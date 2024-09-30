@@ -1,0 +1,14 @@
+telebot
+mysql-connector-python
+requests
+Levenshtein
+diskcache
+spotipy
+apscheduler
+pytz
+beautifulsoup4
+Pillow
+flask
+cachetools
+newrelic
+mutagen

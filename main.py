@@ -137,48 +137,84 @@ def process_tasks():
 task_thread = threading.Thread(target=process_tasks)
 task_thread.start()
 
+from telebot import types
+
+# Grupo para encaminhar as sugestões
+GRUPO_SUGESTOES = -4546359573
+
+def salvar_sugestao_bd(nome, subcategoria, categoria, imagem):
+    """Salva a sugestão aprovada no banco de dados."""
+    conn, cursor = conectar_banco_dados()
+    cursor.execute(
+        "INSERT INTO sugestoes_aprovadas (nome, subcategoria, categoria, imagem) VALUES (%s, %s, %s, %s)",
+        (nome, subcategoria, categoria, imagem)
+    )
+    conn.commit()
+    fechar_conexao(cursor, conn)
+
+def listar_sugestoes():
+    """Recupera todas as sugestões aprovadas do banco de dados e as organiza por categoria."""
+    conn, cursor = conectar_banco_dados()
+    cursor.execute("SELECT categoria, subcategoria, nome, imagem FROM sugestoes_aprovadas")
+    sugestoes = cursor.fetchall()
+    fechar_conexao(cursor, conn)
+
+    sugestoes_organizadas = {}
+    for sugestao in sugestoes:
+        categoria, subcategoria, nome, imagem = sugestao
+        if categoria not in sugestoes_organizadas:
+            sugestoes_organizadas[categoria] = []
+        sugestoes_organizadas[categoria].append(f"- {subcategoria} - {imagem}")
+
+    lista_sugestoes = "Sugestões aprovadas:\n"
+    for categoria, lista in sugestoes_organizadas.items():
+        lista_sugestoes += f"\nCategoria {categoria}:\n" + "\n".join(lista) + "\n"
+    
+    return lista_sugestoes
+
 @bot.message_handler(commands=['sugestao'])
 def sugestao_command(message):
-    id_usuario = message.from_user.id
-    bot.reply_to(message, "Para fazer sua sugestão, envie um personagem por vez no formato:\n\n"
-                          "nome\nsubcategoria\ncategoria\nimagem\n\n"
-                          "Sua sugestão será analisada e aprovada ou reprovada.")
+    try:
+        # Extrair a sugestão no formato correto
+        argumentos = message.text.split(maxsplit=1)
+        if len(argumentos) < 2:
+            bot.reply_to(message, "Por favor, envie sua sugestão no formato:\n"
+                                  "/sugestao nome, subcategoria, categoria, imagem")
+            return
+        
+        dados = argumentos[1].split(",")
+        if len(dados) < 4:
+            bot.reply_to(message, "Erro no formato. Envie como:\n"
+                                  "/sugestao nome, subcategoria, categoria, imagem")
+            return
 
-    usuarios_em_sugestao[id_usuario] = True
+        nome = dados[0].strip()
+        subcategoria = dados[1].strip()
+        categoria = dados[2].strip()
+        imagem = dados[3].strip()
 
-@bot.message_handler(func=lambda message: message.from_user.id in usuarios_em_sugestao and usuarios_em_sugestao[message.from_user.id])
-def receber_sugestao(message):
-    id_usuario = message.from_user.id
-    
-    usuarios_em_sugestao.pop(id_usuario, None)
+        # Obter o nome e user da pessoa que sugeriu
+        nome_usuario = message.from_user.first_name
+        user_usuario = message.from_user.username
 
-    dados = message.text.split("\n")
-    
-    if len(dados) < 3:
-        bot.reply_to(message, "Por favor, envie a sugestão no formato correto:\n"
-                              "nome\nsubcategoria\ncategoria\nimagem")
-        return
+        # Criar os botões de Aprovar e Reprovar
+        markup = types.InlineKeyboardMarkup()
+        botao_aprovar = types.InlineKeyboardButton("Aprovar", callback_data=f"aprovarh_{message.message_id}")
+        botao_reprovar = types.InlineKeyboardButton("Reprovar", callback_data=f"reprovarh_{message.message_id}")
+        markup.add(botao_aprovar, botao_reprovar)
 
-    nome = dados[0]
-    subcategoria = dados[1]
-    categoria = dados[2]
-    imagem = dados[3] if len(dados) > 3 else None
+        # Montar a mensagem da sugestão
+        sugestao_texto = (f"Sugestão recebida:\n"
+                          f"Nome: {nome}\nSubcategoria: {subcategoria}\nCategoria: {categoria}\n"
+                          f"Imagem: {imagem}\n"
+                          f"Usuário: {nome_usuario} (@{user_usuario})")
 
-    nome_usuario = message.from_user.first_name
-    user_usuario = message.from_user.username
+        # Encaminhar para o grupo de sugestões
+        bot.send_message(GRUPO_SUGESTOES, sugestao_texto, reply_markup=markup)
 
-    markup = types.InlineKeyboardMarkup()
-    botao_aprovar = types.InlineKeyboardButton("Aprovar", callback_data=f"aprovarh_{message.message_id}")
-    botao_reprovar = types.InlineKeyboardButton("Reprovar", callback_data=f"reprovarh_{message.message_id}")
-    markup.add(botao_aprovar, botao_reprovar)
-
-    sugestao_texto = (f"Sugestão recebida:\n"
-                      f"Nome: {nome}\nSubcategoria: {subcategoria}\nCategoria: {categoria}\n"
-                      f"Imagem: {imagem if imagem else 'Sem imagem'}\n"
-                      f"Usuário: {nome_usuario} (@{user_usuario})")
-
-
-    bot.send_message(GRUPO_SUGESTOES, sugestao_texto, reply_markup=markup)
+    except Exception as e:
+        print(f"Erro ao processar o comando /sugestao: {e}")
+        bot.reply_to(message, "Ocorreu um erro ao processar sua sugestão. Tente novamente.")
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith('aprovarh_') or call.data.startswith('reprovarh_'))
 def callback_aprovar_reprovar(call):

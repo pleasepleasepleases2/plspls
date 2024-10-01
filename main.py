@@ -59,6 +59,7 @@ from peixes import *
 import logging
 import flask
 import http.server
+from datetime import datetime, timedelta
 import socketserver
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from socketserver import ThreadingMixIn
@@ -92,7 +93,7 @@ cache_musicas_editadas = dc.Cache('./cache_musicas_editadas')
 # Cache para controlar o tempo de espera (TTL - Time To Live)
 song_cooldown_cache = TTLCache(maxsize=1000, ttl=15)  # 3 horas de cooldown
 active_song_challenges = {}
-
+usuarios_em_sugestao = {}
 @app.route("/")
 def set_webhook():
     # Remove o webhook existente
@@ -136,7 +137,76 @@ def process_tasks():
 task_thread = threading.Thread(target=process_tasks)
 task_thread.start()
 
-from datetime import datetime, timedelta
+@bot.message_handler(commands=['sugestao'])
+def sugestao_command(message):
+    id_usuario = message.from_user.id
+    bot.reply_to(message, "Para fazer sua sugestão, envie um personagem por vez no formato:\n\n"
+                          "nome\nsubcategoria\ncategoria\nimagem\n\n"
+                          "Sua sugestão será analisada e aprovada ou reprovada.")
+
+    usuarios_em_sugestao[id_usuario] = True
+
+@bot.message_handler(func=lambda message: message.from_user.id in usuarios_em_sugestao and usuarios_em_sugestao[message.from_user.id])
+def receber_sugestao(message):
+    id_usuario = message.from_user.id
+    
+    usuarios_em_sugestao.pop(id_usuario, None)
+
+    dados = message.text.split("\n")
+    
+    if len(dados) < 3:
+        bot.reply_to(message, "Por favor, envie a sugestão no formato correto:\n"
+                              "nome\nsubcategoria\ncategoria\nimagem")
+        return
+
+    nome = dados[0]
+    subcategoria = dados[1]
+    categoria = dados[2]
+    imagem = dados[3] if len(dados) > 3 else None
+
+    nome_usuario = message.from_user.first_name
+    user_usuario = message.from_user.username
+
+    markup = types.InlineKeyboardMarkup()
+    botao_aprovar = types.InlineKeyboardButton("Aprovar", callback_data=f"aprovarh_{message.message_id}")
+    botao_reprovar = types.InlineKeyboardButton("Reprovar", callback_data=f"reprovarh_{message.message_id}")
+    markup.add(botao_aprovar, botao_reprovar)
+
+    sugestao_texto = (f"Sugestão recebida:\n"
+                      f"Nome: {nome}\nSubcategoria: {subcategoria}\nCategoria: {categoria}\n"
+                      f"Imagem: {imagem if imagem else 'Sem imagem'}\n"
+                      f"Usuário: {nome_usuario} (@{user_usuario})")
+
+
+    bot.send_message(GRUPO_SUGESTOES, sugestao_texto, reply_markup=markup)
+
+@bot.callback_query_handler(func=lambda call: call.data.startswith('aprovarh_') or call.data.startswith('reprovarh_'))
+def callback_aprovar_reprovar(call):
+    mensagem_id = call.data.split("_")[1]
+    
+    if call.data.startswith("aprovarh_"):
+        # Pegar a mensagem original com a sugestão
+        mensagem_sugestao = bot.forward_message(call.message.chat.id, GRUPO_SUGESTOES, mensagem_id)
+        dados = mensagem_sugestao.text.split("\n")
+        
+        nome = dados[1].split(": ")[1]
+        subcategoria = dados[2].split(": ")[1]
+        categoria = dados[3].split(": ")[1]
+        imagem = dados[4].split(": ")[1]
+
+        # Salvar a sugestão aprovada no banco de dados
+        salvar_sugestao_bd(nome, subcategoria, categoria, imagem)
+
+        # Exibir a lista de sugestões aprovadas
+        lista_sugestoes = listar_sugestoes()
+        bot.send_message(call.message.chat.id, lista_sugestoes)
+
+    elif call.data.startswith("reprovarh_"):
+        # Apagar a mensagem da sugestão
+        bot.delete_message(GRUPO_SUGESTOES, mensagem_id)
+
+    # Apagar os botões após a ação
+    bot.edit_message_reply_markup(call.message.chat.id, call.message.message_id, reply_markup=None)
 
 @bot.message_handler(commands=['ranking_semanal'])
 def ranking_semanal(message):

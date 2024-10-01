@@ -197,12 +197,6 @@ def sugestao_command(message):
         nome_usuario = message.from_user.first_name
         user_usuario = message.from_user.username
 
-        # Criar os botões de Aprovar e Reprovar
-        markup = types.InlineKeyboardMarkup()
-        botao_aprovar = types.InlineKeyboardButton("Aprovar", callback_data=f"aprovarh_{message.message_id}")
-        botao_reprovar = types.InlineKeyboardButton("Reprovar", callback_data=f"reprovarh_{message.message_id}")
-        markup.add(botao_aprovar, botao_reprovar)
-
         # Montar a mensagem da sugestão
         sugestao_texto = (f"Sugestão recebida:\n"
                           f"Nome: {nome}\nSubcategoria: {subcategoria}\nCategoria: {categoria}\n"
@@ -210,39 +204,11 @@ def sugestao_command(message):
                           f"Usuário: {nome_usuario} (@{user_usuario})")
 
         # Encaminhar para o grupo de sugestões
-        bot.send_message(GRUPO_SUGESTOES, sugestao_texto, reply_markup=markup)
+        bot.send_message(GRUPO_SUGESTOES, sugestao_texto)
 
     except Exception as e:
         print(f"Erro ao processar o comando /sugestao: {e}")
         bot.reply_to(message, "Ocorreu um erro ao processar sua sugestão. Tente novamente.")
-
-@bot.callback_query_handler(func=lambda call: call.data.startswith('aprovarh_') or call.data.startswith('reprovarh_'))
-def callback_aprovar_reprovar(call):
-    mensagem_id = call.data.split("_")[1]
-    
-    if call.data.startswith("aprovarh_"):
-        # Pegar a mensagem original com a sugestão
-        mensagem_sugestao = bot.forward_message(call.message.chat.id, GRUPO_SUGESTOES, mensagem_id)
-        dados = mensagem_sugestao.text.split("\n")
-        
-        nome = dados[1].split(": ")[1]
-        subcategoria = dados[2].split(": ")[1]
-        categoria = dados[3].split(": ")[1]
-        imagem = dados[4].split(": ")[1]
-
-        # Salvar a sugestão aprovada no banco de dados
-        salvar_sugestao_bd(nome, subcategoria, categoria, imagem)
-
-        # Exibir a lista de sugestões aprovadas
-        lista_sugestoes = listar_sugestoes()
-        bot.send_message(call.message.chat.id, lista_sugestoes)
-
-    elif call.data.startswith("reprovarh_"):
-        # Apagar a mensagem da sugestão
-        bot.delete_message(GRUPO_SUGESTOES, mensagem_id)
-
-    # Apagar os botões após a ação
-    bot.edit_message_reply_markup(call.message.chat.id, call.message.message_id, reply_markup=None)
 
 @bot.message_handler(commands=['ranking_semanal'])
 def ranking_semanal(message):

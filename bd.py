@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 from datetime import date
 from telebot import types
 
-bot = telebot.TeleBot("7088149058:AAE9ichlUjdWpH20QJGKE4xoGK59ZVQYV3I")
+bot = telebot.TeleBot("7088149058:AAEoZ7PsVgaOAFDcW9q1t28k5Pj11o-6LCU")
 def db_config():
     return {
         'host': 'junction.proxy.rlwy.net',

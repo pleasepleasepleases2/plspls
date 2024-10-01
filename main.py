@@ -67,7 +67,7 @@ processing_lock = threading.Lock()
 ids_proibidos = {164, 165, 163, 174, 192, 214, 215, 216}
 scheduler = BackgroundScheduler(timezone=utc)
 scheduler.start()
-API_TOKEN="7088149058:AAE9ichlUjdWpH20QJGKE4xoGK59ZVQYV3I"
+API_TOKEN="7088149058:AAEoZ7PsVgaOAFDcW9q1t28k5Pj11o-6LCU"
 SPOTIFY_CLIENT_ID="804047efa98c4d1d81da250b0770c05d"
 SPOTIFY_CLIENT_SECRET="6deb00cb4cea42f79abe41cc4da05f13"
 DB_HOST="mysql.railway.internal"

@@ -59,6 +59,7 @@ from peixes import *
 import logging
 import flask
 import http.server
+import newrelic.agent
 from datetime import datetime, timedelta
 import socketserver
 from http.server import HTTPServer, BaseHTTPRequestHandler
@@ -85,21 +86,22 @@ WEBHOOK_PORT = int(os.getenv('PORT', 5000))  #
 bot = telebot.TeleBot(API_TOKEN)
 
 app = flask.Flask(__name__)
-import newrelic.agent
 newrelic.agent.initialize('newrelic.ini')
+
 grupodeerro = -4279935414
-# Cache persistente para armazenar versões editadas das músicas
+GRUPO_SUGESTOES = -4546359573
+
+
 cache_musicas_editadas = dc.Cache('./cache_musicas_editadas')
-# Cache para controlar o tempo de espera (TTL - Time To Live)
 song_cooldown_cache = TTLCache(maxsize=1000, ttl=15)  # 3 horas de cooldown
+
 active_song_challenges = {}
 usuarios_em_sugestao = {}
+
 @app.route("/")
 def set_webhook():
-    # Remove o webhook existente
+
     bot.remove_webhook()
-    
-    # Configura o novo webhook
     success = bot.set_webhook(url=WEBHOOK_URL_BASE + WEBHOOK_URL_PATH)
     
     if success:
@@ -126,7 +128,7 @@ sp = spotipy.Spotify(auth_manager=SpotifyClientCredentials(client_id=SPOTIFY_CLI
 cache = dc.Cache('./cache')  
 conn, cursor = conectar_banco_dados()
 task_queue = Queue()
-grupodeerro = -4279935414
+
 def process_tasks():
     while True:
         task = task_queue.get()
@@ -137,45 +139,9 @@ def process_tasks():
 task_thread = threading.Thread(target=process_tasks)
 task_thread.start()
 
-from telebot import types
-
-# Grupo para encaminhar as sugestões
-GRUPO_SUGESTOES = -4546359573
-
-def salvar_sugestao_bd(nome, subcategoria, categoria, imagem):
-    """Salva a sugestão aprovada no banco de dados."""
-    conn, cursor = conectar_banco_dados()
-    cursor.execute(
-        "INSERT INTO sugestoes_aprovadas (nome, subcategoria, categoria, imagem) VALUES (%s, %s, %s, %s)",
-        (nome, subcategoria, categoria, imagem)
-    )
-    conn.commit()
-    fechar_conexao(cursor, conn)
-
-def listar_sugestoes():
-    """Recupera todas as sugestões aprovadas do banco de dados e as organiza por categoria."""
-    conn, cursor = conectar_banco_dados()
-    cursor.execute("SELECT categoria, subcategoria, nome, imagem FROM sugestoes_aprovadas")
-    sugestoes = cursor.fetchall()
-    fechar_conexao(cursor, conn)
-
-    sugestoes_organizadas = {}
-    for sugestao in sugestoes:
-        categoria, subcategoria, nome, imagem = sugestao
-        if categoria not in sugestoes_organizadas:
-            sugestoes_organizadas[categoria] = []
-        sugestoes_organizadas[categoria].append(f"- {subcategoria} - {imagem}")
-
-    lista_sugestoes = "Sugestões aprovadas:\n"
-    for categoria, lista in sugestoes_organizadas.items():
-        lista_sugestoes += f"\nCategoria {categoria}:\n" + "\n".join(lista) + "\n"
-    
-    return lista_sugestoes
-
 @bot.message_handler(commands=['sugestao'])
 def sugestao_command(message):
     try:
-        # Extrair a sugestão no formato correto
         argumentos = message.text.split(maxsplit=1)
         if len(argumentos) < 2:
             bot.reply_to(message, "Por favor, envie sua sugestão no formato:\n"
@@ -215,7 +181,7 @@ def ranking_semanal(message):
     try:
         conn, cursor = conectar_banco_dados()
 
-        # Definir o período de segunda a domingo da última semana
+
         hoje = datetime.now()
         inicio_semana = hoje - timedelta(days=hoje.weekday() + 7)
         fim_semana = inicio_semana + timedelta(days=6, hours=23, minutes=59, seconds=59)

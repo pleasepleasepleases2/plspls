@@ -10,11 +10,11 @@ from telebot import types
 bot = telebot.TeleBot("7088149058:AAE9ichlUjdWpH20QJGKE4xoGK59ZVQYV3I")
 def db_config():
     return {
-        'host': 'autorack.proxy.rlwy.net',
-        'port': '36063',
+        'host': 'junction.proxy.rlwy.net',
+        'port': '53364',
         'database': 'garden',
         'user': 'root',
-        'password': 'NYbuCYupTPXdTkaVRwQEDRiTvJnItGEN',
+        'password': 'ZGDCREJXfzPkyqxisMhnwAcJhtbYkfge',
 
     }
     

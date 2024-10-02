@@ -138,6 +138,152 @@ def process_tasks():
         task_queue.task_done()
 task_thread = threading.Thread(target=process_tasks)
 task_thread.start()
+from telebot import types
+
+def registrar_interacao(id_usuario, id_carta, gostou):
+    """Registra a interação no banco de dados, garantindo que o usuário não interaja mais de uma vez na mesma carta."""
+    conn, cursor = conectar_banco_dados()
+
+    # Verificar se o usuário já interagiu com a carta
+    cursor.execute("SELECT * FROM interacoes_cartas WHERE id_usuario = %s AND id_carta = %s", (id_usuario, id_carta))
+    interacao_existente = cursor.fetchone()
+
+    if interacao_existente:
+        fechar_conexao(cursor, conn)
+        return False  # Usuário já interagiu com essa carta
+
+    # Inserir a interação
+    interacao = 'gostou' if gostou else 'rejeitou'
+    cursor.execute("INSERT INTO interacoes_cartas (id_usuario, id_carta, interacao) VALUES (%s, %s, %s)",
+                   (id_usuario, id_carta, interacao))
+
+    # Atualizar popularidade da carta
+    cursor.execute("SELECT gostos, rejeicoes FROM popularidade_cartas WHERE id_carta = %s", (id_carta,))
+    resultado = cursor.fetchone()
+
+    if resultado:
+        gostos, rejeicoes = resultado
+        if gostou:
+            gostos += 1
+        else:
+            rejeicoes += 1
+        cursor.execute("UPDATE popularidade_cartas SET gostos = %s, rejeicoes = %s WHERE id_carta = %s",
+                       (gostos, rejeicoes, id_carta))
+    else:
+        if gostou:
+            cursor.execute("INSERT INTO popularidade_cartas (id_carta, gostos, rejeicoes) VALUES (%s, %s, %s)",
+                           (id_carta, 1, 0))
+        else:
+            cursor.execute("INSERT INTO popularidade_cartas (id_carta, gostos, rejeicoes) VALUES (%s, %s, %s)",
+                           (id_carta, 0, 1))
+
+    conn.commit()
+    fechar_conexao(cursor, conn)
+    return True  # Interação registrada com sucesso
+
+def gerar_proxima_carta():
+    """Seleciona uma carta aleatória do banco de dados."""
+    conn, cursor = conectar_banco_dados()
+    cursor.execute("SELECT id_personagem, nome, subcategoria, emoji, categoria FROM personagens ORDER BY RAND() LIMIT 1")
+    carta = cursor.fetchone()
+    fechar_conexao(cursor, conn)
+    return carta
+
+@bot.message_handler(commands=['tinder_cartas'])
+def tinder_cartas_command(message):
+    carta = gerar_proxima_carta()
+    
+    id_carta, nome, subcategoria, emoji, categoria = carta
+    
+    # Montar a mensagem com as informações da carta
+    mensagem_carta = (f"ID: {id_carta}\n"
+                      f"Nome: {nome}\n"
+                      f"Subcategoria: {subcategoria}\n"
+                      f"Emoji: {emoji}\n"
+                      f"Categoria: {categoria}")
+    
+    # Criar os botões de coração (gostar) e X (rejeitar)
+    markup = types.InlineKeyboardMarkup()
+    botao_coracao = types.InlineKeyboardButton("❤️", callback_data=f"gostar_{id_carta}")
+    botao_x = types.InlineKeyboardButton("❌", callback_data=f"rejeitar_{id_carta}")
+    markup.add(botao_coracao, botao_x)
+    
+    bot.send_message(message.chat.id, mensagem_carta, reply_markup=markup)
+
+@bot.callback_query_handler(func=lambda call: call.data.startswith('gostar_') or call.data.startswith('rejeitar_'))
+def callback_tinder_cartas(call):
+    id_carta = call.data.split("_")[1]
+    id_usuario = call.from_user.id
+
+    if call.data.startswith("gostar_"):
+        if registrar_interacao(id_usuario, id_carta, gostou=True):
+            bot.answer_callback_query(call.id, "Você gostou dessa carta!")
+        else:
+            bot.answer_callback_query(call.id, "Você já interagiu com essa carta antes.")
+    elif call.data.startswith("rejeitar_"):
+        if registrar_interacao(id_usuario, id_carta, gostou=False):
+            bot.answer_callback_query(call.id, "Você rejeitou essa carta!")
+        else:
+            bot.answer_callback_query(call.id, "Você já interagiu com essa carta antes.")
+
+    # Substituir os botões por um botão de "próxima carta"
+    markup_nova_carta = types.InlineKeyboardMarkup()
+    botao_proxima = types.InlineKeyboardButton("➡️", callback_data="proxima_carta")
+    markup_nova_carta.add(botao_proxima)
+
+    bot.edit_message_reply_markup(call.message.chat.id, call.message.message_id, reply_markup=markup_nova_carta)
+
+@bot.callback_query_handler(func=lambda call: call.data == "proxima_carta")
+def callback_proxima_carta(call):
+    # Gerar a próxima carta
+    carta = gerar_proxima_carta()
+    id_carta, nome, subcategoria, emoji, categoria = carta
+
+    # Montar a nova mensagem com as informações da nova carta
+    mensagem_carta = (f"ID: {id_carta}\n"
+                      f"Nome: {nome}\n"
+                      f"Subcategoria: {subcategoria}\n"
+                      f"Emoji: {emoji}\n"
+                      f"Categoria: {categoria}")
+
+    # Criar os botões de coração (gostar) e X (rejeitar)
+    markup = types.InlineKeyboardMarkup()
+    botao_coracao = types.InlineKeyboardButton("❤️", callback_data=f"gostar_{id_carta}")
+    botao_x = types.InlineKeyboardButton("❌", callback_data=f"rejeitar_{id_carta}")
+    markup.add(botao_coracao, botao_x)
+
+    # Editar a mensagem existente com as novas informações e botões
+    bot.edit_message_text(mensagem_carta, call.message.chat.id, call.message.message_id, reply_markup=markup)
+
+
+def consultar_popularidade():
+    """Consulta as cartas mais amadas e mais rejeitadas."""
+    conn, cursor = conectar_banco_dados()
+    
+    cursor.execute("SELECT id_carta, gostos, rejeicoes FROM popularidade_cartas ORDER BY gostos DESC LIMIT 10")
+    mais_amadas = cursor.fetchall()
+    
+    cursor.execute("SELECT id_carta, gostos, rejeicoes FROM popularidade_cartas ORDER BY rejeicoes DESC LIMIT 10")
+    mais_rejeitadas = cursor.fetchall()
+    
+    fechar_conexao(cursor, conn)
+    return mais_amadas, mais_rejeitadas
+
+
+@bot.message_handler(commands=['popularidade'])
+def consultar_popularidade_command(message):
+    mais_amadas, mais_rejeitadas = consultar_popularidade()
+    
+    # Construir a resposta
+    resposta = "Cartas mais amadas:\n"
+    for carta in mais_amadas:
+        resposta += f"ID: {carta[0]} - Gostos: {carta[1]} - Rejeições: {carta[2]}\n"
+    
+    resposta += "\nCartas mais rejeitadas:\n"
+    for carta in mais_rejeitadas:
+        resposta += f"ID: {carta[0]} - Gostos: {carta[1]} - Rejeições: {carta[2]}\n"
+    
+    bot.send_message(message.chat.id, resposta)
 
 @bot.message_handler(commands=['sugestao'])
 def sugestao_command(message):

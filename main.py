@@ -239,7 +239,7 @@ def callback_proxima_carta(call):
     id_carta, nome, subcategoria, emoji, categoria = carta
 
     # Montar a nova mensagem com as informações da nova carta
-    mensagem_carta = (f"ID: <code>{id_carta}<\code>\n"
+    mensagem_carta = (f"ID: <code>{id_carta}</code>\n"
                       f"Nome: {nome}\n"
                       f"Subcategoria: {subcategoria}\n"
                       f"Emoji: {emoji}\n"
@@ -276,11 +276,11 @@ def consultar_popularidade_command(message):
     # Construir a resposta
     resposta = "Cartas mais amadas:\n"
     for carta in mais_amadas:
-        resposta += f"ID: <code>{carta[0]}<\code> - ❤️: {carta[1]} - ❌: {carta[2]}\n"
+        resposta += f"ID: <code>{carta[0]}</code> - ❤️: {carta[1]} - ❌: {carta[2]}\n"
     
     resposta += "\nCartas mais rejeitadas:\n"
     for carta in mais_rejeitadas: 
-        resposta += f"ID: <code>{carta[0]}<\code> - ❤️: {carta[1]} -❌: {carta[2]}\n"
+        resposta += f"ID: <code>{carta[0]}</code> - ❤️: {carta[1]} -❌: {carta[2]}\n"
     
     bot.send_message(message.chat.id, resposta, parse_mode="HTML")
 

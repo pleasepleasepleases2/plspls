@@ -276,11 +276,11 @@ def consultar_popularidade_command(message):
     # Construir a resposta
     resposta = "Cartas mais amadas:\n"
     for carta in mais_amadas:
-        resposta += f"ID: <code>{carta[0]}</code> - ❤️: {carta[1]} - ❌: {carta[2]}\n"
+        resposta += f"ID: <code>{carta[0]}</code> - ♡: {carta[1]} -  x: {carta[2]}\n"
     
     resposta += "\nCartas mais rejeitadas:\n"
     for carta in mais_rejeitadas: 
-        resposta += f"ID: <code>{carta[0]}</code> - ❤️: {carta[1]} -❌: {carta[2]}\n"
+        resposta += f"ID: <code>{carta[0]}</code> - ♡: {carta[1]} - x: {carta[2]}\n"
     
     bot.send_message(message.chat.id, resposta, parse_mode="HTML")
 

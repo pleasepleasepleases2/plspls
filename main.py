@@ -196,11 +196,10 @@ def tinder_cartas_command(message):
     id_carta, nome, subcategoria, emoji, categoria = carta
     
     # Montar a mensagem com as informações da carta
-    mensagem_carta = (f"ID: {id_carta}\n"
+    mensagem_carta = (f"ID:<code> {id_carta}</code>\n"
                       f"Nome: {nome}\n"
                       f"Subcategoria: {subcategoria}\n"
-                      f"Emoji: {emoji}\n"
-                      f"Categoria: {categoria}")
+                      f"Categoria:{emoji} - {categoria}")
     
     # Criar os botões de coração (gostar) e X (rejeitar)
     markup = types.InlineKeyboardMarkup()
@@ -208,7 +207,7 @@ def tinder_cartas_command(message):
     botao_x = types.InlineKeyboardButton("❌", callback_data=f"rejeitar_{id_carta}")
     markup.add(botao_coracao, botao_x)
     
-    bot.send_message(message.chat.id, mensagem_carta, reply_markup=markup)
+    bot.send_message(message.chat.id, mensagem_carta, reply_markup=markup,parse_mode="HTML")
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith('gostar_') or call.data.startswith('rejeitar_'))
 def callback_tinder_cartas(call):

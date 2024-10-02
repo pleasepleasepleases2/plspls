@@ -202,71 +202,84 @@ def gerar_proxima_carta():
     fechar_conexao(cursor, conn)
     return carta
 
+import traceback
+
 @bot.message_handler(commands=['tinder'])
 def tinder_cartas_command(message):
-    carta = gerar_proxima_carta()
+    try:
+        carta = gerar_proxima_carta()
     
-    id_carta, nome, subcategoria, emoji, categoria = carta
+        id_carta, nome, subcategoria, emoji, categoria = carta
     
-    # Montar a mensagem com as informações da carta
-    mensagem_carta = (f"ID:<code>{id_carta}</code>\n"
-                      f"Nome: {nome}\n"
-                      f"Subcategoria: {subcategoria}\n"
-                      f"Categoria:{emoji} - {categoria}")
+        # Montar a mensagem com as informações da carta
+        mensagem_carta = (f"ID:<code>{id_carta}</code>\n"
+                          f"Nome: {nome}\n"
+                          f"Subcategoria: {subcategoria}\n"
+                          f"Categoria:{emoji} - {categoria}")
     
-    # Criar os botões de coração (gostar) e X (rejeitar)
-    markup = types.InlineKeyboardMarkup()
-    botao_coracao = types.InlineKeyboardButton("❤️", callback_data=f"gostar_{id_carta}")
-    botao_x = types.InlineKeyboardButton("❌", callback_data=f"rejeitar_{id_carta}")
-    markup.add(botao_coracao, botao_x)
+        # Criar os botões de coração (gostar) e X (rejeitar)
+        markup = types.InlineKeyboardMarkup()
+        botao_coracao = types.InlineKeyboardButton("❤️", callback_data=f"gostar_{id_carta}")
+        botao_x = types.InlineKeyboardButton("❌", callback_data=f"rejeitar_{id_carta}")
+        markup.add(botao_coracao, botao_x)
     
-    bot.send_message(message.chat.id, mensagem_carta, reply_markup=markup,parse_mode="HTML")
+        bot.send_message(message.chat.id, mensagem_carta, reply_markup=markup, parse_mode="HTML")
+    except Exception as e:
+        print(f"Erro ao processar o comando /tinder: {e}")
+        traceback.print_exc()
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith('gostar_') or call.data.startswith('rejeitar_'))
 def callback_tinder_cartas(call):
-    id_carta = call.data.split("_")[1]
-    id_usuario = call.from_user.id
+    try:
+        id_carta = call.data.split("_")[1]
+        id_usuario = call.from_user.id
 
-    if call.data.startswith("gostar_"):
-        if registrar_interacao(id_usuario, id_carta, gostou=True):
-            bot.answer_callback_query(call.id, "Você gostou dessa carta!")
-        else:
-            bot.answer_callback_query(call.id, "Você já interagiu com essa carta antes.")
-    elif call.data.startswith("rejeitar_"):
-        if registrar_interacao(id_usuario, id_carta, gostou=False):
-            bot.answer_callback_query(call.id, "Você rejeitou essa carta!")
-        else:
-            bot.answer_callback_query(call.id, "Você já interagiu com essa carta antes.")
+        if call.data.startswith("gostar_"):
+            if registrar_interacao(id_usuario, id_carta, gostou=True):
+                bot.answer_callback_query(call.id, "Você gostou dessa carta!")
+            else:
+                bot.answer_callback_query(call.id, "Você já interagiu com essa carta antes.")
+        elif call.data.startswith("rejeitar_"):
+            if registrar_interacao(id_usuario, id_carta, gostou=False):
+                bot.answer_callback_query(call.id, "Você rejeitou essa carta!")
+            else:
+                bot.answer_callback_query(call.id, "Você já interagiu com essa carta antes.")
 
-    # Substituir os botões por um botão de "próxima carta"
-    markup_nova_carta = types.InlineKeyboardMarkup()
-    botao_proxima = types.InlineKeyboardButton("➡️", callback_data="proxima_carta")
-    markup_nova_carta.add(botao_proxima)
+        # Substituir os botões por um botão de "próxima carta"
+        markup_nova_carta = types.InlineKeyboardMarkup()
+        botao_proxima = types.InlineKeyboardButton("➡️", callback_data="proxima_carta")
+        markup_nova_carta.add(botao_proxima)
 
-    bot.edit_message_reply_markup(call.message.chat.id, call.message.message_id, reply_markup=markup_nova_carta)
+        bot.edit_message_reply_markup(call.message.chat.id, call.message.message_id, reply_markup=markup_nova_carta)
+    except Exception as e:
+        print(f"Erro ao processar o callback (gostar/rejeitar): {e}")
+        traceback.print_exc()
 
 @bot.callback_query_handler(func=lambda call: call.data == "proxima_carta")
 def callback_proxima_carta(call):
-    # Gerar a próxima carta
-    carta = gerar_proxima_carta()
-    id_carta, nome, subcategoria, emoji, categoria = carta
+    try:
+        # Gerar a próxima carta
+        carta = gerar_proxima_carta()
+        id_carta, nome, subcategoria, emoji, categoria = carta
 
-    # Montar a nova mensagem com as informações da nova carta
-    mensagem_carta = (f"ID: <code>{id_carta}</code>\n"
-                      f"Nome: {nome}\n"
-                      f"Subcategoria: {subcategoria}\n"
-                      f"Emoji: {emoji}\n"
-                      f"Categoria: {categoria}")
+        # Montar a nova mensagem com as informações da nova carta
+        mensagem_carta = (f"ID: <code>{id_carta}</code>\n"
+                          f"Nome: {nome}\n"
+                          f"Subcategoria: {subcategoria}\n"
+                          f"Emoji: {emoji}\n"
+                          f"Categoria: {categoria}")
 
-    # Criar os botões de coração (gostar) e X (rejeitar)
-    markup = types.InlineKeyboardMarkup()
-    botao_coracao = types.InlineKeyboardButton("❤️", callback_data=f"gostar_{id_carta}")
-    botao_x = types.InlineKeyboardButton("❌", callback_data=f"rejeitar_{id_carta}")
-    markup.add(botao_coracao, botao_x)
+        # Criar os botões de coração (gostar) e X (rejeitar)
+        markup = types.InlineKeyboardMarkup()
+        botao_coracao = types.InlineKeyboardButton("❤️", callback_data=f"gostar_{id_carta}")
+        botao_x = types.InlineKeyboardButton("❌", callback_data=f"rejeitar_{id_carta}")
+        markup.add(botao_coracao, botao_x)
 
-    # Editar a mensagem existente com as novas informações e botões
-    bot.edit_message_text(mensagem_carta, call.message.chat.id, call.message.message_id, reply_markup=markup,parse_mode="HTML")
-
+        # Editar a mensagem existente com as novas informações e botões
+        bot.edit_message_text(mensagem_carta, call.message.chat.id, call.message.message_id, reply_markup=markup, parse_mode="HTML")
+    except Exception as e:
+        print(f"Erro ao processar o callback de próxima carta: {e}")
+        traceback.print_exc()
 
 def consultar_popularidade():
     """Consulta as cartas mais amadas e mais rejeitadas."""

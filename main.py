@@ -157,6 +157,18 @@ def registrar_interacao(id_usuario, id_carta, gostou):
     cursor.execute("INSERT INTO interacoes_cartas (id_usuario, id_carta, interacao) VALUES (%s, %s, %s)",
                    (id_usuario, id_carta, interacao))
 
+    # Atualizar contador de interações
+    cursor.execute("UPDATE usuarios SET interacoes_cartas = interacoes_cartas + 1 WHERE id_usuario = %s", (id_usuario,))
+
+    # Verificar se o usuário já respondeu 10 cartas
+    cursor.execute("SELECT interacoes_cartas FROM usuarios WHERE id_usuario = %s", (id_usuario,))
+    interacoes = cursor.fetchone()[0]
+
+    if interacoes >= 10:
+        # Dar 5 cenouras e resetar o contador
+        cursor.execute("UPDATE usuarios SET cenouras = cenouras + 5, interacoes_cartas = 0 WHERE id_usuario = %s", (id_usuario,))
+        bot.send_message(id_usuario, "🎉 Parabéns! Você ganhou 5 cenouras por responder 10 cartas!")
+
     # Atualizar popularidade da carta
     cursor.execute("SELECT gostos, rejeicoes FROM popularidade_cartas WHERE id_carta = %s", (id_carta,))
     resultado = cursor.fetchone()
@@ -180,6 +192,7 @@ def registrar_interacao(id_usuario, id_carta, gostou):
     conn.commit()
     fechar_conexao(cursor, conn)
     return True  # Interação registrada com sucesso
+
 
 def gerar_proxima_carta():
     """Seleciona uma carta aleatória do banco de dados."""

@@ -189,7 +189,7 @@ def gerar_proxima_carta():
     fechar_conexao(cursor, conn)
     return carta
 
-@bot.message_handler(commands=['tinder_cartas'])
+@bot.message_handler(commands=['tinder'])
 def tinder_cartas_command(message):
     carta = gerar_proxima_carta()
     

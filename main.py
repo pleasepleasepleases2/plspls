@@ -196,7 +196,7 @@ def tinder_cartas_command(message):
     id_carta, nome, subcategoria, emoji, categoria = carta
     
     # Montar a mensagem com as informações da carta
-    mensagem_carta = (f"ID:<code> {id_carta}</code>\n"
+    mensagem_carta = (f"ID:<code>{id_carta}</code>\n"
                       f"Nome: {nome}\n"
                       f"Subcategoria: {subcategoria}\n"
                       f"Categoria:{emoji} - {categoria}")
@@ -239,7 +239,7 @@ def callback_proxima_carta(call):
     id_carta, nome, subcategoria, emoji, categoria = carta
 
     # Montar a nova mensagem com as informações da nova carta
-    mensagem_carta = (f"ID: {id_carta}\n"
+    mensagem_carta = (f"ID: <code>{id_carta}<\code>\n"
                       f"Nome: {nome}\n"
                       f"Subcategoria: {subcategoria}\n"
                       f"Emoji: {emoji}\n"
@@ -252,7 +252,7 @@ def callback_proxima_carta(call):
     markup.add(botao_coracao, botao_x)
 
     # Editar a mensagem existente com as novas informações e botões
-    bot.edit_message_text(mensagem_carta, call.message.chat.id, call.message.message_id, reply_markup=markup)
+    bot.edit_message_text(mensagem_carta, call.message.chat.id, call.message.message_id, reply_markup=markup,parse_mode="HTML")
 
 
 def consultar_popularidade():
@@ -276,13 +276,13 @@ def consultar_popularidade_command(message):
     # Construir a resposta
     resposta = "Cartas mais amadas:\n"
     for carta in mais_amadas:
-        resposta += f"ID: {carta[0]} - Gostos: {carta[1]} - Rejeições: {carta[2]}\n"
+        resposta += f"ID: <code>{carta[0]}<\code> - ❤️: {carta[1]} - ❌: {carta[2]}\n"
     
     resposta += "\nCartas mais rejeitadas:\n"
-    for carta in mais_rejeitadas:
-        resposta += f"ID: {carta[0]} - Gostos: {carta[1]} - Rejeições: {carta[2]}\n"
+    for carta in mais_rejeitadas: 
+        resposta += f"ID: <code>{carta[0]}<\code> - ❤️: {carta[1]} -❌: {carta[2]}\n"
     
-    bot.send_message(message.chat.id, resposta)
+    bot.send_message(message.chat.id, resposta, parse_mode="HTML")
 
 @bot.message_handler(commands=['sugestao'])
 def sugestao_command(message):

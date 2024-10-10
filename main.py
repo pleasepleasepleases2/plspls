@@ -128,6 +128,99 @@ sp = spotipy.Spotify(auth_manager=SpotifyClientCredentials(client_id=SPOTIFY_CLI
 cache = dc.Cache('./cache')  
 conn, cursor = conectar_banco_dados()
 task_queue = Queue()
+import random
+
+# Função para gerar o labirinto com paredes de pedra
+def gerar_labirinto(tamanho=7):
+    labirinto = []
+    for _ in range(tamanho):
+        linha = []
+        for _ in range(tamanho):
+            conteudo = random.choice(['⬜', '👻', '🎃', '🪨'])  # Caminho vazio, monstro, recompensa, ou parede
+            linha.append(conteudo)
+        labirinto.append(linha)
+    return labirinto
+
+# Função para mostrar o labirinto atual com emojis de pedra e mostrar até 4 blocos ao redor
+def mostrar_labirinto(labirinto, posicao):
+    mapa = ""
+    x, y = posicao
+    for i in range(len(labirinto)):
+        for j in range(len(labirinto[i])):
+            # Verificar se a posição está ao redor (até 1 bloco de distância em todas as direções)
+            if abs(x - i) <= 1 and abs(y - j) <= 1:
+                mapa += labirinto[i][j]  # Revelar o bloco ao redor
+            else:
+                mapa += "⬛"  # Emoji preto (sala escondida)
+        mapa += "\n"
+    return mapa
+
+# Dicionário para armazenar o labirinto e posição dos jogadores
+jogadores_labirinto = {}
+
+@bot.message_handler(commands=['labirinto'])
+def iniciar_labirinto(message):
+    id_usuario = message.from_user.id
+    tamanho = 7  # Tamanho do labirinto (7x7 para mais complexidade)
+    
+    labirinto = gerar_labirinto(tamanho)
+    posicao_inicial = (0, 0)  # O jogador começa no canto superior esquerdo
+    
+    jogadores_labirinto[id_usuario] = {
+        "labirinto": labirinto,
+        "posicao": posicao_inicial
+    }
+    
+    mapa = mostrar_labirinto(labirinto, posicao_inicial)
+    bot.send_message(message.chat.id, f"🏰 Bem-vindo ao Labirinto de Pedras! Escolha uma direção: /norte, /sul, /leste ou /oeste.\n\n{mapa}")
+
+@bot.message_handler(commands=['norte', 'sul', 'leste', 'oeste'])
+def mover_labirinto(message):
+    id_usuario = message.from_user.id
+    if id_usuario not in jogadores_labirinto:
+        bot.send_message(message.chat.id, "👻 Você precisa iniciar o labirinto primeiro com o comando /labirinto.")
+        return
+    
+    direcao = message.text[1:]  # Remove o "/" para pegar a direção
+    jogador = jogadores_labirinto[id_usuario]
+    labirinto = jogador["labirinto"]
+    posicao_atual = jogador["posicao"]
+    
+    nova_posicao = mover_posicao(posicao_atual, direcao, len(labirinto))
+    
+    if nova_posicao != posicao_atual:  # Se a nova posição for válida
+        jogadores_labirinto[id_usuario]["posicao"] = nova_posicao
+        conteudo = labirinto[nova_posicao[0]][nova_posicao[1]]
+        
+        # Mostrar o novo labirinto após o movimento
+        mapa = mostrar_labirinto(labirinto, nova_posicao)
+        if conteudo == '👻':
+            bot.send_message(message.chat.id, f"👻 Uh oh! Você encontrou um monstro e perdeu 20 cenouras!\n\n{mapa}")
+            conn, cursor = conectar_banco_dados()
+            cursor.execute("UPDATE usuarios SET cenouras = cenouras - 20 WHERE id_usuario = %s", (id_usuario,))
+            conn.commit()
+        elif conteudo == '🎃':
+            bot.send_message(message.chat.id, f"🎃 Boa escolha! Você encontrou uma recompensa de 50 cenouras!\n\n{mapa}")
+            conn, cursor = conectar_banco_dados()
+            cursor.execute("UPDATE usuarios SET cenouras = cenouras + 50 WHERE id_usuario = %s", (id_usuario,))
+            conn.commit()
+        else:
+            bot.send_message(message.chat.id, f"🌕 Você avançou pelo labirinto.\n\n{mapa}")
+    else:
+        bot.send_message(message.chat.id, "👻 Você não pode ir nessa direção!")
+
+# Função para calcular a nova posição com base na direção
+def mover_posicao(posicao_atual, direcao, tamanho_labirinto):
+    x, y = posicao_atual
+    if direcao == 'norte' and x > 0:
+        return (x - 1, y)
+    elif direcao == 'sul' and x < tamanho_labirinto - 1:
+        return (x + 1, y)
+    elif direcao == 'leste' and y < tamanho_labirinto - 1:
+        return (x, y + 1)
+    elif direcao == 'oeste' and y > 0:
+        return (x, y - 1)
+    return posicao_atual  # Se a direção for inválida, retorna a posição atual
 
 def process_tasks():
     while True:

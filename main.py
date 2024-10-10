@@ -130,42 +130,57 @@ conn, cursor = conectar_banco_dados()
 task_queue = Queue()
 import random
 
-# Função para gerar o labirinto com saída e conteúdos ocultos
-def gerar_labirinto(tamanho=7):
+# Função para gerar o labirinto com saída, monstros e recompensas
+def gerar_labirinto(tamanho=10):
     labirinto = []
     for _ in range(tamanho):
         linha = []
         for _ in range(tamanho):
             conteudo = random.choices(
-                ['⬜', '👻', '🎃', '🪨'], 
-                weights=[70, 10, 10, 10]  # Mais probabilidade de espaços vazios (⬜)
+                ['⬜', '🪨'],  # O jogador só pode andar nos espaços vazios (⬜), as pedras são bloqueios
+                weights=[70, 30]  # 70% de chance de espaços vazios, 30% de pedras
             )[0]
             linha.append(conteudo)
         labirinto.append(linha)
 
-    # Colocar a saída em uma posição aleatória (não nas bordas)
-    saida_x, saida_y = random.randint(1, tamanho-2), random.randint(1, tamanho-2)
-    labirinto[saida_x][saida_y] = '🚪'  # Saída
+    # Colocar monstros e recompensas de forma aleatória
+    for _ in range(5):  # Colocar 5 monstros
+        while True:
+            x, y = random.randint(1, tamanho-2), random.randint(1, tamanho-2)
+            if labirinto[x][y] == '⬜':
+                labirinto[x][y] = '👻'
+                break
+    
+    for _ in range(3):  # Colocar 3 recompensas
+        while True:
+            x, y = random.randint(1, tamanho-2), random.randint(1, tamanho-2)
+            if labirinto[x][y] == '⬜':
+                labirinto[x][y] = '🎃'
+                break
+
+    # Colocar a saída em uma posição aleatória
+    while True:
+        saida_x, saida_y = random.randint(1, tamanho-2), random.randint(1, tamanho-2)
+        if labirinto[saida_x][saida_y] == '⬜':  # A saída só pode ser em um espaço vazio
+            labirinto[saida_x][saida_y] = '🚪'
+            break
 
     return labirinto
 
-# Função para mostrar o labirinto atual com a posição do jogador e visibilidade ao redor
+# Função para mostrar o labirinto atual com a posição do jogador e as paredes de pedra
 def mostrar_labirinto(labirinto, posicao):
     mapa = ""
     x, y = posicao
     for i in range(len(labirinto)):
         for j in range(len(labirinto[i])):
-            # Colocar o emoji da posição do jogador
+            # Mostrar o emoji do jogador
             if (i, j) == posicao:
                 mapa += "🔴"
-            # Mostrar os blocos ao redor do jogador (até 1 bloco de distância), mas ocultar conteúdo até chegar
-            elif abs(x - i) <= 1 and abs(y - j) <= 1:
-                if labirinto[i][j] in ['👻', '🎃', '🚪']:  # Não revelar conteúdo de monstros ou recompensas
-                    mapa += '⬜'
-                else:
-                    mapa += labirinto[i][j]
+            # Mostrar os blocos andáveis ou as pedras
+            elif labirinto[i][j] in ['👻', '🎃', '🚪']:  # Não revelar monstros, recompensas ou saída até pisar neles
+                mapa += '⬜'
             else:
-                mapa += "⬛"  # Emoji preto (sala escondida)
+                mapa += labirinto[i][j]  # Mostrar as pedras e espaços vazios
         mapa += "\n"
     return mapa
 
@@ -175,10 +190,10 @@ jogadores_labirinto = {}
 @bot.message_handler(commands=['labirinto'])
 def iniciar_labirinto(message):
     id_usuario = message.from_user.id
-    tamanho = 7  # Tamanho do labirinto (7x7 para mais complexidade)
+    tamanho = 10  # Tamanho do labirinto (10x10 para mais complexidade)
     
     labirinto = gerar_labirinto(tamanho)
-    posicao_inicial = (0, 0)  # O jogador começa no canto superior esquerdo
+    posicao_inicial = (1, 1)  # O jogador começa em uma posição inicial fixa ou aleatória
     
     jogadores_labirinto[id_usuario] = {
         "labirinto": labirinto,
@@ -186,7 +201,7 @@ def iniciar_labirinto(message):
     }
     
     mapa = mostrar_labirinto(labirinto, posicao_inicial)
-    bot.send_message(message.chat.id, f"🏰 Bem-vindo ao Labirinto! Seu objetivo é encontrar a saída (🚪). Escolha uma direção: /norte, /sul, /leste ou /oeste.\n\n{mapa}")
+    bot.send_message(message.chat.id, f"🏰 Bem-vindo ao Labirinto de Pedras! Seu objetivo é encontrar a saída (🚪). Escolha uma direção: /norte, /sul, /leste ou /oeste.\n\n{mapa}")
 
 @bot.message_handler(commands=['norte', 'sul', 'leste', 'oeste'])
 def mover_labirinto(message):
@@ -200,7 +215,7 @@ def mover_labirinto(message):
     labirinto = jogador["labirinto"]
     posicao_atual = jogador["posicao"]
     
-    nova_posicao = mover_posicao(posicao_atual, direcao, len(labirinto))
+    nova_posicao = mover_posicao(posicao_atual, direcao, len(labirinto), labirinto)
     
     if nova_posicao != posicao_atual:  # Se a nova posição for válida
         jogadores_labirinto[id_usuario]["posicao"] = nova_posicao
@@ -228,18 +243,18 @@ def mover_labirinto(message):
     else:
         bot.send_message(message.chat.id, "👻 Você não pode ir nessa direção!")
 
-# Função para calcular a nova posição com base na direção
-def mover_posicao(posicao_atual, direcao, tamanho_labirinto):
+# Função para calcular a nova posição com base na direção, sem permitir passar por pedras
+def mover_posicao(posicao_atual, direcao, tamanho_labirinto, labirinto):
     x, y = posicao_atual
-    if direcao == 'norte' and x > 0:
+    if direcao == 'norte' and x > 0 and labirinto[x-1][y] != '🪨':
         return (x - 1, y)
-    elif direcao == 'sul' and x < tamanho_labirinto - 1:
+    elif direcao == 'sul' and x < tamanho_labirinto - 1 and labirinto[x+1][y] != '🪨':
         return (x + 1, y)
-    elif direcao == 'leste' and y < tamanho_labirinto - 1:
+    elif direcao == 'leste' and y < tamanho_labirinto - 1 and labirinto[x][y+1] != '🪨':
         return (x, y + 1)
-    elif direcao == 'oeste' and y > 0:
+    elif direcao == 'oeste' and y > 0 and labirinto[x][y-1] != '🪨':
         return (x, y - 1)
-    return posicao_atual  # Se a direção for inválida, retorna a posição atual
+    return posicao_atual  # Se a direção for inválida ou for uma pedra, retorna a posição atual
 
 def process_tasks():
     while True:

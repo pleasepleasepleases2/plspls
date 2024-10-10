@@ -130,7 +130,7 @@ conn, cursor = conectar_banco_dados()
 task_queue = Queue()
 import random
 
-# Função para gerar o labirinto com menos recompensas e travessuras
+# Função para gerar o labirinto com saída e conteúdos ocultos
 def gerar_labirinto(tamanho=7):
     labirinto = []
     for _ in range(tamanho):
@@ -142,9 +142,14 @@ def gerar_labirinto(tamanho=7):
             )[0]
             linha.append(conteudo)
         labirinto.append(linha)
+
+    # Colocar a saída em uma posição aleatória (não nas bordas)
+    saida_x, saida_y = random.randint(1, tamanho-2), random.randint(1, tamanho-2)
+    labirinto[saida_x][saida_y] = '🚪'  # Saída
+
     return labirinto
 
-# Função para mostrar o labirinto atual com a posição do jogador representada por 🔴 e visibilidade ao redor
+# Função para mostrar o labirinto atual com a posição do jogador e visibilidade ao redor
 def mostrar_labirinto(labirinto, posicao):
     mapa = ""
     x, y = posicao
@@ -153,15 +158,18 @@ def mostrar_labirinto(labirinto, posicao):
             # Colocar o emoji da posição do jogador
             if (i, j) == posicao:
                 mapa += "🔴"
-            # Mostrar os blocos ao redor do jogador (até 1 bloco de distância)
+            # Mostrar os blocos ao redor do jogador (até 1 bloco de distância), mas ocultar conteúdo até chegar
             elif abs(x - i) <= 1 and abs(y - j) <= 1:
-                mapa += labirinto[i][j]
+                if labirinto[i][j] in ['👻', '🎃', '🚪']:  # Não revelar conteúdo de monstros ou recompensas
+                    mapa += '⬜'
+                else:
+                    mapa += labirinto[i][j]
             else:
                 mapa += "⬛"  # Emoji preto (sala escondida)
         mapa += "\n"
     return mapa
 
-# Dicionário para armazenar o labirinto e a posição dos jogadores
+# Dicionário para armazenar o labirinto e posição dos jogadores
 jogadores_labirinto = {}
 
 @bot.message_handler(commands=['labirinto'])
@@ -178,7 +186,7 @@ def iniciar_labirinto(message):
     }
     
     mapa = mostrar_labirinto(labirinto, posicao_inicial)
-    bot.send_message(message.chat.id, f"🏰 Bem-vindo ao Labirinto de Pedras! Escolha uma direção: /norte, /sul, /leste ou /oeste.\n\n{mapa}")
+    bot.send_message(message.chat.id, f"🏰 Bem-vindo ao Labirinto! Seu objetivo é encontrar a saída (🚪). Escolha uma direção: /norte, /sul, /leste ou /oeste.\n\n{mapa}")
 
 @bot.message_handler(commands=['norte', 'sul', 'leste', 'oeste'])
 def mover_labirinto(message):
@@ -198,20 +206,25 @@ def mover_labirinto(message):
         jogadores_labirinto[id_usuario]["posicao"] = nova_posicao
         conteudo = labirinto[nova_posicao[0]][nova_posicao[1]]
         
-        # Mostrar o novo labirinto após o movimento
-        mapa = mostrar_labirinto(labirinto, nova_posicao)
-        if conteudo == '👻':
-            bot.send_message(message.chat.id, f"👻 Uh oh! Você encontrou um monstro e perdeu 20 cenouras!\n\n{mapa}")
-            conn, cursor = conectar_banco_dados()
-            cursor.execute("UPDATE usuarios SET cenouras = cenouras - 20 WHERE id_usuario = %s", (id_usuario,))
-            conn.commit()
-        elif conteudo == '🎃':
-            bot.send_message(message.chat.id, f"🎃 Boa escolha! Você encontrou uma recompensa de 50 cenouras!\n\n{mapa}")
-            conn, cursor = conectar_banco_dados()
-            cursor.execute("UPDATE usuarios SET cenouras = cenouras + 50 WHERE id_usuario = %s", (id_usuario,))
-            conn.commit()
+        # Verificar se o jogador chegou na saída
+        if conteudo == '🚪':
+            bot.send_message(message.chat.id, f"🏆 Parabéns! Você encontrou a saída e completou o labirinto!\n\n{mostrar_labirinto(labirinto, nova_posicao)}")
+            del jogadores_labirinto[id_usuario]  # Remover o jogador do labirinto
         else:
-            bot.send_message(message.chat.id, f"🌕 Você avançou pelo labirinto.\n\n{mapa}")
+            mapa = mostrar_labirinto(labirinto, nova_posicao)
+            # Revelar o conteúdo do bloco ao chegar nele
+            if conteudo == '👻':
+                bot.send_message(message.chat.id, f"👻 Uh oh! Você encontrou um monstro e perdeu 20 cenouras!\n\n{mapa}")
+                conn, cursor = conectar_banco_dados()
+                cursor.execute("UPDATE usuarios SET cenouras = cenouras - 20 WHERE id_usuario = %s", (id_usuario,))
+                conn.commit()
+            elif conteudo == '🎃':
+                bot.send_message(message.chat.id, f"🎃 Boa escolha! Você encontrou uma recompensa de 50 cenouras!\n\n{mapa}")
+                conn, cursor = conectar_banco_dados()
+                cursor.execute("UPDATE usuarios SET cenouras = cenouras + 50 WHERE id_usuario = %s", (id_usuario,))
+                conn.commit()
+            else:
+                bot.send_message(message.chat.id, f"🌕 Você avançou pelo labirinto.\n\n{mapa}")
     else:
         bot.send_message(message.chat.id, "👻 Você não pode ir nessa direção!")
 

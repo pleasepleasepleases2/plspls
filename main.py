@@ -130,32 +130,38 @@ conn, cursor = conectar_banco_dados()
 task_queue = Queue()
 import random
 
-# Função para gerar o labirinto com paredes de pedra
+# Função para gerar o labirinto com menos recompensas e travessuras
 def gerar_labirinto(tamanho=7):
     labirinto = []
     for _ in range(tamanho):
         linha = []
         for _ in range(tamanho):
-            conteudo = random.choice(['⬜', '👻', '🎃', '🪨'])  # Caminho vazio, monstro, recompensa, ou parede
+            conteudo = random.choices(
+                ['⬜', '👻', '🎃', '🪨'], 
+                weights=[70, 10, 10, 10]  # Mais probabilidade de espaços vazios (⬜)
+            )[0]
             linha.append(conteudo)
         labirinto.append(linha)
     return labirinto
 
-# Função para mostrar o labirinto atual com emojis de pedra e mostrar até 4 blocos ao redor
+# Função para mostrar o labirinto atual com a posição do jogador representada por 🔴 e visibilidade ao redor
 def mostrar_labirinto(labirinto, posicao):
     mapa = ""
     x, y = posicao
     for i in range(len(labirinto)):
         for j in range(len(labirinto[i])):
-            # Verificar se a posição está ao redor (até 1 bloco de distância em todas as direções)
-            if abs(x - i) <= 1 and abs(y - j) <= 1:
-                mapa += labirinto[i][j]  # Revelar o bloco ao redor
+            # Colocar o emoji da posição do jogador
+            if (i, j) == posicao:
+                mapa += "🔴"
+            # Mostrar os blocos ao redor do jogador (até 1 bloco de distância)
+            elif abs(x - i) <= 1 and abs(y - j) <= 1:
+                mapa += labirinto[i][j]
             else:
                 mapa += "⬛"  # Emoji preto (sala escondida)
         mapa += "\n"
     return mapa
 
-# Dicionário para armazenar o labirinto e posição dos jogadores
+# Dicionário para armazenar o labirinto e a posição dos jogadores
 jogadores_labirinto = {}
 
 @bot.message_handler(commands=['labirinto'])

@@ -130,7 +130,7 @@ conn, cursor = conectar_banco_dados()
 task_queue = Queue()
 import random
 
-# Função para gerar o labirinto com saída, monstros e recompensas
+# Função para gerar o labirinto com paredes, monstros, recompensas e saída
 def gerar_labirinto(tamanho=10):
     labirinto = []
     for _ in range(tamanho):
@@ -167,24 +167,24 @@ def gerar_labirinto(tamanho=10):
 
     return labirinto
 
-# Função para mostrar o labirinto atual com a posição do jogador e as paredes de pedra
+# Função para mostrar o labirinto com visibilidade limitada
 def mostrar_labirinto(labirinto, posicao):
     mapa = ""
     x, y = posicao
     for i in range(len(labirinto)):
         for j in range(len(labirinto[i])):
-            # Mostrar o emoji do jogador
+            # Mostrar a posição atual do jogador
             if (i, j) == posicao:
                 mapa += "🔴"
-            # Mostrar os blocos andáveis ou as pedras
-            elif labirinto[i][j] in ['👻', '🎃', '🚪']:  # Não revelar monstros, recompensas ou saída até pisar neles
-                mapa += '⬜'
+            # Revelar as células ao redor do jogador (cima, baixo, esquerda, direita)
+            elif abs(x - i) <= 1 and abs(y - j) <= 1:
+                mapa += labirinto[i][j]
             else:
-                mapa += labirinto[i][j]  # Mostrar as pedras e espaços vazios
+                mapa += "⬛"  # Células ainda não reveladas
         mapa += "\n"
     return mapa
 
-# Dicionário para armazenar o labirinto e posição dos jogadores
+# Dicionário para armazenar o labirinto e a posição dos jogadores
 jogadores_labirinto = {}
 
 @bot.message_handler(commands=['labirinto'])
@@ -201,7 +201,7 @@ def iniciar_labirinto(message):
     }
     
     mapa = mostrar_labirinto(labirinto, posicao_inicial)
-    bot.send_message(message.chat.id, f"🏰 Bem-vindo ao Labirinto de Pedras! Seu objetivo é encontrar a saída (🚪). Escolha uma direção: /norte, /sul, /leste ou /oeste.\n\n{mapa}")
+    bot.send_message(message.chat.id, f"🏰 Bem-vindo ao Labirinto! Seu objetivo é encontrar a saída (🚪). Escolha uma direção: /norte, /sul, /leste ou /oeste.\n\n{mapa}")
 
 @bot.message_handler(commands=['norte', 'sul', 'leste', 'oeste'])
 def mover_labirinto(message):

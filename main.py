@@ -146,27 +146,53 @@ def verificar_vitoria(tabuleiro, jogador):
 def verificar_empate(tabuleiro):
     return all(celula != '⬜' for linha in tabuleiro for celula in linha)
 
-# Função para o bot fazer uma jogada
-def bot_fazer_jogada(tabuleiro, simbolo_bot, simbolo_jogador):
-    # 60% de chance do bot fazer a melhor jogada
-    if random.random() < 0.6:
-        # Tentar vencer ou bloquear o jogador
+# Função Minimax para determinar a melhor jogada para o bot
+def minimax(tabuleiro, profundidade, is_bot, simbolo_bot, simbolo_jogador):
+    if verificar_vitoria(tabuleiro, simbolo_bot):
+        return 10 - profundidade  # Quanto mais rápido vencer, melhor o resultado
+    elif verificar_vitoria(tabuleiro, simbolo_jogador):
+        return profundidade - 10  # Quanto mais rápido perder, pior o resultado
+    elif verificar_empate(tabuleiro):
+        return 0  # Empate
+
+    if is_bot:
+        melhor_valor = -float('inf')
         for i in range(3):
             for j in range(3):
                 if tabuleiro[i][j] == '⬜':
-                    # Simular jogada do bot
                     tabuleiro[i][j] = simbolo_bot
-                    if verificar_vitoria(tabuleiro, simbolo_bot):
-                        return tabuleiro  # Se for uma jogada vencedora, retorna
-                    tabuleiro[i][j] = '⬜'  # Desfaz a jogada
-                    
-                    # Simular jogada do jogador para bloquear
+                    valor = minimax(tabuleiro, profundidade + 1, False, simbolo_bot, simbolo_jogador)
+                    tabuleiro[i][j] = '⬜'
+                    melhor_valor = max(melhor_valor, valor)
+        return melhor_valor
+    else:
+        melhor_valor = float('inf')
+        for i in range(3):
+            for j in range(3):
+                if tabuleiro[i][j] == '⬜':
                     tabuleiro[i][j] = simbolo_jogador
-                    if verificar_vitoria(tabuleiro, simbolo_jogador):
-                        tabuleiro[i][j] = simbolo_bot
-                        return tabuleiro  # Bloqueia o jogador
-                    tabuleiro[i][j] = '⬜'  # Desfaz a jogada
+                    valor = minimax(tabuleiro, profundidade + 1, True, simbolo_bot, simbolo_jogador)
+                    tabuleiro[i][j] = '⬜'
+                    melhor_valor = min(melhor_valor, valor)
+        return melhor_valor
 
+# Função para o bot fazer uma jogada usando Minimax com 60% de chance
+def bot_fazer_jogada(tabuleiro, simbolo_bot, simbolo_jogador):
+    if random.random() < 0.6:  # 60% de chance de usar Minimax
+        melhor_valor = -float('inf')
+        melhor_jogada = None
+        for i in range(3):
+            for j in range(3):
+                if tabuleiro[i][j] == '⬜':
+                    tabuleiro[i][j] = simbolo_bot
+                    valor = minimax(tabuleiro, 0, False, simbolo_bot, simbolo_jogador)
+                    tabuleiro[i][j] = '⬜'
+                    if valor > melhor_valor:
+                        melhor_valor = valor
+                        melhor_jogada = (i, j)
+        if melhor_jogada:
+            tabuleiro[melhor_jogada[0]][melhor_jogada[1]] = simbolo_bot
+            return tabuleiro
     # 40% de chance de fazer uma jogada aleatória
     while True:
         i, j = random.randint(0, 2), random.randint(0, 2)

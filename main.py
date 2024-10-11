@@ -224,7 +224,7 @@ def iniciar_jogo(message):
     jogos_da_velha[id_usuario] = tabuleiro
     
     # Mostrar o tabuleiro inicial
-    bot.send_message(message.chat.id, f"Vamos jogar Jogo da Velha! Você é o 'X' e eu sou o 'O'.\n\n{mostrar_tabuleiro(tabuleiro)}")
+    bot.send_message(message.chat.id, f"Vamos jogar Jogo da Velha! Você é o '✔️' e eu sou o '❌'.\n\n{mostrar_tabuleiro(tabuleiro)}")
     
     # Enviar o tabuleiro com botões
     markup = criar_botoes_tabuleiro(tabuleiro)
@@ -255,7 +255,7 @@ def jogador_fazer_jogada(call):
     tabuleiro[i][j] = 'X'
     
     # Verificar se o jogador venceu
-    if verificar_vitoria(tabuleiro, 'X'):
+    if verificar_vitoria(tabuleiro, '✔️'):
         bot.edit_message_text(f"🎉 Parabéns! Você venceu!\n\n{mostrar_tabuleiro(tabuleiro)}", call.message.chat.id, call.message.message_id)
         del jogos_da_velha[id_usuario]
         return
@@ -267,10 +267,10 @@ def jogador_fazer_jogada(call):
         return
     
     # Jogada do bot
-    tabuleiro = bot_fazer_jogada(tabuleiro, 'O', 'X')
+    tabuleiro = bot_fazer_jogada(tabuleiro, '❌', '✔️')
     
     # Verificar se o bot venceu
-    if verificar_vitoria(tabuleiro, 'O'):
+    if verificar_vitoria(tabuleiro, '❌'):
         bot.edit_message_text(f"😎 Eu venci! Melhor sorte da próxima vez.\n\n{mostrar_tabuleiro(tabuleiro)}", call.message.chat.id, call.message.message_id)
         del jogos_da_velha[id_usuario]
         return

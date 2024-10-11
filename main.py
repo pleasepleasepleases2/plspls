@@ -132,49 +132,42 @@ task_queue = Queue()
 import random
 from telebot import types
 
-# Função para garantir que o jogador não fique cercado por pedras e tenha sempre um caminho até a saída
+# Função para garantir que o jogador tenha sempre um caminho livre até a saída
 def gerar_labirinto_com_caminho_e_validacao(tamanho=10):
     labirinto = [['🪨' for _ in range(tamanho)] for _ in range(tamanho)]
     
-    # Criar um caminho do início até a saída
+    # Definir o ponto inicial e final
     x, y = 1, 1  # Ponto inicial
+    saida_x, saida_y = tamanho - 2, random.randint(1, tamanho - 2)  # Saída em posição aleatória na borda inferior
+    
+    # Definir um caminho garantido até a saída usando backtracking
     caminho = [(x, y)]
     labirinto[x][y] = '⬜'
     
-    while True:
-        # Definir a saída aleatoriamente na borda inferior ou lateral direita
-        if random.random() > 0.5:
-            saida_x = tamanho - 2
-            saida_y = random.randint(1, tamanho - 2)
-        else:
-            saida_x = random.randint(1, tamanho - 2)
-            saida_y = tamanho - 2
-        
-        # Gerar o caminho até a saída
-        while (x, y) != (saida_x, saida_y):
-            direcoes = []
-            if x > 1 and labirinto[x-1][y] == '🪨':  # Norte
-                direcoes.append((-1, 0))
-            if x < tamanho - 2 and labirinto[x+1][y] == '🪨':  # Sul
-                direcoes.append((1, 0))
-            if y > 1 and labirinto[x][y-1] == '🪨':  # Oeste
-                direcoes.append((0, -1))
-            if y < tamanho - 2 and labirinto[x][y+1] == '🪨':  # Leste
-                direcoes.append((0, 1))
+    while (x, y) != (saida_x, saida_y):
+        direcoes = []
+        if x > 1 and labirinto[x-1][y] == '🪨':  # Norte
+            direcoes.append((-1, 0))
+        if x < tamanho - 2 and labirinto[x+1][y] == '🪨':  # Sul
+            direcoes.append((1, 0))
+        if y > 1 and labirinto[x][y-1] == '🪨':  # Oeste
+            direcoes.append((0, -1))
+        if y < tamanho - 2 and labirinto[x][y+1] == '🪨':  # Leste
+            direcoes.append((0, 1))
 
-            if not direcoes:
-                break  # Evitar que o caminho trave se não houver mais direções válidas
+        if not direcoes:
+            # Retroceder se não houver direções disponíveis
+            x, y = caminho.pop()
+        else:
             dx, dy = random.choice(direcoes)
             x += dx
             y += dy
             labirinto[x][y] = '⬜'
             caminho.append((x, y))
-        
-        # Colocar a saída
-        labirinto[saida_x][saida_y] = '🚪'
-        if len(caminho) > tamanho * 2:  # Garantir que o caminho seja longo o suficiente
-            break
 
+    # Colocar a saída
+    labirinto[saida_x][saida_y] = '🚪'
+    
     # Adicionar monstros e recompensas fora do caminho garantido
     for _ in range(5):
         while True:

@@ -216,7 +216,7 @@ def iniciar_labirinto(message):
     
     labirinto = gerar_labirinto_com_caminho_e_validacao(tamanho)
     posicao_inicial = (1, 1)  # O jogador começa em uma posição inicial fixa ou aleatória
-    movimentos_restantes = 25  # Limite de movimentos para encontrar a saída
+    movimentos_restantes = 35  # Limite de movimentos para encontrar a saída
     
     jogadores_labirinto[id_usuario] = {
         "labirinto": labirinto,

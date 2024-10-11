@@ -129,6 +129,7 @@ cache = dc.Cache('./cache')
 conn, cursor = conectar_banco_dados()
 task_queue = Queue()
 import random
+from telebot import types
 
 # Função para gerar o labirinto com paredes, monstros, recompensas e saída
 def gerar_labirinto(tamanho=10):
@@ -201,16 +202,27 @@ def iniciar_labirinto(message):
     }
     
     mapa = mostrar_labirinto(labirinto, posicao_inicial)
-    bot.send_message(message.chat.id, f"🏰 Bem-vindo ao Labirinto! Seu objetivo é encontrar a saída (🚪). Escolha uma direção: /norte, /sul, /leste ou /oeste.\n\n{mapa}")
+    
+    # Criar os botões de navegação
+    markup = types.InlineKeyboardMarkup(row_width=3)
+    botao_cima = types.InlineKeyboardButton("⬆️", callback_data="norte")
+    botao_esquerda = types.InlineKeyboardButton("⬅️", callback_data="oeste")
+    botao_direita = types.InlineKeyboardButton("➡️", callback_data="leste")
+    botao_baixo = types.InlineKeyboardButton("⬇️", callback_data="sul")
+    markup.add(botao_cima)
+    markup.add(botao_esquerda, botao_direita)
+    markup.add(botao_baixo)
+    
+    bot.send_message(message.chat.id, f"🏰 Bem-vindo ao Labirinto! Seu objetivo é encontrar a saída (🚪).\n\n{mapa}", reply_markup=markup)
 
-@bot.message_handler(commands=['norte', 'sul', 'leste', 'oeste'])
-def mover_labirinto(message):
-    id_usuario = message.from_user.id
+@bot.callback_query_handler(func=lambda call: call.data in ['norte', 'sul', 'leste', 'oeste'])
+def mover_labirinto(call):
+    id_usuario = call.from_user.id
     if id_usuario not in jogadores_labirinto:
-        bot.send_message(message.chat.id, "👻 Você precisa iniciar o labirinto primeiro com o comando /labirinto.")
+        bot.send_message(call.message.chat.id, "👻 Você precisa iniciar o labirinto primeiro com o comando /labirinto.")
         return
     
-    direcao = message.text[1:]  # Remove o "/" para pegar a direção
+    direcao = call.data  # Pega a direção do botão clicado
     jogador = jogadores_labirinto[id_usuario]
     labirinto = jogador["labirinto"]
     posicao_atual = jogador["posicao"]
@@ -223,25 +235,28 @@ def mover_labirinto(message):
         
         # Verificar se o jogador chegou na saída
         if conteudo == '🚪':
-            bot.send_message(message.chat.id, f"🏆 Parabéns! Você encontrou a saída e completou o labirinto!\n\n{mostrar_labirinto(labirinto, nova_posicao)}")
+            bot.edit_message_text(f"🏆 Parabéns! Você encontrou a saída e completou o labirinto!\n\n{mostrar_labirinto(labirinto, nova_posicao)}",
+                                  call.message.chat.id, call.message.message_id)
             del jogadores_labirinto[id_usuario]  # Remover o jogador do labirinto
         else:
             mapa = mostrar_labirinto(labirinto, nova_posicao)
             # Revelar o conteúdo do bloco ao chegar nele
             if conteudo == '👻':
-                bot.send_message(message.chat.id, f"👻 Uh oh! Você encontrou um monstro e perdeu 20 cenouras!\n\n{mapa}")
+                bot.edit_message_text(f"👻 Uh oh! Você encontrou um monstro e perdeu 20 cenouras!\n\n{mapa}",
+                                      call.message.chat.id, call.message.message_id)
                 conn, cursor = conectar_banco_dados()
                 cursor.execute("UPDATE usuarios SET cenouras = cenouras - 20 WHERE id_usuario = %s", (id_usuario,))
                 conn.commit()
             elif conteudo == '🎃':
-                bot.send_message(message.chat.id, f"🎃 Boa escolha! Você encontrou uma recompensa de 50 cenouras!\n\n{mapa}")
+                bot.edit_message_text(f"🎃 Boa escolha! Você encontrou uma recompensa de 50 cenouras!\n\n{mapa}",
+                                      call.message.chat.id, call.message.message_id)
                 conn, cursor = conectar_banco_dados()
                 cursor.execute("UPDATE usuarios SET cenouras = cenouras + 50 WHERE id_usuario = %s", (id_usuario,))
                 conn.commit()
             else:
-                bot.send_message(message.chat.id, f"🌕 Você avançou pelo labirinto.\n\n{mapa}")
+                bot.edit_message_text(f"🌕 Você avançou pelo labirinto.\n\n{mapa}", call.message.chat.id, call.message.message_id, reply_markup=call.message.reply_markup)
     else:
-        bot.send_message(message.chat.id, "👻 Você não pode ir nessa direção!")
+        bot.answer_callback_query(call.id, "👻 Você não pode ir nessa direção!")
 
 # Função para calcular a nova posição com base na direção, sem permitir passar por pedras
 def mover_posicao(posicao_atual, direcao, tamanho_labirinto, labirinto):

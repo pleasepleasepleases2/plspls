@@ -116,6 +116,9 @@ def index():
 import random
 from telebot import types
 
+import random
+from telebot import types
+
 # Inicializar o tabuleiro do jogo da velha
 def inicializar_tabuleiro():
     return [['⬜', '⬜', '⬜'], ['⬜', '⬜', '⬜'], ['⬜', '⬜', '⬜']]
@@ -171,6 +174,20 @@ def bot_fazer_jogada(tabuleiro, simbolo_bot, simbolo_jogador):
             tabuleiro[i][j] = simbolo_bot
             return tabuleiro
 
+# Função para criar os botões do tabuleiro
+def criar_botoes_tabuleiro(tabuleiro):
+    markup = types.InlineKeyboardMarkup(row_width=3)
+    botoes = []
+    for i in range(3):
+        for j in range(3):
+            if tabuleiro[i][j] == '⬜':
+                botao = types.InlineKeyboardButton(f"{i*3+j+1}", callback_data=f"jogada_{i}_{j}")
+            else:
+                botao = types.InlineKeyboardButton(tabuleiro[i][j], callback_data=f"jogada_disabled")
+            botoes.append(botao)
+    markup.add(*botoes)
+    return markup
+
 # Dicionário para armazenar os jogos em andamento
 jogos_da_velha = {}
 
@@ -183,11 +200,8 @@ def iniciar_jogo(message):
     # Mostrar o tabuleiro inicial
     bot.send_message(message.chat.id, f"Vamos jogar Jogo da Velha! Você é o 'X' e eu sou o 'O'.\n\n{mostrar_tabuleiro(tabuleiro)}")
     
-    # Criar botões para escolher a posição (1-9 representando as posições do tabuleiro)
-    markup = types.InlineKeyboardMarkup(row_width=3)
-    botoes = [types.InlineKeyboardButton(f"{i+1}", callback_data=f"jogada_{i}") for i in range(9)]
-    markup.add(*botoes)
-    
+    # Enviar o tabuleiro com botões
+    markup = criar_botoes_tabuleiro(tabuleiro)
     bot.send_message(message.chat.id, "Escolha sua jogada (1-9):", reply_markup=markup)
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith('jogada_'))
@@ -196,13 +210,16 @@ def jogador_fazer_jogada(call):
     if id_usuario not in jogos_da_velha:
         bot.send_message(call.message.chat.id, "Você não iniciou um jogo da velha. Use /jogodavelha para começar.")
         return
-    
+
+    # Se o botão foi desabilitado, o jogador não pode escolher novamente
+    if call.data == "jogada_disabled":
+        bot.answer_callback_query(call.id, "Essa posição já está ocupada!")
+        return
+
     # Obter o tabuleiro e a jogada do jogador
     tabuleiro = jogos_da_velha[id_usuario]
-    jogada = int(call.data.split('_')[1])
-    
-    # Converter jogada de 1-9 para coordenadas (i, j)
-    i, j = divmod(jogada, 3)
+    _, i, j = call.data.split('_')
+    i, j = int(i), int(j)
     
     if tabuleiro[i][j] != '⬜':
         bot.answer_callback_query(call.id, "Essa posição já está ocupada!")
@@ -239,7 +256,8 @@ def jogador_fazer_jogada(call):
         return
     
     # Atualizar o tabuleiro e pedir a próxima jogada do jogador
-    bot.edit_message_text(f"Seu turno!\n\n{mostrar_tabuleiro(tabuleiro)}", call.message.chat.id, call.message.message_id)
+    markup = criar_botoes_tabuleiro(tabuleiro)
+    bot.edit_message_text(f"Seu turno!\n\n{mostrar_tabuleiro(tabuleiro)}", call.message.chat.id, call.message.message_id, reply_markup=markup)
 
 
 @app.route(WEBHOOK_URL_PATH, methods=['POST'])

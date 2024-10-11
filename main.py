@@ -113,6 +113,134 @@ def set_webhook():
 @app.route('/', methods=['GET', 'HEAD'])
 def index():
     return 'Server is running.'
+import random
+from telebot import types
+
+# Inicializar o tabuleiro do jogo da velha
+def inicializar_tabuleiro():
+    return [['⬜', '⬜', '⬜'], ['⬜', '⬜', '⬜'], ['⬜', '⬜', '⬜']]
+
+# Função para mostrar o tabuleiro
+def mostrar_tabuleiro(tabuleiro):
+    return '\n'.join([' '.join(linha) for linha in tabuleiro])
+
+# Função para verificar se alguém ganhou
+def verificar_vitoria(tabuleiro, jogador):
+    # Verificar linhas, colunas e diagonais
+    for linha in tabuleiro:
+        if all(celula == jogador for celula in linha):
+            return True
+    for coluna in range(3):
+        if all(tabuleiro[linha][coluna] == jogador for linha in range(3)):
+            return True
+    if tabuleiro[0][0] == tabuleiro[1][1] == tabuleiro[2][2] == jogador:
+        return True
+    if tabuleiro[0][2] == tabuleiro[1][1] == tabuleiro[2][0] == jogador:
+        return True
+    return False
+
+# Função para verificar se há empate
+def verificar_empate(tabuleiro):
+    return all(celula != '⬜' for linha in tabuleiro for celula in linha)
+
+# Função para o bot fazer uma jogada
+def bot_fazer_jogada(tabuleiro, simbolo_bot, simbolo_jogador):
+    # 60% de chance do bot fazer a melhor jogada
+    if random.random() < 0.6:
+        # Tentar vencer ou bloquear o jogador
+        for i in range(3):
+            for j in range(3):
+                if tabuleiro[i][j] == '⬜':
+                    # Simular jogada do bot
+                    tabuleiro[i][j] = simbolo_bot
+                    if verificar_vitoria(tabuleiro, simbolo_bot):
+                        return tabuleiro  # Se for uma jogada vencedora, retorna
+                    tabuleiro[i][j] = '⬜'  # Desfaz a jogada
+                    
+                    # Simular jogada do jogador para bloquear
+                    tabuleiro[i][j] = simbolo_jogador
+                    if verificar_vitoria(tabuleiro, simbolo_jogador):
+                        tabuleiro[i][j] = simbolo_bot
+                        return tabuleiro  # Bloqueia o jogador
+                    tabuleiro[i][j] = '⬜'  # Desfaz a jogada
+
+    # 40% de chance de fazer uma jogada aleatória
+    while True:
+        i, j = random.randint(0, 2), random.randint(0, 2)
+        if tabuleiro[i][j] == '⬜':
+            tabuleiro[i][j] = simbolo_bot
+            return tabuleiro
+
+# Dicionário para armazenar os jogos em andamento
+jogos_da_velha = {}
+
+@bot.message_handler(commands=['jogodavelha'])
+def iniciar_jogo(message):
+    id_usuario = message.from_user.id
+    tabuleiro = inicializar_tabuleiro()
+    jogos_da_velha[id_usuario] = tabuleiro
+    
+    # Mostrar o tabuleiro inicial
+    bot.send_message(message.chat.id, f"Vamos jogar Jogo da Velha! Você é o 'X' e eu sou o 'O'.\n\n{mostrar_tabuleiro(tabuleiro)}")
+    
+    # Criar botões para escolher a posição (1-9 representando as posições do tabuleiro)
+    markup = types.InlineKeyboardMarkup(row_width=3)
+    botoes = [types.InlineKeyboardButton(f"{i+1}", callback_data=f"jogada_{i}") for i in range(9)]
+    markup.add(*botoes)
+    
+    bot.send_message(message.chat.id, "Escolha sua jogada (1-9):", reply_markup=markup)
+
+@bot.callback_query_handler(func=lambda call: call.data.startswith('jogada_'))
+def jogador_fazer_jogada(call):
+    id_usuario = call.from_user.id
+    if id_usuario not in jogos_da_velha:
+        bot.send_message(call.message.chat.id, "Você não iniciou um jogo da velha. Use /jogodavelha para começar.")
+        return
+    
+    # Obter o tabuleiro e a jogada do jogador
+    tabuleiro = jogos_da_velha[id_usuario]
+    jogada = int(call.data.split('_')[1])
+    
+    # Converter jogada de 1-9 para coordenadas (i, j)
+    i, j = divmod(jogada, 3)
+    
+    if tabuleiro[i][j] != '⬜':
+        bot.answer_callback_query(call.id, "Essa posição já está ocupada!")
+        return
+    
+    # Fazer a jogada do jogador
+    tabuleiro[i][j] = 'X'
+    
+    # Verificar se o jogador venceu
+    if verificar_vitoria(tabuleiro, 'X'):
+        bot.edit_message_text(f"🎉 Parabéns! Você venceu!\n\n{mostrar_tabuleiro(tabuleiro)}", call.message.chat.id, call.message.message_id)
+        del jogos_da_velha[id_usuario]
+        return
+    
+    # Verificar empate
+    if verificar_empate(tabuleiro):
+        bot.edit_message_text(f"😐 Empate!\n\n{mostrar_tabuleiro(tabuleiro)}", call.message.chat.id, call.message.message_id)
+        del jogos_da_velha[id_usuario]
+        return
+    
+    # Jogada do bot
+    tabuleiro = bot_fazer_jogada(tabuleiro, 'O', 'X')
+    
+    # Verificar se o bot venceu
+    if verificar_vitoria(tabuleiro, 'O'):
+        bot.edit_message_text(f"😎 Eu venci! Melhor sorte da próxima vez.\n\n{mostrar_tabuleiro(tabuleiro)}", call.message.chat.id, call.message.message_id)
+        del jogos_da_velha[id_usuario]
+        return
+    
+    # Verificar empate após a jogada do bot
+    if verificar_empate(tabuleiro):
+        bot.edit_message_text(f"😐 Empate!\n\n{mostrar_tabuleiro(tabuleiro)}", call.message.chat.id, call.message.message_id)
+        del jogos_da_velha[id_usuario]
+        return
+    
+    # Atualizar o tabuleiro e pedir a próxima jogada do jogador
+    bot.edit_message_text(f"Seu turno!\n\n{mostrar_tabuleiro(tabuleiro)}", call.message.chat.id, call.message.message_id)
+
 
 @app.route(WEBHOOK_URL_PATH, methods=['POST'])
 def webhook():

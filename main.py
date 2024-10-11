@@ -118,6 +118,8 @@ from telebot import types
 
 import random
 from telebot import types
+import random
+from telebot import types
 
 # Inicializar o tabuleiro do jogo da velha
 def inicializar_tabuleiro():
@@ -252,7 +254,7 @@ def jogador_fazer_jogada(call):
         return
     
     # Fazer a jogada do jogador
-    tabuleiro[i][j] = 'X'
+    tabuleiro[i][j] = '✔️'
     
     # Verificar se o jogador venceu
     if verificar_vitoria(tabuleiro, '✔️'):
@@ -284,7 +286,6 @@ def jogador_fazer_jogada(call):
     # Atualizar o tabuleiro e pedir a próxima jogada do jogador
     markup = criar_botoes_tabuleiro(tabuleiro)
     bot.edit_message_text(f"Seu turno!\n\n{mostrar_tabuleiro(tabuleiro)}", call.message.chat.id, call.message.message_id, reply_markup=markup)
-
 
 @app.route(WEBHOOK_URL_PATH, methods=['POST'])
 def webhook():

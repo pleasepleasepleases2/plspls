@@ -211,7 +211,7 @@ def iniciar_labirinto(message):
     botao_esquerda = types.InlineKeyboardButton("⬅️", callback_data="oeste")
     botao_direita = types.InlineKeyboardButton("➡️", callback_data="leste")
     botao_baixo = types.InlineKeyboardButton("⬇️", callback_data="sul")
-    markup.add(botao_esquerda, botao_cima, botao_baixo, botao_direita)
+    markup.add(botao_cima, botao_esquerda, botao_direita, botao_baixo)
     
     bot.send_message(message.chat.id, f"🏰 Bem-vindo ao Labirinto! Você tem {movimentos_restantes} movimentos para escapar.\n\n{mapa}", reply_markup=markup)
 
@@ -266,8 +266,16 @@ def mover_labirinto(call):
                     cursor.execute("UPDATE usuarios SET cenouras = cenouras + 50 WHERE id_usuario = %s", (id_usuario,))
                     conn.commit()
             else:
+                # Atualizar os botões de navegação
+                markup = types.InlineKeyboardMarkup(row_width=4)
+                botao_cima = types.InlineKeyboardButton("⬆️", callback_data="norte")
+                botao_esquerda = types.InlineKeyboardButton("⬅️", callback_data="oeste")
+                botao_direita = types.InlineKeyboardButton("➡️", callback_data="leste")
+                botao_baixo = types.InlineKeyboardButton("⬇️", callback_data="sul")
+                markup.add(botao_cima, botao_esquerda, botao_direita, botao_baixo)
+
                 bot.edit_message_text(f"🌕 Você avançou pelo labirinto. Movimentos restantes: {movimentos_restantes}\n\n{mapa}",
-                                      call.message.chat.id, call.message.message_id, reply_markup=call.message.reply_markup)
+                                      call.message.chat.id, call.message.message_id, reply_markup=markup)
     else:
         bot.answer_callback_query(call.id, "👻 Você não pode ir nessa direção!")
 
@@ -279,6 +287,19 @@ def encerrar_ou_continuar(call):
         del jogadores_labirinto[id_usuario]  # Remover jogador
     elif call.data == 'continuar':
         bot.edit_message_text("🏃 Você decidiu continuar sua jornada! Boa sorte!", call.message.chat.id, call.message.message_id)
+
+# Função para calcular a nova posição com base na direção, sem permitir passar por pedras
+def mover_posicao(posicao_atual, direcao, tamanho_labirinto, labirinto):
+    x, y = posicao_atual
+    if direcao == 'norte' and x > 0 and labirinto[x-1][y] != '🪨':
+        return (x - 1, y)
+    elif direcao == 'sul' and x < tamanho_labirinto - 1 and labirinto[x+1][y] != '🪨':
+        return (x + 1, y)
+    elif direcao == 'leste' and y < tamanho_labirinto - 1 and labirinto[x][y+1] != '🪨':
+        return (x, y + 1)
+    elif direcao == 'oeste' and y > 0 and labirinto[x][y-1] != '🪨':
+        return (x, y - 1)
+    return posicao_atual  # Se a direção for inválida ou for uma pedra, retorna a posição atual
 
 
 def process_tasks():

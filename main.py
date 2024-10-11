@@ -131,42 +131,69 @@ task_queue = Queue()
 import random
 from telebot import types
 
-# Função para gerar o labirinto com paredes, monstros, recompensas e saída
-def gerar_labirinto(tamanho=10):
-    labirinto = []
-    for _ in range(tamanho):
-        linha = []
-        for _ in range(tamanho):
-            conteudo = random.choices(
-                ['⬜', '🪨'],  # O jogador só pode andar nos espaços vazios (⬜), as pedras são bloqueios
-                weights=[70, 30]  # 70% de chance de espaços vazios, 30% de pedras
-            )[0]
-            linha.append(conteudo)
-        labirinto.append(linha)
-
-    # Colocar monstros e recompensas de forma aleatória
-    for _ in range(5):  # Colocar 5 monstros
-        while True:
-            x, y = random.randint(1, tamanho-2), random.randint(1, tamanho-2)
-            if labirinto[x][y] == '⬜':
-                labirinto[x][y] = '👻'
-                break
+# Função para garantir que o jogador não fique cercado por pedras
+def gerar_labirinto_com_caminho(tamanho=10):
+    labirinto = [['🪨' for _ in range(tamanho)] for _ in range(tamanho)]
     
-    for _ in range(3):  # Colocar 3 recompensas
-        while True:
-            x, y = random.randint(1, tamanho-2), random.randint(1, tamanho-2)
-            if labirinto[x][y] == '⬜':
-                labirinto[x][y] = '🎃'
-                break
-
-    # Colocar a saída em uma posição aleatória
+    # Criar um caminho do início até a saída
+    x, y = 1, 1  # Ponto inicial
+    caminho = [(x, y)]
+    labirinto[x][y] = '⬜'
+    
     while True:
-        saida_x, saida_y = random.randint(1, tamanho-2), random.randint(1, tamanho-2)
-        if labirinto[saida_x][saida_y] == '⬜':  # A saída só pode ser em um espaço vazio
-            labirinto[saida_x][saida_y] = '🚪'
+        # Definir a saída aleatoriamente na borda inferior ou lateral direita
+        if random.random() > 0.5:
+            saida_x = tamanho - 2
+            saida_y = random.randint(1, tamanho - 2)
+        else:
+            saida_x = random.randint(1, tamanho - 2)
+            saida_y = tamanho - 2
+        
+        # Gerar o caminho até a saída
+        while (x, y) != (saida_x, saida_y):
+            direcoes = []
+            if x > 1 and labirinto[x-1][y] == '🪨':  # Norte
+                direcoes.append((-1, 0))
+            if x < tamanho - 2 and labirinto[x+1][y] == '🪨':  # Sul
+                direcoes.append((1, 0))
+            if y > 1 and labirinto[x][y-1] == '🪨':  # Oeste
+                direcoes.append((0, -1))
+            if y < tamanho - 2 and labirinto[x][y+1] == '🪨':  # Leste
+                direcoes.append((0, 1))
+
+            if not direcoes:
+                break  # Evitar que o caminho trave se não houver mais direções válidas
+            dx, dy = random.choice(direcoes)
+            x += dx
+            y += dy
+            labirinto[x][y] = '⬜'
+            caminho.append((x, y))
+        
+        # Colocar a saída
+        labirinto[saida_x][saida_y] = '🚪'
+        if len(caminho) > tamanho * 2:  # Garantir que o caminho seja longo o suficiente
             break
 
+    # Adicionar monstros e recompensas fora do caminho
+    for _ in range(5):
+        while True:
+            mx, my = random.randint(1, tamanho-2), random.randint(1, tamanho-2)
+            if labirinto[mx][my] == '🪨':
+                labirinto[mx][my] = '👻'
+                break
+    
+    for _ in range(3):
+        while True:
+            rx, ry = random.randint(1, tamanho-2), random.randint(1, tamanho-2)
+            if labirinto[rx][ry] == '🪨':
+                labirinto[rx][ry] = '🎃'
+                break
+
     return labirinto
+
+# Função para revelar todo o labirinto ao final do jogo
+def revelar_labirinto(labirinto):
+    return '\n'.join([''.join(linha) for linha in labirinto])
 
 # Função para mostrar o labirinto com visibilidade limitada
 def mostrar_labirinto(labirinto, posicao):
@@ -176,7 +203,7 @@ def mostrar_labirinto(labirinto, posicao):
         for j in range(len(labirinto[i])):
             # Mostrar a posição atual do jogador
             if (i, j) == posicao:
-                mapa += "🔴"
+                mapa += "🚶‍♀️"
             # Revelar as células ao redor do jogador (cima, baixo, esquerda, direita)
             elif abs(x - i) <= 1 and abs(y - j) <= 1:
                 mapa += labirinto[i][j]
@@ -193,7 +220,7 @@ def iniciar_labirinto(message):
     id_usuario = message.from_user.id
     tamanho = 10  # Tamanho do labirinto (10x10 para mais complexidade)
     
-    labirinto = gerar_labirinto(tamanho)
+    labirinto = gerar_labirinto_com_caminho(tamanho)
     posicao_inicial = (1, 1)  # O jogador começa em uma posição inicial fixa ou aleatória
     movimentos_restantes = 15  # Limite de movimentos para encontrar a saída
     
@@ -238,11 +265,11 @@ def mover_labirinto(call):
         
         # Verificar se o jogador chegou na saída
         if conteudo == '🚪':
-            bot.edit_message_text(f"🏆 Parabéns! Você encontrou a saída e escapou do labirinto!\n\n{mostrar_labirinto(labirinto, nova_posicao)}",
+            bot.edit_message_text(f"🏆 Parabéns! Você encontrou a saída e escapou do labirinto!\n\n{revelar_labirinto(labirinto)}",
                                   call.message.chat.id, call.message.message_id)
             del jogadores_labirinto[id_usuario]  # Remover o jogador do labirinto
         elif movimentos_restantes == 0:
-            bot.edit_message_text(f"😢 Seus movimentos acabaram! Você não conseguiu escapar da maldição...\n\n{mostrar_labirinto(labirinto, nova_posicao)}",
+            bot.edit_message_text(f"😢 Seus movimentos acabaram! Você não conseguiu escapar da maldição...\n\n{revelar_labirinto(labirinto)}",
                                   call.message.chat.id, call.message.message_id)
             del jogadores_labirinto[id_usuario]  # Fim do jogo, remover jogador
         else:

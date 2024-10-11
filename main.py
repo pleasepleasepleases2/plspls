@@ -128,11 +128,12 @@ sp = spotipy.Spotify(auth_manager=SpotifyClientCredentials(client_id=SPOTIFY_CLI
 cache = dc.Cache('./cache')  
 conn, cursor = conectar_banco_dados()
 task_queue = Queue()
+
 import random
 from telebot import types
 
-# Função para garantir que o jogador não fique cercado por pedras e sempre tenha um caminho até a saída
-def gerar_labirinto_com_caminho(tamanho=10):
+# Função para garantir que o jogador não fique cercado por pedras e tenha sempre um caminho até a saída
+def gerar_labirinto_com_caminho_e_validacao(tamanho=10):
     labirinto = [['🪨' for _ in range(tamanho)] for _ in range(tamanho)]
     
     # Criar um caminho do início até a saída
@@ -174,18 +175,18 @@ def gerar_labirinto_com_caminho(tamanho=10):
         if len(caminho) > tamanho * 2:  # Garantir que o caminho seja longo o suficiente
             break
 
-    # Adicionar monstros e recompensas fora do caminho
+    # Adicionar monstros e recompensas fora do caminho garantido
     for _ in range(5):
         while True:
             mx, my = random.randint(1, tamanho-2), random.randint(1, tamanho-2)
-            if labirinto[mx][my] == '🪨':
+            if labirinto[mx][my] == '🪨' and (mx, my) not in caminho:  # Não bloquear o caminho principal
                 labirinto[mx][my] = '👻'
                 break
     
     for _ in range(3):
         while True:
             rx, ry = random.randint(1, tamanho-2), random.randint(1, tamanho-2)
-            if labirinto[rx][ry] == '🪨':
+            if labirinto[rx][ry] == '🪨' and (rx, ry) not in caminho:  # Não bloquear o caminho principal
                 labirinto[rx][ry] = '🎃'
                 break
 
@@ -220,7 +221,7 @@ def iniciar_labirinto(message):
     id_usuario = message.from_user.id
     tamanho = 10  # Tamanho do labirinto (10x10 para mais complexidade)
     
-    labirinto = gerar_labirinto_com_caminho(tamanho)
+    labirinto = gerar_labirinto_com_caminho_e_validacao(tamanho)
     posicao_inicial = (1, 1)  # O jogador começa em uma posição inicial fixa ou aleatória
     movimentos_restantes = 15  # Limite de movimentos para encontrar a saída
     
@@ -346,6 +347,7 @@ def mover_posicao(posicao_atual, direcao, tamanho_labirinto, labirinto):
     elif direcao == 'oeste' and y > 0 and labirinto[x][y-1] != '🪨':
         return (x, y - 1)
     return posicao_atual  # Se a direção for inválida ou for uma pedra, retorna a posição atual
+
 
 def process_tasks():
     while True:

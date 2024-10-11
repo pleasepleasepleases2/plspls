@@ -131,7 +131,7 @@ task_queue = Queue()
 import random
 from telebot import types
 
-# Função para garantir que o jogador não fique cercado por pedras
+# Função para garantir que o jogador não fique cercado por pedras e sempre tenha um caminho até a saída
 def gerar_labirinto_com_caminho(tamanho=10):
     labirinto = [['🪨' for _ in range(tamanho)] for _ in range(tamanho)]
     
@@ -203,7 +203,7 @@ def mostrar_labirinto(labirinto, posicao):
         for j in range(len(labirinto[i])):
             # Mostrar a posição atual do jogador
             if (i, j) == posicao:
-                mapa += "🚶‍♀️"
+                mapa += "🔴"
             # Revelar as células ao redor do jogador (cima, baixo, esquerda, direita)
             elif abs(x - i) <= 1 and abs(y - j) <= 1:
                 mapa += labirinto[i][j]
@@ -276,10 +276,14 @@ def mover_labirinto(call):
             mapa = mostrar_labirinto(labirinto, nova_posicao)
             # Revelar o conteúdo do bloco ao chegar nele
             if conteudo == '👻' or conteudo == '🎃':
+                # Remover o monstro ou abóbora do labirinto
+                labirinto[nova_posicao[0]][nova_posicao[1]] = '⬜'
+                
                 markup_opcoes = types.InlineKeyboardMarkup(row_width=2)
                 botao_encerrar = types.InlineKeyboardButton("Encerrar", callback_data="encerrar")
                 botao_continuar = types.InlineKeyboardButton("Continuar", callback_data="continuar")
                 markup_opcoes.add(botao_encerrar, botao_continuar)
+                
                 if conteudo == '👻':
                     bot.edit_message_text(f"👻 Você encontrou um monstro e perdeu 20 cenouras! Você quer encerrar ou continuar?\n\n{mapa}",
                                           call.message.chat.id, call.message.message_id, reply_markup=markup_opcoes)

@@ -197,7 +197,7 @@ def mostrar_labirinto(labirinto, posicao):
         for j in range(len(labirinto[i])):
             # Mostrar a posição atual do jogador
             if (i, j) == posicao:
-                mapa += "🔴"
+                mapa += "🔦"
             # Revelar as células ao redor do jogador (cima, baixo, esquerda, direita)
             elif abs(x - i) <= 1 and abs(y - j) <= 1:
                 mapa += labirinto[i][j]
@@ -216,7 +216,7 @@ def iniciar_labirinto(message):
     
     labirinto = gerar_labirinto_com_caminho_e_validacao(tamanho)
     posicao_inicial = (1, 1)  # O jogador começa em uma posição inicial fixa ou aleatória
-    movimentos_restantes = 15  # Limite de movimentos para encontrar a saída
+    movimentos_restantes = 25  # Limite de movimentos para encontrar a saída
     
     jogadores_labirinto[id_usuario] = {
         "labirinto": labirinto,

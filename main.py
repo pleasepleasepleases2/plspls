@@ -286,7 +286,22 @@ def encerrar_ou_continuar(call):
         bot.edit_message_text("💀 Você decidiu encerrar sua jornada no labirinto. Fim de jogo!", call.message.chat.id, call.message.message_id)
         del jogadores_labirinto[id_usuario]  # Remover jogador
     elif call.data == 'continuar':
-        bot.edit_message_text("🏃 Você decidiu continuar sua jornada! Boa sorte!", call.message.chat.id, call.message.message_id)
+        jogador = jogadores_labirinto[id_usuario]
+        labirinto = jogador["labirinto"]
+        posicao = jogador["posicao"]
+        movimentos_restantes = jogador["movimentos"]
+
+        # Atualizar a mensagem com o labirinto e botões de navegação
+        mapa = mostrar_labirinto(labirinto, posicao)
+        markup = types.InlineKeyboardMarkup(row_width=4)
+        botao_cima = types.InlineKeyboardButton("⬆️", callback_data="norte")
+        botao_esquerda = types.InlineKeyboardButton("⬅️", callback_data="oeste")
+        botao_direita = types.InlineKeyboardButton("➡️", callback_data="leste")
+        botao_baixo = types.InlineKeyboardButton("⬇️", callback_data="sul")
+        markup.add(botao_cima, botao_esquerda, botao_direita, botao_baixo)
+
+        bot.edit_message_text(f"🏃 Você decidiu continuar sua jornada! Movimentos restantes: {movimentos_restantes}\n\n{mapa}",
+                              call.message.chat.id, call.message.message_id, reply_markup=markup)
 
 # Função para calcular a nova posição com base na direção, sem permitir passar por pedras
 def mover_posicao(posicao_atual, direcao, tamanho_labirinto, labirinto):
@@ -300,7 +315,6 @@ def mover_posicao(posicao_atual, direcao, tamanho_labirinto, labirinto):
     elif direcao == 'oeste' and y > 0 and labirinto[x][y-1] != '🪨':
         return (x, y - 1)
     return posicao_atual  # Se a direção for inválida ou for uma pedra, retorna a posição atual
-
 
 def process_tasks():
     while True:

@@ -359,7 +359,7 @@ def mover_labirinto(call):
         traceback.print_exc()
 @bot.callback_query_handler(func=lambda call: call.data in ['encerrar', 'continuar'])
 def encerrar_ou_continuar(call):
-        try:
+    try:
         id_usuario = call.from_user.id
         if call.data == 'encerrar':
             bot.edit_message_text("💀 Você decidiu encerrar sua jornada no labirinto. Fim de jogo!", call.message.chat.id, call.message.message_id)

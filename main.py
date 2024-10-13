@@ -34,6 +34,7 @@ from album import *
 from pescar import *
 from evento import *
 from spotipy.oauth2 import SpotifyClientCredentials
+from PIL import Image, ImageFilter
 from apscheduler.schedulers.background import BackgroundScheduler
 from pytz import utc
 from phrases import *
@@ -56,6 +57,9 @@ from banco import *
 from diary import *
 from admin import obter_id_beta,remover_beta,verificar_ban,obter_id_cenouras,obter_id_iscas,remover_id_cenouras,remover_id_iscas,verificar_autorizacao
 from peixes import *
+from halloween import *
+from vips import *
+from petalas import *
 import logging
 import flask
 import http.server
@@ -64,7 +68,12 @@ from datetime import datetime, timedelta
 import socketserver
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from socketserver import ThreadingMixIn
-
+from PIL import Image, UnidentifiedImageError, ImageOps
+import random
+import os
+import tempfile
+import requests
+from io import BytesIO
 processing_lock = threading.Lock()
 ids_proibidos = {164, 165, 163, 174, 192, 214, 215, 216}
 scheduler = BackgroundScheduler(timezone=utc)
@@ -80,23 +89,21 @@ WEBHOOK_URL_BASE = "https://plspls-production.up.railway.app/"
 
 WEBHOOK_URL_PATH = '/' + API_TOKEN + '/'
 WEBHOOK_LISTEN = "0.0.0.0"
-
 WEBHOOK_PORT = int(os.getenv('PORT', 5000))  #
 
 bot = telebot.TeleBot(API_TOKEN)
-
 app = flask.Flask(__name__)
 newrelic.agent.initialize('newrelic.ini')
 
 grupodeerro = -4279935414
 GRUPO_SUGESTOES = -4546359573
-
-
 cache_musicas_editadas = dc.Cache('./cache_musicas_editadas')
 song_cooldown_cache = TTLCache(maxsize=1000, ttl=15)  # 3 horas de cooldown
+sp = spotipy.Spotify(auth_manager=SpotifyClientCredentials(client_id=SPOTIFY_CLIENT_ID, client_secret=SPOTIFY_CLIENT_SECRET))
+cache = dc.Cache('./cache')  
+conn, cursor = conectar_banco_dados()
+task_queue = Queue()
 
-active_song_challenges = {}
-usuarios_em_sugestao = {}
 
 @app.route("/")
 def set_webhook():
@@ -109,115 +116,9 @@ def set_webhook():
     else:
         return "Falha ao configurar o webhook.", 500
 
-
 @app.route('/', methods=['GET', 'HEAD'])
 def index():
     return 'Server is running.'
-import random
-from telebot import types
-
-import random
-from telebot import types
-import random
-from telebot import types
-
-# Inicializar o tabuleiro do jogo da velha
-def inicializar_tabuleiro():
-    return [['⬜', '⬜', '⬜'], ['⬜', '⬜', '⬜'], ['⬜', '⬜', '⬜']]
-
-# Função para mostrar o tabuleiro
-def mostrar_tabuleiro(tabuleiro):
-    return '\n'.join([' '.join(linha) for linha in tabuleiro])
-
-# Função para verificar se alguém ganhou
-def verificar_vitoria(tabuleiro, jogador):
-    # Verificar linhas, colunas e diagonais
-    for linha in tabuleiro:
-        if all(celula == jogador for celula in linha):
-            return True
-    for coluna in range(3):
-        if all(tabuleiro[linha][coluna] == jogador for linha in range(3)):
-            return True
-    if tabuleiro[0][0] == tabuleiro[1][1] == tabuleiro[2][2] == jogador:
-        return True
-    if tabuleiro[0][2] == tabuleiro[1][1] == tabuleiro[2][0] == jogador:
-        return True
-    return False
-
-# Função para verificar se há empate
-def verificar_empate(tabuleiro):
-    return all(celula != '⬜' for linha in tabuleiro for celula in linha)
-
-# Função Minimax para determinar a melhor jogada para o bot
-def minimax(tabuleiro, profundidade, is_bot, simbolo_bot, simbolo_jogador):
-    if verificar_vitoria(tabuleiro, simbolo_bot):
-        return 10 - profundidade  # Quanto mais rápido vencer, melhor o resultado
-    elif verificar_vitoria(tabuleiro, simbolo_jogador):
-        return profundidade - 10  # Quanto mais rápido perder, pior o resultado
-    elif verificar_empate(tabuleiro):
-        return 0  # Empate
-
-    if is_bot:
-        melhor_valor = -float('inf')
-        for i in range(3):
-            for j in range(3):
-                if tabuleiro[i][j] == '⬜':
-                    tabuleiro[i][j] = simbolo_bot
-                    valor = minimax(tabuleiro, profundidade + 1, False, simbolo_bot, simbolo_jogador)
-                    tabuleiro[i][j] = '⬜'
-                    melhor_valor = max(melhor_valor, valor)
-        return melhor_valor
-    else:
-        melhor_valor = float('inf')
-        for i in range(3):
-            for j in range(3):
-                if tabuleiro[i][j] == '⬜':
-                    tabuleiro[i][j] = simbolo_jogador
-                    valor = minimax(tabuleiro, profundidade + 1, True, simbolo_bot, simbolo_jogador)
-                    tabuleiro[i][j] = '⬜'
-                    melhor_valor = min(melhor_valor, valor)
-        return melhor_valor
-
-# Função para o bot fazer uma jogada usando Minimax com 60% de chance
-def bot_fazer_jogada(tabuleiro, simbolo_bot, simbolo_jogador):
-    if random.random() < 0.6:  # 60% de chance de usar Minimax
-        melhor_valor = -float('inf')
-        melhor_jogada = None
-        for i in range(3):
-            for j in range(3):
-                if tabuleiro[i][j] == '⬜':
-                    tabuleiro[i][j] = simbolo_bot
-                    valor = minimax(tabuleiro, 0, False, simbolo_bot, simbolo_jogador)
-                    tabuleiro[i][j] = '⬜'
-                    if valor > melhor_valor:
-                        melhor_valor = valor
-                        melhor_jogada = (i, j)
-        if melhor_jogada:
-            tabuleiro[melhor_jogada[0]][melhor_jogada[1]] = simbolo_bot
-            return tabuleiro
-    # 40% de chance de fazer uma jogada aleatória
-    while True:
-        i, j = random.randint(0, 2), random.randint(0, 2)
-        if tabuleiro[i][j] == '⬜':
-            tabuleiro[i][j] = simbolo_bot
-            return tabuleiro
-
-# Função para criar os botões do tabuleiro
-def criar_botoes_tabuleiro(tabuleiro):
-    markup = types.InlineKeyboardMarkup(row_width=3)
-    botoes = []
-    for i in range(3):
-        for j in range(3):
-            if tabuleiro[i][j] == '⬜':
-                botao = types.InlineKeyboardButton(f"{i*3+j+1}", callback_data=f"jogada_{i}_{j}")
-            else:
-                botao = types.InlineKeyboardButton(tabuleiro[i][j], callback_data=f"jogada_disabled")
-            botoes.append(botao)
-    markup.add(*botoes)
-    return markup
-
-# Dicionário para armazenar os jogos em andamento
-jogos_da_velha = {}
 
 @bot.message_handler(commands=['jogodavelha'])
 def iniciar_jogo(message):
@@ -225,10 +126,8 @@ def iniciar_jogo(message):
     tabuleiro = inicializar_tabuleiro()
     jogos_da_velha[id_usuario] = tabuleiro
     
-    # Mostrar o tabuleiro inicial
     bot.send_message(message.chat.id, f"Vamos jogar Jogo da Velha! Você é o '✔️' e eu sou o '❌'.\n\n{mostrar_tabuleiro(tabuleiro)}")
     
-    # Enviar o tabuleiro com botões
     markup = criar_botoes_tabuleiro(tabuleiro)
     bot.send_message(message.chat.id, "Escolha sua jogada (1-9):", reply_markup=markup)
 
@@ -239,12 +138,10 @@ def jogador_fazer_jogada(call):
         bot.send_message(call.message.chat.id, "Você não iniciou um jogo da velha. Use /jogodavelha para começar.")
         return
 
-    # Se o botão foi desabilitado, o jogador não pode escolher novamente
     if call.data == "jogada_disabled":
         bot.answer_callback_query(call.id, "Essa posição já está ocupada!")
         return
 
-    # Obter o tabuleiro e a jogada do jogador
     tabuleiro = jogos_da_velha[id_usuario]
     _, i, j = call.data.split('_')
     i, j = int(i), int(j)
@@ -253,37 +150,30 @@ def jogador_fazer_jogada(call):
         bot.answer_callback_query(call.id, "Essa posição já está ocupada!")
         return
     
-    # Fazer a jogada do jogador
     tabuleiro[i][j] = '✔️'
     
-    # Verificar se o jogador venceu
     if verificar_vitoria(tabuleiro, '✔️'):
         bot.edit_message_text(f"🎉 Parabéns! Você venceu!\n\n{mostrar_tabuleiro(tabuleiro)}", call.message.chat.id, call.message.message_id)
         del jogos_da_velha[id_usuario]
         return
     
-    # Verificar empate
     if verificar_empate(tabuleiro):
         bot.edit_message_text(f"😐 Empate!\n\n{mostrar_tabuleiro(tabuleiro)}", call.message.chat.id, call.message.message_id)
         del jogos_da_velha[id_usuario]
         return
     
-    # Jogada do bot
     tabuleiro = bot_fazer_jogada(tabuleiro, '❌', '✔️')
-    
-    # Verificar se o bot venceu
+
     if verificar_vitoria(tabuleiro, '❌'):
         bot.edit_message_text(f"😎 Eu venci! Melhor sorte da próxima vez.\n\n{mostrar_tabuleiro(tabuleiro)}", call.message.chat.id, call.message.message_id)
         del jogos_da_velha[id_usuario]
         return
     
-    # Verificar empate após a jogada do bot
     if verificar_empate(tabuleiro):
         bot.edit_message_text(f"😐 Empate!\n\n{mostrar_tabuleiro(tabuleiro)}", call.message.chat.id, call.message.message_id)
         del jogos_da_velha[id_usuario]
         return
     
-    # Atualizar o tabuleiro e pedir a próxima jogada do jogador
     markup = criar_botoes_tabuleiro(tabuleiro)
     bot.edit_message_text(f"Seu turno!\n\n{mostrar_tabuleiro(tabuleiro)}", call.message.chat.id, call.message.message_id, reply_markup=markup)
 
@@ -296,91 +186,6 @@ def webhook():
         return ''
     else:
         flask.abort(403)
-
-sp = spotipy.Spotify(auth_manager=SpotifyClientCredentials(client_id=SPOTIFY_CLIENT_ID, client_secret=SPOTIFY_CLIENT_SECRET))
-cache = dc.Cache('./cache')  
-conn, cursor = conectar_banco_dados()
-task_queue = Queue()
-
-import random
-from telebot import types
-
-# Função para garantir que o jogador tenha sempre um caminho livre até a saída
-def gerar_labirinto_com_caminho_e_validacao(tamanho=10):
-    labirinto = [['🪨' for _ in range(tamanho)] for _ in range(tamanho)]
-    
-    # Definir o ponto inicial e final
-    x, y = 1, 1  # Ponto inicial
-    saida_x, saida_y = tamanho - 2, random.randint(1, tamanho - 2)  # Saída em posição aleatória na borda inferior
-    
-    # Definir um caminho garantido até a saída usando backtracking
-    caminho = [(x, y)]
-    labirinto[x][y] = '⬜'
-    
-    while (x, y) != (saida_x, saida_y):
-        direcoes = []
-        if x > 1 and labirinto[x-1][y] == '🪨':  # Norte
-            direcoes.append((-1, 0))
-        if x < tamanho - 2 and labirinto[x+1][y] == '🪨':  # Sul
-            direcoes.append((1, 0))
-        if y > 1 and labirinto[x][y-1] == '🪨':  # Oeste
-            direcoes.append((0, -1))
-        if y < tamanho - 2 and labirinto[x][y+1] == '🪨':  # Leste
-            direcoes.append((0, 1))
-
-        if not direcoes:
-            # Retroceder se não houver direções disponíveis
-            x, y = caminho.pop()
-        else:
-            dx, dy = random.choice(direcoes)
-            x += dx
-            y += dy
-            labirinto[x][y] = '⬜'
-            caminho.append((x, y))
-
-    # Colocar a saída
-    labirinto[saida_x][saida_y] = '🚪'
-    
-    # Adicionar monstros e recompensas fora do caminho garantido
-    for _ in range(5):
-        while True:
-            mx, my = random.randint(1, tamanho-2), random.randint(1, tamanho-2)
-            if labirinto[mx][my] == '🪨' and (mx, my) not in caminho:  # Não bloquear o caminho principal
-                labirinto[mx][my] = '👻'
-                break
-    
-    for _ in range(3):
-        while True:
-            rx, ry = random.randint(1, tamanho-2), random.randint(1, tamanho-2)
-            if labirinto[rx][ry] == '🪨' and (rx, ry) not in caminho:  # Não bloquear o caminho principal
-                labirinto[rx][ry] = '🎃'
-                break
-
-    return labirinto
-
-# Função para revelar todo o labirinto ao final do jogo
-def revelar_labirinto(labirinto):
-    return '\n'.join([''.join(linha) for linha in labirinto])
-
-# Função para mostrar o labirinto com visibilidade limitada
-def mostrar_labirinto(labirinto, posicao):
-    mapa = ""
-    x, y = posicao
-    for i in range(len(labirinto)):
-        for j in range(len(labirinto[i])):
-            # Mostrar a posição atual do jogador
-            if (i, j) == posicao:
-                mapa += "🔦"
-            # Revelar as células ao redor do jogador (cima, baixo, esquerda, direita)
-            elif abs(x - i) <= 1 and abs(y - j) <= 1:
-                mapa += labirinto[i][j]
-            else:
-                mapa += "⬛"  # Células ainda não reveladas
-        mapa += "\n"
-    return mapa
-
-# Dicionário para armazenar o labirinto, posição dos jogadores, e os movimentos restantes
-jogadores_labirinto = {}
 
 @bot.message_handler(commands=['labirinto'])
 def iniciar_labirinto(message):
@@ -501,18 +306,6 @@ def encerrar_ou_continuar(call):
         bot.edit_message_text(f"🏃 Você decidiu continuar sua jornada! Movimentos restantes: {movimentos_restantes}\n\n{mapa}",
                               call.message.chat.id, call.message.message_id, reply_markup=markup)
 
-# Função para calcular a nova posição com base na direção, sem permitir passar por pedras
-def mover_posicao(posicao_atual, direcao, tamanho_labirinto, labirinto):
-    x, y = posicao_atual
-    if direcao == 'norte' and x > 0 and labirinto[x-1][y] != '🪨':
-        return (x - 1, y)
-    elif direcao == 'sul' and x < tamanho_labirinto - 1 and labirinto[x+1][y] != '🪨':
-        return (x + 1, y)
-    elif direcao == 'leste' and y < tamanho_labirinto - 1 and labirinto[x][y+1] != '🪨':
-        return (x, y + 1)
-    elif direcao == 'oeste' and y > 0 and labirinto[x][y-1] != '🪨':
-        return (x, y - 1)
-    return posicao_atual  # Se a direção for inválida ou for uma pedra, retorna a posição atual
 
 
 def process_tasks():
@@ -522,73 +315,9 @@ def process_tasks():
             break
         task()
         task_queue.task_done()
+        
 task_thread = threading.Thread(target=process_tasks)
 task_thread.start()
-from telebot import types
-
-def registrar_interacao(id_usuario, id_carta, gostou):
-    """Registra a interação no banco de dados, garantindo que o usuário não interaja mais de uma vez na mesma carta."""
-    conn, cursor = conectar_banco_dados()
-
-    # Verificar se o usuário já interagiu com a carta
-    cursor.execute("SELECT * FROM interacoes_cartas WHERE id_usuario = %s AND id_carta = %s", (id_usuario, id_carta))
-    interacao_existente = cursor.fetchone()
-
-    if interacao_existente:
-        fechar_conexao(cursor, conn)
-        return False  # Usuário já interagiu com essa carta
-
-    # Inserir a interação
-    interacao = 'gostou' if gostou else 'rejeitou'
-    cursor.execute("INSERT INTO interacoes_cartas (id_usuario, id_carta, interacao) VALUES (%s, %s, %s)",
-                   (id_usuario, id_carta, interacao))
-
-    # Atualizar contador de interações
-    cursor.execute("UPDATE usuarios SET interacoes_cartas = interacoes_cartas + 1 WHERE id_usuario = %s", (id_usuario,))
-
-    # Verificar se o usuário já respondeu 10 cartas
-    cursor.execute("SELECT interacoes_cartas FROM usuarios WHERE id_usuario = %s", (id_usuario,))
-    interacoes = cursor.fetchone()[0]
-
-    if interacoes >= 10:
-        # Dar 5 cenouras e resetar o contador
-        cursor.execute("UPDATE usuarios SET cenouras = cenouras + 5, interacoes_cartas = 0 WHERE id_usuario = %s", (id_usuario,))
-        bot.send_message(id_usuario, "🎉 Parabéns! Você ganhou 5 cenouras por responder 10 cartas!")
-
-    # Atualizar popularidade da carta
-    cursor.execute("SELECT gostos, rejeicoes FROM popularidade_cartas WHERE id_carta = %s", (id_carta,))
-    resultado = cursor.fetchone()
-
-    if resultado:
-        gostos, rejeicoes = resultado
-        if gostou:
-            gostos += 1
-        else:
-            rejeicoes += 1
-        cursor.execute("UPDATE popularidade_cartas SET gostos = %s, rejeicoes = %s WHERE id_carta = %s",
-                       (gostos, rejeicoes, id_carta))
-    else:
-        if gostou:
-            cursor.execute("INSERT INTO popularidade_cartas (id_carta, gostos, rejeicoes) VALUES (%s, %s, %s)",
-                           (id_carta, 1, 0))
-        else:
-            cursor.execute("INSERT INTO popularidade_cartas (id_carta, gostos, rejeicoes) VALUES (%s, %s, %s)",
-                           (id_carta, 0, 1))
-
-    conn.commit()
-    fechar_conexao(cursor, conn)
-    return True  # Interação registrada com sucesso
-
-
-def gerar_proxima_carta():
-    """Seleciona uma carta aleatória do banco de dados."""
-    conn, cursor = conectar_banco_dados()
-    cursor.execute("SELECT id_personagem, nome, subcategoria, emoji, categoria FROM personagens ORDER BY RAND() LIMIT 1")
-    carta = cursor.fetchone()
-    fechar_conexao(cursor, conn)
-    return carta
-
-import traceback
 
 @bot.message_handler(commands=['tinder'])
 def tinder_cartas_command(message):
@@ -666,20 +395,6 @@ def callback_proxima_carta(call):
     except Exception as e:
         print(f"Erro ao processar o callback de próxima carta: {e}")
         traceback.print_exc()
-
-def consultar_popularidade():
-    """Consulta as cartas mais amadas e mais rejeitadas."""
-    conn, cursor = conectar_banco_dados()
-    
-    cursor.execute("SELECT id_carta, gostos, rejeicoes FROM popularidade_cartas ORDER BY gostos DESC LIMIT 10")
-    mais_amadas = cursor.fetchall()
-    
-    cursor.execute("SELECT id_carta, gostos, rejeicoes FROM popularidade_cartas ORDER BY rejeicoes DESC LIMIT 10")
-    mais_rejeitadas = cursor.fetchall()
-    
-    fechar_conexao(cursor, conn)
-    return mais_amadas, mais_rejeitadas
-
 
 @bot.message_handler(commands=['popularidade'])
 def consultar_popularidade_command(message):
@@ -783,9 +498,6 @@ def ranking_semanal(message):
         bot.reply_to(message, "Ocorreu um erro ao gerar o ranking.")
     finally:
         fechar_conexao(cursor, conn)
-from telebot import types
-
-
 
 @bot.message_handler(commands=['adicionar_vip'])
 def adicionar_vip(message):
@@ -797,41 +509,6 @@ def adicionar_vip(message):
     msg = bot.reply_to(message, "Por favor, envie o ID do usuário.")
     bot.register_next_step_handler(msg, processar_id_vip)
 
-
-def processar_id_vip(message):
-    try:
-        id_usuario = int(message.text)
-        msg = bot.reply_to(message, "Por favor, envie o nome do usuário.")
-        bot.register_next_step_handler(msg, lambda msg: processar_nome_vip(msg, id_usuario))
-    except ValueError:
-        bot.reply_to(message, "ID inválido. Por favor, tente novamente.")
-
-
-def processar_nome_vip(message, id_usuario):
-    nome = message.text
-    msg = bot.reply_to(message, "Informe a data de pagamento (formato: AAAA-MM-DD):")
-    bot.register_next_step_handler(msg, lambda msg: processar_pagamento_vip(msg, id_usuario, nome))
-
-
-def processar_pagamento_vip(message, id_usuario, nome):
-    try:
-        data_pagamento = message.text
-        conn, cursor = conectar_banco_dados()
-        
-        # Inserir o novo VIP na tabela
-        cursor.execute(
-            "INSERT INTO vips (id_usuario, nome, data_pagamento, mes_atual) VALUES (%s, %s, %s, DATE_FORMAT(NOW(), '%Y-%m'))",
-            (id_usuario, nome, data_pagamento)
-        )
-        conn.commit()
-
-        bot.reply_to(message, f"{nome} foi adicionado(a) como VIP com sucesso!")
-    except Exception as e:
-        bot.reply_to(message, f"Erro ao adicionar VIP: {e}")
-    finally:
-        fechar_conexao(cursor, conn)
-
-
 @bot.message_handler(commands=['remover_vip'])
 def remover_vip(message):
     if message.from_user.id not in [5532809878, 1805086442, 5799169750]:
@@ -840,84 +517,6 @@ def remover_vip(message):
 
     msg = bot.reply_to(message, "Por favor, envie o ID do usuário VIP a ser removido.")
     bot.register_next_step_handler(msg, processar_remocao_vip)
-# Função para verificar quanto tempo falta para a próxima pétala
-def calcular_tempo_restante(id_usuario):
-    conn, cursor = conectar_banco_dados()
-    cursor.execute("SELECT ultima_regeneracao_petalas FROM usuarios WHERE id_usuario = %s", (id_usuario,))
-    resultado = cursor.fetchone()
-    
-    if resultado:
-        ultima_regeneracao = resultado[0]
-        agora = datetime.now()
-
-        # Verificar se o usuário é VIP e ajustar o tempo de regeneração
-        vip = is_vip(id_usuario)
-        if vip:
-            TEMPO_REGENERACAO = timedelta(hours=2)
-        else:
-            TEMPO_REGENERACAO = timedelta(hours=3)
-
-        # Calcular o tempo até a próxima regeneração de pétalas
-        tempo_restante = TEMPO_REGENERACAO - (agora - ultima_regeneracao)
-        if tempo_restante.total_seconds() > 0:
-            horas, resto = divmod(tempo_restante.total_seconds(), 3600)
-            minutos, _ = divmod(resto, 60)
-            return f"{int(horas)}h {int(minutos)}min"
-        else:
-            return "menos de 1 minuto"
-
-    fechar_conexao(cursor, conn)
-    return "um pouco mais"
-
-def processar_remocao_vip(message):
-    try:
-        id_usuario = int(message.text)
-        conn, cursor = conectar_banco_dados()
-        
-        # Remover o VIP da tabela
-        cursor.execute("DELETE FROM vips WHERE id_usuario = %s", (id_usuario,))
-        conn.commit()
-
-        bot.reply_to(message, "VIP removido com sucesso!")
-    except Exception as e:
-        bot.reply_to(message, f"Erro ao remover VIP: {e}")
-    finally:
-        fechar_conexao(cursor, conn)
-def verificar_pedidos_vip(id_usuario):
-    conn, cursor = conectar_banco_dados()
-    
-    cursor.execute(
-        "SELECT pedidos_restantes, mes_atual FROM vips WHERE id_usuario = %s",
-        (id_usuario,)
-    )
-    vip_data = cursor.fetchone()
-    fechar_conexao(cursor, conn)
-    
-    if vip_data:
-        pedidos_restantes, mes_atual = vip_data
-        mes_atual_sistema = datetime.now().strftime('%Y-%m')
-        
-        if mes_atual != mes_atual_sistema:
-            # Reiniciar pedidos para o novo mês
-            pedidos_restantes = 4
-            atualizar_pedidos_vip(id_usuario, pedidos_restantes, mes_atual_sistema)
-        
-        return pedidos_restantes
-    else:
-        return None
-
-
-def atualizar_pedidos_vip(id_usuario, novos_pedidos, novo_mes):
-    conn, cursor = conectar_banco_dados()
-    
-    cursor.execute(
-        "UPDATE vips SET pedidos_restantes = %s, mes_atual = %s WHERE id_usuario = %s",
-        (novos_pedidos, novo_mes, id_usuario)
-    )
-    conn.commit()
-    fechar_conexao(cursor, conn)
-
-from datetime import datetime, timedelta
 
 @bot.message_handler(commands=['vips'])
 def listar_vips(message):
@@ -994,6 +593,7 @@ def listar_pedidos_vips(message):
         bot.send_message(message.chat.id, "Erro ao listar pedidos VIPs.")
     finally:
         fechar_conexao(cursor, conn)
+        
 @bot.message_handler(commands=['ficha'])
 def ver_ficha_vip(message):
     try:
@@ -1072,6 +672,7 @@ def toggle_config(call):
         perfil_config(call)
     finally:
         fechar_conexao(cursor, conn)
+        
 @bot.callback_query_handler(func=lambda call: call.data == 'toggle_casamento')
 def toggle_casamento(call):
     user_id = call.from_user.id
@@ -1126,42 +727,6 @@ def perfil_config(call):
         bot.edit_message_text("Escolha o que deseja ativar/desativar no perfil:", chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=markup)
     finally:
         fechar_conexao(cursor, conn)
-from PIL import Image, UnidentifiedImageError, ImageOps
-import random
-import os
-import tempfile
-import requests
-from io import BytesIO
-
-# Lista de URLs das bordas PNG
-bordas_urls = [
-    "https://pub-2c8b03f2268f415896ccfb5456f45c9c.r2.dev/foto_20240921014910.jpg",
-    "https://pub-2c8b03f2268f415896ccfb5456f45c9c.r2.dev/foto_20240921014846.jpg",
-    "https://pub-2c8b03f2268f415896ccfb5456f45c9c.r2.dev/foto_20240921014841.jpg",
-    "https://pub-2c8b03f2268f415896ccfb5456f45c9c.r2.dev/foto_20240921014836.jpg",
-    "https://pub-2c8b03f2268f415896ccfb5456f45c9c.r2.dev/foto_20240921014831.jpg",
-    "https://pub-2c8b03f2268f415896ccfb5456f45c9c.r2.dev/foto_20240921014817.jpg"
-]
-
-# Criar um cache para as imagens com bordas aplicadas
-cache_imagens_com_bordas = {}
-
-from datetime import datetime, timedelta
-
-def is_vip(id_usuario):
-    """Verifica se o usuário é VIP consultando a tabela vips."""
-    conn, cursor = conectar_banco_dados()
-    
-    # Verifica se o usuário está na tabela de VIPs
-    cursor.execute("SELECT id_usuario FROM vips WHERE id_usuario = %s", (id_usuario,))
-    resultado = cursor.fetchone()  # Usa fetchone para obter um único resultado
-
-    # Fechar o cursor e a conexão
-    cursor.fetchall()  # Garante que todos os resultados foram processados, se houver
-    fechar_conexao(cursor, conn)
-
-    # Retorna True se o usuário for VIP, False caso contrário
-    return resultado is not None
 
 def atualizar_petalas(id_usuario):
     """Atualiza o número de pétalas do usuário de acordo com o tempo decorrido e se é VIP."""
@@ -1387,58 +952,6 @@ def callback_escolher_carta(call):
         print(f"Erro ao processar a escolha de carta: {e}")
         bot.reply_to(call.message, "Ocorreu um erro ao processar sua escolha.")
 
-
-from PIL import Image, ImageFilter
-
-def aplicar_borda(imagem, borda):
-    """Aplica uma borda PNG sobre uma imagem e usa a imagem original desfocada como fundo, com borda menor."""
-    # Garantir que a imagem tenha o modo RGBA (suporte a transparência)
-    imagem = imagem.convert("RGBA")
-
-    # Reduzir a imagem para caber dentro da borda
-    largura_original, altura_original = imagem.size
-    nova_largura = int(largura_original * 1)  # Reduzir a imagem para 85% da largura original
-    nova_altura = int(altura_original * 1)  # Reduzir a imagem para 85% da altura original
-    imagem_redimensionada = imagem.resize((nova_largura, nova_altura))
-
-    # Aplicar desfoque à imagem original para usar como fundo
-    imagem_fundo = imagem.filter(ImageFilter.GaussianBlur(radius=15))  # Ajuste o raio do desfoque conforme necessário
-
-    # Redimensionar a borda para ser menor que a imagem original (diminuir a borda)
-    largura_borda = int(largura_original * 1)  # Reduzir a borda para 95% da largura original
-    altura_borda = int(altura_original * 1.25)  # Reduzir a borda para 95% da altura original
-    borda = borda.convert("RGBA").resize((largura_borda, altura_borda))
-
-    # Criar uma nova imagem com o fundo desfocado
-    imagem_com_fundo = Image.new("RGBA", (largura_original, altura_original), (255, 255, 255, 0))
-
-    # Colar o fundo desfocado na nova imagem
-    imagem_com_fundo.paste(imagem_fundo, (0, 0))
-
-    # Ajustar a posição vertical para mover a imagem um pouco mais para baixo
-    deslocamento_vertical = int(altura_original * 0.1)  # Deslocar 10% para baixo
-
-    # Calcular as posições para centralizar a imagem redimensionada
-    posicao_x = (largura_original - nova_largura) // 2
-    posicao_y = (altura_original - nova_altura) // 2 + deslocamento_vertical  # Mover a imagem um pouco para baixo
-
-    # Colar a imagem redimensionada no centro da imagem desfocada
-    imagem_com_fundo.paste(imagem_redimensionada, (posicao_x, posicao_y), imagem_redimensionada)
-
-    # Calcular as posições para centralizar a borda menor
-    posicao_borda_x = (largura_original - largura_borda) // 2
-    posicao_borda_y = (altura_original - altura_borda) // 2
-
-    # Aplicar a borda menor sobre a imagem com o fundo
-    imagem_com_fundo.paste(borda, (posicao_borda_x, posicao_borda_y), borda)
-
-    return imagem_com_fundo
-
-
-
-
-
-        
 @bot.message_handler(commands=['pedidosubmenu'])
 def pedido_submenu_command(message):
     user_id = message.from_user.id
@@ -1489,54 +1002,6 @@ def pedido_submenu_command(message):
         fechar_conexao(cursor, conn)
 
 
-def processar_pedido_submenu(message, pedidos_restantes, user_name):
-    chat_id = message.chat.id
-    texto_submenu = message.text
-
-    # Verificar se o texto está no formato esperado
-    try:
-        if not validar_formato_submenu(texto_submenu):
-            bot.send_message(chat_id, "Formato incorreto. Certifique-se de seguir o exemplo:\n- subcategoria:\n- submenu:\npersonagem1nome, link da foto\npersonagem2nome, link da foto")
-            return
-
-        # Reduzir o número de pedidos restantes no banco de dados
-        conn, cursor = conectar_banco_dados()
-        cursor.execute("UPDATE vips SET pedidos_restantes = pedidos_restantes - 1 WHERE id_usuario = %s", (message.from_user.id,))
-        conn.commit()
-
-        # Enviar o pedido para o grupo
-        grupo_id = -1002024419694  # ID do grupo para encaminhar os pedidos
-        mensagem_grupo = (
-            f"📩 Novo pedido de submenu de {user_name}!\n\n"
-            f"Pedidos restantes: {pedidos_restantes - 1}\n\n"
-            f"Submenu enviado:\n\n{texto_submenu}"
-        )
-        bot.send_message(grupo_id, mensagem_grupo)
-
-        bot.send_message(chat_id, "Seu pedido foi encaminhado com sucesso!")
-    except Exception as e:
-        bot.send_message(chat_id, "Ocorreu um erro ao processar seu pedido. Tente novamente.")
-        print(f"Erro ao processar pedido de submenu: {e}")
-    finally:
-        fechar_conexao(cursor, conn)
-
-
-def validar_formato_submenu(texto):
-    # Verifica se o texto contém os itens básicos do submenu
-    linhas = texto.splitlines()
-    if len(linhas) < 4:
-        return False
-
-    # Verifica a presença das chaves "subcategoria" e "submenu"
-    if not linhas[0].lower().startswith("- subcategoria:") or not linhas[1].lower().startswith("- submenu:"):
-        return False
-
-    # Verifica se há ao menos uma linha de personagem no formato esperado (nome, link)
-    for linha in linhas[2:]:
-        if "," not in linha or len(linha.split(",")) != 2:
-            return False
-
-    return True
 @bot.message_handler(commands=['pedidovip'])
 def pedidovip_command(message):
     # Verifica se o usuário é autorizado a usar o comando
@@ -1649,11 +1114,6 @@ def jogar_song(message):
     finally:
         fechar_conexao(cursor, conn)
         
-def tempo_esgotado(chat_id):
-    challenge = active_song_challenges.get(chat_id)
-    if challenge and not challenge['respondido']:
-        bot.edit_message_caption(chat_id=chat_id, message_id=challenge['message_id'], caption="⏳ Poxa, você não conseguiu adivinhar. Tente novamente em 3 horas.")
-        del active_song_challenges[chat_id]
 
 @bot.message_handler(func=lambda message: message.reply_to_message and message.reply_to_message.message_id in [challenge['message_id'] for challenge in active_song_challenges.values()])
 def verificar_resposta(message):
@@ -1748,10 +1208,7 @@ def callback_peixes(call):
     except Exception as e:
         newrelic.agent.record_exception()    
         print(f"Erro ao processar callback de peixes: {e}")
-        
-
-
-        
+               
 @bot.callback_query_handler(func=lambda call: call.data.startswith('choose_subcategoria_'))
 def callback_subcategoria_handler(call):
     try:
@@ -1781,8 +1238,6 @@ def callback_subcategoria_handler(call):
         bot.send_message(grupodeerro, f"Erro em categoria_callback: {e}\n{erro}")
     finally:
         fechar_conexao(cursor, conn)
-
-
 
 
 @bot.message_handler(commands=['ervadaninha'])
@@ -1818,7 +1273,6 @@ def listar_bloqueios(message):
         bot.send_message(message.chat.id, f"Erro ao listar bloqueios: {err}")
     finally:
         fechar_conexao(cursor, conn)
-
 # Adicionando o handler para o comando /delgif
 @bot.message_handler(commands=['delgif'])
 def handle_delgif(message):

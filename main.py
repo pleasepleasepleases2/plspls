@@ -134,6 +134,79 @@ def iniciar_jogo(message):
     except Exception as e:
         print(f"Erro ao processar o jogo da velha): {e}")
         traceback.print_exc()
+
+@bot.message_handler(commands=['picnic'])
+@bot.message_handler(commands=['trocar'])
+@bot.message_handler(commands=['troca'])
+def trade(message):
+    try:
+        print("Comando troca acionado")
+        chat_id = message.chat.id
+        eu = message.from_user.id
+        voce = message.reply_to_message.from_user.id
+        seunome = message.reply_to_message.from_user.first_name
+        meunome = message.from_user.first_name
+        bot_id = 7088149058
+        categoria = message.text.replace('/troca', '')
+        minhacarta = message.text.split()[1]
+        suacarta = message.text.split()[2]
+
+        print(f"Dados da troca: eu={eu}, voce={voce}, minhacarta={minhacarta}, suacarta={suacarta}")
+
+        if verificar_bloqueio(eu, voce):
+            bot.send_message(chat_id, "A troca não pode ser realizada porque um dos usuários bloqueou o outro.")
+            return
+
+        if voce == bot_id:
+            bot.send_message(chat_id, "Você não pode fazer trocas com a Mabi :(", reply_to_message_id=message.message_id)
+            return
+
+        if verifica_inventario_troca(eu, minhacarta) == 0:
+            bot.send_message(chat_id, f"🌦️ ་  {meunome}, você não possui o peixe {minhacarta} para trocar.", reply_to_message_id=message.message_id)
+            return
+
+        if verifica_inventario_troca(voce, suacarta) == 0:
+            bot.send_message(chat_id, f"🌦️ ་  Parece que {seunome} não possui o peixe {suacarta} para trocar.", reply_to_message_id=message.message_id)
+            return
+
+        info_minhacarta = obter_informacoes_carta(minhacarta)
+        info_suacarta = obter_informacoes_carta(suacarta)
+        emojiminhacarta, idminhacarta, nomeminhacarta, subcategoriaminhacarta = info_minhacarta
+        emojisuacarta, idsuacarta, nomesuacarta, subcategoriasuacarta = info_suacarta
+        meu_username = bot.get_chat_member(chat_id, eu).user.username
+        seu_username = bot.get_chat_member(chat_id, voce).user.username
+
+        seu_nome_formatado = f"@{seu_username}" if seu_username else seunome
+        texto = (
+            f"🥪 | Hora do picnic!\n\n"
+            f"{meunome} oferece de lanche:\n"
+            f" {idminhacarta} {emojiminhacarta}  —  {nomeminhacarta} de {subcategoriaminhacarta}\n\n"
+            f"E {seunome} oferece de lanche:\n"
+            f" {idsuacarta} {emojisuacarta}  —  {nomesuacarta} de {subcategoriasuacarta}\n\n"
+            f"Podemos começar a comer, {seu_nome_formatado}?"
+        )
+
+        keyboard = types.InlineKeyboardMarkup()
+
+        primeiro = [
+            types.InlineKeyboardButton(text="✅",
+                                       callback_data=f'troca_sim_{eu}_{voce}_{minhacarta}_{suacarta}_{chat_id}'),
+            types.InlineKeyboardButton(text="❌", callback_data=f'troca_nao_{eu}_{voce}_{minhacarta}_{suacarta}_{chat_id}'),
+        ]
+        keyboard.add(*primeiro)
+
+        image_url = "https://telegra.ph/file/8672c8f91c8e77bcdad45.jpg"
+        bot.send_photo(chat_id, image_url, caption=texto, reply_markup=keyboard, reply_to_message_id=message.reply_to_message.message_id)
+
+    except Exception as e:
+        traceback.print_exc()
+        erro = traceback.format_exc()
+        mensagem = f"Erro durante a troca. dados: {voce},{eu},{minhacarta},{suacarta}\n{erro}"
+        bot.send_message(grupodeerro, mensagem, parse_mode="HTML")
+        newrelic.agent.record_exception()
+
+
+
 @bot.callback_query_handler(func=lambda call: call.data.startswith('jogada_'))
 def jogador_fazer_jogada(call):
     try: 
@@ -2265,77 +2338,6 @@ def spicnic_command(message):
         erro = traceback.format_exc()
         mensagem = f"Erro durante a troca. dados: {voce},{eu},{minhacarta},{suacarta}\n{erro}"
         bot.send_message(grupodeerro, mensagem, parse_mode="HTML")
-
-
-@bot.message_handler(commands=['picnic'])
-@bot.message_handler(commands=['trocar'])
-@bot.message_handler(commands=['troca'])
-def trade(message):
-    try:
-        print("Comando troca acionado")
-        chat_id = message.chat.id
-        eu = message.from_user.id
-        voce = message.reply_to_message.from_user.id
-        seunome = message.reply_to_message.from_user.first_name
-        meunome = message.from_user.first_name
-        bot_id = 7088149058
-        categoria = message.text.replace('/troca', '')
-        minhacarta = message.text.split()[1]
-        suacarta = message.text.split()[2]
-
-        print(f"Dados da troca: eu={eu}, voce={voce}, minhacarta={minhacarta}, suacarta={suacarta}")
-
-        if verificar_bloqueio(eu, voce):
-            bot.send_message(chat_id, "A troca não pode ser realizada porque um dos usuários bloqueou o outro.")
-            return
-
-        if voce == bot_id:
-            bot.send_message(chat_id, "Você não pode fazer trocas com a Mabi :(", reply_to_message_id=message.message_id)
-            return
-
-        if verifica_inventario_troca(eu, minhacarta) == 0:
-            bot.send_message(chat_id, f"🌦️ ་  {meunome}, você não possui o peixe {minhacarta} para trocar.", reply_to_message_id=message.message_id)
-            return
-
-        if verifica_inventario_troca(voce, suacarta) == 0:
-            bot.send_message(chat_id, f"🌦️ ་  Parece que {seunome} não possui o peixe {suacarta} para trocar.", reply_to_message_id=message.message_id)
-            return
-
-        info_minhacarta = obter_informacoes_carta(minhacarta)
-        info_suacarta = obter_informacoes_carta(suacarta)
-        emojiminhacarta, idminhacarta, nomeminhacarta, subcategoriaminhacarta = info_minhacarta
-        emojisuacarta, idsuacarta, nomesuacarta, subcategoriasuacarta = info_suacarta
-        meu_username = bot.get_chat_member(chat_id, eu).user.username
-        seu_username = bot.get_chat_member(chat_id, voce).user.username
-
-        seu_nome_formatado = f"@{seu_username}" if seu_username else seunome
-        texto = (
-            f"🥪 | Hora do picnic!\n\n"
-            f"{meunome} oferece de lanche:\n"
-            f" {idminhacarta} {emojiminhacarta}  —  {nomeminhacarta} de {subcategoriaminhacarta}\n\n"
-            f"E {seunome} oferece de lanche:\n"
-            f" {idsuacarta} {emojisuacarta}  —  {nomesuacarta} de {subcategoriasuacarta}\n\n"
-            f"Podemos começar a comer, {seu_nome_formatado}?"
-        )
-
-        keyboard = types.InlineKeyboardMarkup()
-
-        primeiro = [
-            types.InlineKeyboardButton(text="✅",
-                                       callback_data=f'troca_sim_{eu}_{voce}_{minhacarta}_{suacarta}_{chat_id}'),
-            types.InlineKeyboardButton(text="❌", callback_data=f'troca_nao_{eu}_{voce}_{minhacarta}_{suacarta}_{chat_id}'),
-        ]
-        keyboard.add(*primeiro)
-
-        image_url = "https://telegra.ph/file/8672c8f91c8e77bcdad45.jpg"
-        bot.send_photo(chat_id, image_url, caption=texto, reply_markup=keyboard, reply_to_message_id=message.reply_to_message.message_id)
-
-    except Exception as e:
-        traceback.print_exc()
-        erro = traceback.format_exc()
-        mensagem = f"Erro durante a troca. dados: {voce},{eu},{minhacarta},{suacarta}\n{erro}"
-        bot.send_message(grupodeerro, mensagem, parse_mode="HTML")
-        newrelic.agent.record_exception()
 
 
 

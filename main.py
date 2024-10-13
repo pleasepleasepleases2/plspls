@@ -266,7 +266,7 @@ def iniciar_labirinto(message):
         posicao_inicial = (1, 1)  # O jogador começa em uma posição inicial fixa ou aleatória
         movimentos_restantes = 35  # Limite de movimentos para encontrar a saída
         
-        jogadores_labirinto[id_usuario] = {
+        globals.jogadores_labirinto[id_usuario] = {
             "labirinto": labirinto,
             "posicao": posicao_inicial,
             "movimentos": movimentos_restantes
@@ -295,7 +295,7 @@ def mover_labirinto(call):
             return
         
         direcao = call.data  # Pega a direção do botão clicado
-        jogador = jogadores_labirinto[id_usuario]
+        jogador = globals.jogadores_labirinto[id_usuario]
         labirinto = jogador["labirinto"]
         posicao_atual = jogador["posicao"]
         movimentos_restantes = jogador["movimentos"]

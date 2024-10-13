@@ -124,3 +124,52 @@ def is_vip(id_usuario):
 
     # Retorna True se o usuário for VIP, False caso contrário
     return resultado is not None
+
+def processar_pedido_submenu(message, pedidos_restantes, user_name):
+    chat_id = message.chat.id
+    texto_submenu = message.text
+
+    # Verificar se o texto está no formato esperado
+    try:
+        if not validar_formato_submenu(texto_submenu):
+            bot.send_message(chat_id, "Formato incorreto. Certifique-se de seguir o exemplo:\n- subcategoria:\n- submenu:\npersonagem1nome, link da foto\npersonagem2nome, link da foto")
+            return
+
+        # Reduzir o número de pedidos restantes no banco de dados
+        conn, cursor = conectar_banco_dados()
+        cursor.execute("UPDATE vips SET pedidos_restantes = pedidos_restantes - 1 WHERE id_usuario = %s", (message.from_user.id,))
+        conn.commit()
+
+        # Enviar o pedido para o grupo
+        grupo_id = -1002024419694  # ID do grupo para encaminhar os pedidos
+        mensagem_grupo = (
+            f"📩 Novo pedido de submenu de {user_name}!\n\n"
+            f"Pedidos restantes: {pedidos_restantes - 1}\n\n"
+            f"Submenu enviado:\n\n{texto_submenu}"
+        )
+        bot.send_message(grupo_id, mensagem_grupo)
+
+        bot.send_message(chat_id, "Seu pedido foi encaminhado com sucesso!")
+    except Exception as e:
+        bot.send_message(chat_id, "Ocorreu um erro ao processar seu pedido. Tente novamente.")
+        print(f"Erro ao processar pedido de submenu: {e}")
+    finally:
+        fechar_conexao(cursor, conn)
+
+
+def validar_formato_submenu(texto):
+    # Verifica se o texto contém os itens básicos do submenu
+    linhas = texto.splitlines()
+    if len(linhas) < 4:
+        return False
+
+    # Verifica a presença das chaves "subcategoria" e "submenu"
+    if not linhas[0].lower().startswith("- subcategoria:") or not linhas[1].lower().startswith("- submenu:"):
+        return False
+
+    # Verifica se há ao menos uma linha de personagem no formato esperado (nome, link)
+    for linha in linhas[2:]:
+        if "," not in linha or len(linha.split(",")) != 2:
+            return False
+
+    return True

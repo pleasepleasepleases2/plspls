@@ -21,4 +21,7 @@ cesta_info = []
 botao_clicado = False
 load_state = {}
 user_event_data = {}
-
+active_song_challenges = {}
+usuarios_em_sugestao = {}
+jogos_da_velha = {}
+jogadores_labirinto = {}

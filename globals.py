@@ -25,3 +25,15 @@ active_song_challenges = {}
 usuarios_em_sugestao = {}
 jogos_da_velha = {}
 jogadores_labirinto = {}
+# Lista de URLs das bordas PNG
+bordas_urls = [
+    "https://pub-2c8b03f2268f415896ccfb5456f45c9c.r2.dev/foto_20240921014910.jpg",
+    "https://pub-2c8b03f2268f415896ccfb5456f45c9c.r2.dev/foto_20240921014846.jpg",
+    "https://pub-2c8b03f2268f415896ccfb5456f45c9c.r2.dev/foto_20240921014841.jpg",
+    "https://pub-2c8b03f2268f415896ccfb5456f45c9c.r2.dev/foto_20240921014836.jpg",
+    "https://pub-2c8b03f2268f415896ccfb5456f45c9c.r2.dev/foto_20240921014831.jpg",
+    "https://pub-2c8b03f2268f415896ccfb5456f45c9c.r2.dev/foto_20240921014817.jpg"
+]
+
+# Criar um cache para as imagens com bordas aplicadas
+cache_imagens_com_bordas = {}

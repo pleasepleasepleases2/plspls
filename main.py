@@ -930,15 +930,6 @@ def doar(message):
                 bot.send_message(chat_id, "Você precisa responder a uma mensagem para doar a carta.")
                 return
 
-            doacao_suspeita, total_trocas, total_anterior, total_atual = verificar_doacao_suspeita(cursor, eu, destinatario_id, minhacarta, quantidade)
-            if doacao_suspeita:
-                alerta = (f"⚠️ Doação suspeita! ⚠️\n"
-                          f"Doação da carta {minhacarta} entre {message.from_user.first_name} e {nome_destinatario}.\n"
-                          f"Quantidade doada anteriormente: {total_anterior}\n"
-                          f"Quantidade doada agora: {total_atual}\n"
-                          f"Número de trocas entre os usuários: {total_trocas}")
-                enviar_alerta_para_grupo(alerta)
-
             nome_carta = obter_nome(minhacarta)
             qnt_str = f"uma unidade da carta" if quantidade == 1 else f"{quantidade} unidades da carta"
             texto = f"Olá, {message.from_user.first_name}!\n\nVocê tem {qnt_carta} unidades da carta: {minhacarta} — {nome_carta}.\n\n"

@@ -1390,6 +1390,85 @@ def callback_subcategoria_handler(call):
     finally:
         fechar_conexao(cursor, conn)
 
+@bot.message_handler(commands=['doar'])
+def doar(message):
+    try:
+        print("Comando doar acionado")
+        chat_id = message.chat.id
+        eu = message.from_user.id
+        args = message.text.split()
+
+        if len(args) < 2:
+            bot.send_message(chat_id, "Formato incorreto. Use /doar <quantidade> <ID_da_carta> ou /doar all <ID_da_carta>")
+            return
+
+        doar_todas = False
+        doar_uma = False
+
+        if args[1].lower() == 'all':
+            doar_todas = True
+            minhacarta = int(args[2])
+        elif len(args) == 2:
+            doar_uma = True
+            minhacarta = int(args[1])
+        else:
+            quantidade = int(args[1])
+            minhacarta = int(args[2])
+
+        conn, cursor = conectar_banco_dados()
+        qnt_carta = verifica_inventario_troca(eu, minhacarta)
+        if qnt_carta > 0:
+            if doar_todas:
+                quantidade = qnt_carta
+            elif doar_uma:
+                quantidade = 1
+            elif quantidade > qnt_carta:
+                bot.send_message(chat_id, f"Você não possui {quantidade} unidades dessa carta.")
+                return
+
+            destinatario_id = None
+            nome_destinatario = None
+
+            if message.reply_to_message and message.reply_to_message.from_user:
+                destinatario_id = message.reply_to_message.from_user.id
+                nome_destinatario = message.reply_to_message.from_user.first_name
+
+            # Verificar se o destinatário é o bot
+            if destinatario_id == int(API_TOKEN.split(':')[0]):
+                bot.send_message(chat_id, "Pr-Pra mim? 😳 Muito obrigada, mas não acho que seja de bom tom um bot aceitar doação tão generosa... 😢 Talvez você deva procurar um camponês de verdade...")
+                return
+
+            if not destinatario_id:
+                bot.send_message(chat_id, "Você precisa responder a uma mensagem para doar a carta.")
+                return
+
+            doacao_suspeita, total_trocas, total_anterior, total_atual = verificar_doacao_suspeita(cursor, eu, destinatario_id, minhacarta, quantidade)
+            if doacao_suspeita:
+                alerta = (f"⚠️ Doação suspeita! ⚠️\n"
+                          f"Doação da carta {minhacarta} entre {message.from_user.first_name} e {nome_destinatario}.\n"
+                          f"Quantidade doada anteriormente: {total_anterior}\n"
+                          f"Quantidade doada agora: {total_atual}\n"
+                          f"Número de trocas entre os usuários: {total_trocas}")
+                enviar_alerta_para_grupo(alerta)
+
+            nome_carta = obter_nome(minhacarta)
+            qnt_str = f"uma unidade da carta" if quantidade == 1 else f"{quantidade} unidades da carta"
+            texto = f"Olá, {message.from_user.first_name}!\n\nVocê tem {qnt_carta} unidades da carta: {minhacarta} — {nome_carta}.\n\n"
+            texto += f"Deseja doar {qnt_str} para {nome_destinatario}?"
+
+            keyboard = telebot.types.InlineKeyboardMarkup()
+            keyboard.row(
+                telebot.types.InlineKeyboardButton(text="Sim", callback_data=f'cdoacao_{eu}_{minhacarta}_{destinatario_id}_{quantidade}'),
+                telebot.types.InlineKeyboardButton(text="Não", callback_data=f'ccancelar_{eu}')
+            )
+
+            bot.send_message(chat_id, texto, reply_markup=keyboard)
+        else:
+            bot.send_message(chat_id, "Você não pode doar uma carta que não possui.")
+
+    except Exception as e:
+        newrelic.agent.record_exception()    
+        print(f"Erro durante o comando de doação: {e}")
 
 @bot.message_handler(commands=['ervadaninha'])
 def listar_bloqueios(message):
@@ -2435,95 +2514,6 @@ def callback_help(call):
     
     bot.edit_message_text(help_text, chat_id=call.message.chat.id, message_id=call.message.message_id, parse_mode="HTML")
 
-def atualizar_ranking_pescas(cursor, conn):
-    try:
-        # Iniciando a transação manualmente
-        conn.start_transaction()
-
-        query_atualizar_ranking = """
-        INSERT INTO ranking_pescas (id_usuario, total_pescado)
-        SELECT id_usuario, COUNT(id_carta)
-        FROM historico_cartas_giradas
-        WHERE data_hora >= DATE_SUB(CURDATE(), INTERVAL WEEKDAY(CURDATE()) DAY)
-        GROUP BY id_usuario
-        ON DUPLICATE KEY UPDATE total_pescado = VALUES(total_pescado);
-        """
-        
-        # Executando a atualização do ranking
-        cursor.execute(query_atualizar_ranking)
-
-        # Confirmando a transação
-        conn.commit()
-
-    except mysql.connector.Error as e:
-        print(f"Erro ao atualizar ranking de pescas: {e}")
-        conn.rollback()  # Revertendo transações caso ocorra um erro
-
-def atualizar_ranking_doacoes(cursor, conn):
-    try:
-        # Iniciando a transação manualmente
-        conn.start_transaction()
-
-        query_atualizar_ranking = """
-        INSERT INTO ranking_doacoes (id_usuario, total_pontos)
-        SELECT id_usuario_doacao, SUM(quantidade)
-        FROM historico_doacoes
-        WHERE data_hora >= DATE_SUB(CURDATE(), INTERVAL WEEKDAY(CURDATE()) DAY)
-        GROUP BY id_usuario_doacao
-        ON DUPLICATE KEY UPDATE total_pontos = VALUES(total_pontos);
-        """
-        
-        # Executando a atualização do ranking
-        cursor.execute(query_atualizar_ranking)
-
-        # Confirmando a transação
-        conn.commit()
-
-    except mysql.connector.Error as e:
-        print(f"Erro ao atualizar ranking de doações: {e}")
-        conn.rollback()  # Revertendo transações caso ocorra um erro
-
-
-
-@bot.message_handler(commands=['attrank'])
-def atualizar_ranking_command(message):
-    try:
-        conn, cursor = conectar_banco_dados()
-
-        # Atualizar o ranking de pescas
-        print("Atualizando ranking de pescas...")
-        atualizar_ranking_pescas(cursor, conn)
-        print("Ranking de pescas atualizado.")
-
-        # Atualizar o ranking de doações
-        print("Atualizando ranking de doações...")
-        atualizar_ranking_doacoes(cursor, conn)
-        print("Ranking de doações atualizado.")
-
-        bot.reply_to(message, "🏆 Rankings de pescas e doações atualizados com sucesso!")
-
-    except Exception as e:
-        print(f"Erro ao atualizar os rankings: {e}")
-        bot.reply_to(message, f"Erro ao atualizar os rankings: {e}")
-    finally:
-        fechar_conexao(cursor, conn)
-
-
-# Função para obter o nome do usuário
-def obter_nome_usuario(id_usuario, cursor):
-    query = "SELECT nome FROM usuarios WHERE id_usuario = %s"
-    cursor.execute(query, (id_usuario,))
-    resultado = cursor.fetchone()
-    return resultado[0] if resultado else "Usuário Desconhecido"
-
-
-# Função para obter o nome do usuário
-
-def obter_nome_usuario(id_usuario, cursor):
-    query = "SELECT nome FROM usuarios WHERE id_usuario = %s"
-    cursor.execute(query, (id_usuario,))
-    resultado = cursor.fetchone()
-    return resultado[0] if resultado else "Usuário Desconhecido"
 
     
 @bot.message_handler(commands=['delcards'])
@@ -2566,114 +2556,6 @@ def delcards_command(message):
         print(f"Erro ao deletar cartas do inventário: {e}")
         bot.reply_to(message, "Ocorreu um erro ao deletar as cartas do inventário.")
 
-
-@bot.message_handler(commands=['doar'])
-def doar(message):
-    try:
-        print("Comando doar acionado")
-        chat_id = message.chat.id
-        eu = message.from_user.id
-        args = message.text.split()
-
-        if len(args) < 2:
-            bot.send_message(chat_id, "Formato incorreto. Use /doar <quantidade> <ID_da_carta> ou /doar all <ID_da_carta>")
-            return
-
-        doar_todas = False
-        doar_uma = False
-
-        if args[1].lower() == 'all':
-            doar_todas = True
-            minhacarta = int(args[2])
-        elif len(args) == 2:
-            doar_uma = True
-            minhacarta = int(args[1])
-        else:
-            quantidade = int(args[1])
-            minhacarta = int(args[2])
-
-        conn, cursor = conectar_banco_dados()
-        qnt_carta = verifica_inventario_troca(eu, minhacarta)
-        if qnt_carta > 0:
-            if doar_todas:
-                quantidade = qnt_carta
-            elif doar_uma:
-                quantidade = 1
-            elif quantidade > qnt_carta:
-                bot.send_message(chat_id, f"Você não possui {quantidade} unidades dessa carta.")
-                return
-
-            destinatario_id = None
-            nome_destinatario = None
-
-            if message.reply_to_message and message.reply_to_message.from_user:
-                destinatario_id = message.reply_to_message.from_user.id
-                nome_destinatario = message.reply_to_message.from_user.first_name
-
-            # Verificar se o destinatário é o bot
-            if destinatario_id == int(API_TOKEN.split(':')[0]):
-                bot.send_message(chat_id, "Pr-Pra mim? 😳 Muito obrigada, mas não acho que seja de bom tom um bot aceitar doação tão generosa... 😢 Talvez você deva procurar um camponês de verdade...")
-                return
-
-            if not destinatario_id:
-                bot.send_message(chat_id, "Você precisa responder a uma mensagem para doar a carta.")
-                return
-
-            doacao_suspeita, total_trocas, total_anterior, total_atual = verificar_doacao_suspeita(cursor, eu, destinatario_id, minhacarta, quantidade)
-            if doacao_suspeita:
-                alerta = (f"⚠️ Doação suspeita! ⚠️\n"
-                          f"Doação da carta {minhacarta} entre {message.from_user.first_name} e {nome_destinatario}.\n"
-                          f"Quantidade doada anteriormente: {total_anterior}\n"
-                          f"Quantidade doada agora: {total_atual}\n"
-                          f"Número de trocas entre os usuários: {total_trocas}")
-                enviar_alerta_para_grupo(alerta)
-
-            nome_carta = obter_nome(minhacarta)
-            qnt_str = f"uma unidade da carta" if quantidade == 1 else f"{quantidade} unidades da carta"
-            texto = f"Olá, {message.from_user.first_name}!\n\nVocê tem {qnt_carta} unidades da carta: {minhacarta} — {nome_carta}.\n\n"
-            texto += f"Deseja doar {qnt_str} para {nome_destinatario}?"
-
-            keyboard = telebot.types.InlineKeyboardMarkup()
-            keyboard.row(
-                telebot.types.InlineKeyboardButton(text="Sim", callback_data=f'cdoacao_{eu}_{minhacarta}_{destinatario_id}_{quantidade}'),
-                telebot.types.InlineKeyboardButton(text="Não", callback_data=f'ccancelar_{eu}')
-            )
-
-            bot.send_message(chat_id, texto, reply_markup=keyboard)
-        else:
-            bot.send_message(chat_id, "Você não pode doar uma carta que não possui.")
-
-    except Exception as e:
-        newrelic.agent.record_exception()    
-        print(f"Erro durante o comando de doação: {e}")
-
-def verificar_doacao_suspeita(cursor, usuario_id, destinatario_id, id_carta, quantidade_atual):
-    # Verifica se a mesma carta foi trocada entre os mesmos usuários nas últimas 24 horas e coleta informações adicionais
-    query = """
-    SELECT 
-        COUNT(*) AS total_trocas,
-        SUM(CASE WHEN id_usuario_doacao = %s THEN quantidade ELSE 0 END) AS total_anterior,
-        SUM(CASE WHEN id_usuario_doacao = %s THEN quantidade ELSE 0 END) + %s AS total_atual
-    FROM 
-        historico_doacoes 
-    WHERE 
-        ((id_usuario_doacao = %s AND id_usuario_recebedor = %s) OR
-         (id_usuario_doacao = %s AND id_usuario_recebedor = %s)) AND
-        id_personagem_carta = %s AND 
-        data_hora >= NOW() - INTERVAL 24 HOUR
-    """
-    cursor.execute(query, (usuario_id, usuario_id, quantidade_atual, usuario_id, destinatario_id, destinatario_id, usuario_id, id_carta))
-    result = cursor.fetchone()
-    
-    total_trocas = result[0]
-    total_anterior = result[1]
-    total_atual = result[2]
-
-    return total_trocas > 0, total_trocas, total_anterior, total_atual
-
-def enviar_alerta_para_grupo(alerta):
-    grupo_id = -4209628464
-    bot.send_message(grupo_id, alerta)
 @bot.message_handler(commands=['versubs'])
 def versubs_command(message):
     try:

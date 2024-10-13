@@ -3608,101 +3608,6 @@ def obter_informacoes_loja(ids_do_dia):
         cursor.close()
         conn.close()
 
-@bot.message_handler(commands=['help'])
-def help_command(message):
-    markup = telebot.types.InlineKeyboardMarkup()
-    markup.row(
-        telebot.types.InlineKeyboardButton("Cartas", callback_data="help_cartas"),
-        telebot.types.InlineKeyboardButton("Trocas", callback_data="help_trocas")
-    )
-    markup.row(
-        telebot.types.InlineKeyboardButton("Eventos", callback_data="help_eventos"),
-        telebot.types.InlineKeyboardButton("Usuário", callback_data="help_bugs")
-    )
-    markup.row(
-        telebot.types.InlineKeyboardButton("Outros", callback_data="help_tudo"),
-        telebot.types.InlineKeyboardButton("Sobre o Beta", callback_data="help_beta")
-    )
-    
-    markup.row(
-        telebot.types.InlineKeyboardButton("⚠️ IMPORTANTE! ⚠️", callback_data="help_imp")
-    )
-    
-    
-    bot.send_message(message.chat.id, "Selecione uma categoria para obter ajuda:", reply_markup=markup)
-
-@bot.message_handler(commands=['iduser'])
-def handle_iduser_command(message):
-    if message.reply_to_message:
-        idusuario = message.reply_to_message.from_user.id
-        bot.send_message(chat_id=message.chat.id, text=f"O ID do usuário é <code>{idusuario}</code>", reply_to_message_id=message.message_id,parse_mode="HTML")
-
-@bot.message_handler(commands=['sair'])
-def sair_grupo(message):
-    try:
-        id_grupo = message.text.split(' ', 1)[1]
-        bot.leave_chat(id_grupo)
-        bot.reply_to(message, f"O bot saiu do grupo com ID {id_grupo}.")
-
-    except IndexError:
-        bot.reply_to(message, "Por favor, forneça o ID do grupo após o comando, por exemplo: /sair 123456789.")
-
-    except Exception as e:
-        print(f"Erro ao processar comando /sair: {e}")
-        bot.reply_to(message, "Ocorreu um erro ao processar sua solicitação.")
-
-@bot.message_handler(commands=['supergroupid'])
-def supergroup_id_command(message):
-    chat_id = message.chat.id
-    chat_type = message.chat.type
-
-    if chat_type == 'supergroup':
-        chat_info = bot.get_chat(chat_id)
-        bot.send_message(chat_id, f"O ID deste supergrupo é: <code>{chat_info.id}</code>", reply_to_message_id=message.message_id,parse_mode="HTML")
-    else:
-        bot.send_message(chat_id, "Este chat não é um supergrupo.")
-
-@bot.message_handler(commands=['idchat'])
-def handle_idchat_command(message):
-    chat_id = message.chat.id
-    bot.send_message(chat_id, f"O ID deste chat é<code>{chat_id}</code>", reply_to_message_id=message.message_id,parse_mode="HTML")
-
-@bot.message_handler(commands=['setuser'])
-def setuser_comando(message):
-    command_parts = message.text.split()
-    if len(command_parts) != 2:
-        bot.send_message(message.chat.id, "Formato incorreto. Use /setuser seguido do user desejado, por exemplo: /setuser novouser.", reply_to_message_id=message.message_id)
-        return
-
-    nome_usuario = command_parts[1].strip()
-
-    if not re.match("^[a-zA-Z0-9_]{1,20}$", nome_usuario):
-        bot.send_message(message.chat.id, "Nome de usuário inválido. Use apenas letras, números e '_' e não ultrapasse 20 caracteres.", reply_to_message_id=message.message_id)
-        return
-
-    try:
-        conn, cursor = conectar_banco_dados()
-        cursor.execute("SELECT 1 FROM usuarios WHERE user = %s", (nome_usuario,))
-        if cursor.fetchone():
-            bot.send_message(message.chat.id, "O nome de usuário já está em uso. Escolha outro nome de usuário.", reply_to_message_id=message.message_id)
-            return
-
-        cursor.execute("SELECT 1 FROM usuarios_banidos WHERE id_usuario = %s", (nome_usuario,))
-        if cursor.fetchone():
-            bot.send_message(message.chat.id, "O nome de usuário já está em uso. Escolha outro nome de usuário.", reply_to_message_id=message.message_id)
-            return
-
-        cursor.execute("UPDATE usuarios SET user = %s WHERE id_usuario = %s", (nome_usuario, message.from_user.id))
-        conn.commit()
-
-        bot.send_message(message.chat.id, f"O nome de usuário foi alterado para '{nome_usuario}'.", reply_to_message_id=message.message_id)
-
-    except mysql.connector.Error as err:
-        bot.send_message(message.chat.id, f"Erro ao processar comando /setuser: {err}", reply_to_message_id=message.message_id)
-
-    finally:
-        fechar_conexao(cursor, conn)
-     
 @bot.message_handler(commands=['start'])
 def start_comando(message):
     user_id = message.from_user.id
@@ -3730,17 +3635,7 @@ def start_comando(message):
         print(f"Erro: {e}")
         mensagem_banido = "Você foi banido permanentemente do garden. Entre em contato com o suporte caso haja dúvidas."
         bot.send_message(message.chat.id, mensagem_banido, reply_to_message_id=message.message_id)
-        
-@bot.message_handler(commands=['removefav'])
-def remove_fav_command(message):
-    id_usuario = message.from_user.id
-
-    conn, cursor = conectar_banco_dados()
-    cursor.execute("UPDATE usuarios SET fav = NULL WHERE id_usuario = %s", (id_usuario,))
-    conn.commit()
-
-    bot.send_message(message.chat.id, "Favorito removido com sucesso.", reply_to_message_id=message.message_id)
-
+    
            
 @bot.message_handler(commands=['setfav'])
 def set_fav_command(message):
@@ -3758,21 +3653,6 @@ def set_fav_command(message):
         else:
             bot.send_message(message.chat.id, f"Você não possui {id_personagem} no seu inventário, que tal ir pescar?", reply_to_message_id=message.message_id)
 
-
-@bot.message_handler(commands=['setnome'])
-def set_nome_command(message):
-
-    command_parts = message.text.split(maxsplit=1)
-
-    if len(command_parts) == 2:
-        novo_nome = command_parts[1]
-        id_usuario = message.from_user.id
-        atualizar_coluna_usuario(id_usuario, 'nome', novo_nome)
-        bot.send_message(message.chat.id, f"Nome atualizado para: {novo_nome}", reply_to_message_id=message.message_id)
-    else:
-        bot.send_message(message.chat.id,
-                         "Formato incorreto. Use /setnome seguido do novo nome, por exemplo: /setnome Manoela Gavassi", reply_to_message_id=message.message_id)
-
 @bot.message_handler(commands=['usuario'])
 def obter_username_por_comando(message):
     if len(message.text.split()) == 2 and message.text.split()[1].isdigit():
@@ -3781,18 +3661,6 @@ def obter_username_por_comando(message):
         bot.reply_to(message, username)
     else:
         bot.reply_to(message, "Formato incorreto. Use /usuario seguido do ID desejado, por exemplo: /usuario 123")
-
-
-def obter_rankings(cursor, ranking_type):
-
-    # Buscar o ranking atualizado
-    if ranking_type == 'pesca':
-        query = "SELECT id_usuario, total_pescado FROM ranking_pescas ORDER BY total_pescado DESC LIMIT 10"
-    elif ranking_type == 'doações':
-        query = "SELECT id_usuario, total_pontos FROM ranking_doacoes ORDER BY total_pontos DESC LIMIT 10"
-
-    cursor.execute(query)
-    return cursor.fetchall()
 
 @bot.message_handler(commands=['eu'])
 def me_command(message):
@@ -3838,24 +3706,6 @@ def me_command(message):
             cursor.execute(query_obter_casamento, (id_usuario,))
             casamento = cursor.fetchone()
 
-            # Obter ranking de doações e pescas separadamente
-            ranking_doacoes = obter_rankings(cursor, 'doações')
-            ranking_pescas = obter_rankings(cursor, 'pesca')
-
-            # Encontrar a posição do usuário no ranking de doações
-            posicao_doacoes = None
-            for pos, (id_ranked_usuario, total_pontos) in enumerate(ranking_doacoes, start=1):
-                if id_ranked_usuario == id_usuario:
-                    posicao_doacoes = pos
-                    break
-
-            # Encontrar a posição do usuário no ranking de pescas
-            posicao_pescas = None
-            for pos, (id_ranked_usuario, total_pescado) in enumerate(ranking_pescas, start=1):
-                if id_ranked_usuario == id_usuario:
-                    posicao_pescas = pos
-                    break
-
             # Construir a resposta
             if perfil:
                 nome, nome_usuario, fav, adm, qntcartas, cenouras, iscas, bio, musica, pronome, privado, user, beta, nome_fav, imagem_fav = perfil
@@ -3864,12 +3714,6 @@ def me_command(message):
 
                 if is_vip:
                     resposta += "<i>🍃 Agricultor do Garden</i>\n\n"
-
-                if posicao_doacoes:
-                    resposta += f"<i>💚 {posicao_doacoes}º lugar em doações</i>\n\n"
-                
-                if posicao_pescas:
-                    resposta += f"<i>💙 {posicao_pescas}º lugar em pescas</i>\n\n"
 
                 # Mostrar estado de casamento
                 if casamento:
@@ -3922,9 +3766,6 @@ def verificar_comando_especies(message):
 
     except Exception as e:
         print(f"Erro ao processar comando /especies: {e}")
-
-
-
         
 @bot.message_handler(commands=['gperfil'])
 def gperfil_command(message):
@@ -4124,8 +3965,6 @@ def gnome(message):
         newrelic.agent.record_exception()
     finally:
         fechar_conexao(cursor, conn)
-
-
 
 @bot.message_handler(commands=['gnomes'])
 def gnome(message):
@@ -4669,8 +4508,6 @@ def verificar_comando_tag(message):
     except Exception as e:
         print(f"Erro ao processar comando /tag: {e}")
 
-
-
 @bot.message_handler(commands=['addtag'])
 def adicionar_tag(message):
     try:
@@ -4754,7 +4591,6 @@ def enviar_pagina(chat_id, message_id, pagina, tipo, personagens, total_personag
             bot.edit_message_media(media=types.InputMediaPhoto(imagem_subgrupo, caption=mensagem, parse_mode="HTML"), chat_id=chat_id, message_id=message_id, reply_markup=markup if has_buttons else None)
         else:
             bot.edit_message_text(mensagem, chat_id=chat_id, message_id=message_id, parse_mode="HTML", reply_markup=markup if has_buttons else None)
-
 
 
 @bot.message_handler(commands=['sub'])
@@ -5065,88 +4901,7 @@ def callback_cartas_compradas(call):
         bot.send_message(call.message.chat.id, "Erro ao exibir cartas compradas. Tente novamente.")
 
         fechar_conexao(cursor, conn)
-
-@bot.message_handler(commands=['diamante'])
-def mostrar_diamante_por_nome(message):
-    try:
-        args = message.text.split(' ', 1)
-        if len(args) < 2:
-            bot.reply_to(message, "Por favor, forneça o nome do card especial. Exemplo: /diamante Red Velvet")
-            return
-
-        nome_procurado = args[1].strip().lower()
-        id_usuario = message.from_user.id
-
-        conn, cursor = conectar_banco_dados()
-
-        # Verificar se o usuário possui um card especial com o nome especificado
-        query = """
-        SELECT ce.nome, ce.imagem 
-        FROM inventario_especial ie
-        JOIN cards_especiais ce ON ie.id_card = ce.id_card
-        WHERE ie.id_usuario = %s AND LOWER(ce.nome) = %s
-        """
-        cursor.execute(query, (id_usuario, nome_procurado))
-        card = cursor.fetchone()
-
-        if card:
-            nome_card, imagem_card = card
-            resposta = f"💎 {nome_card}"
-            if imagem_card:
-                bot.send_photo(message.chat.id, imagem_card, caption=resposta, parse_mode="HTML")
-            else:
-                bot.send_message(message.chat.id, resposta, parse_mode="HTML")
-        else:
-            bot.send_message(message.chat.id, f"Você não possui um card especial com o nome '{nome_procurado}'.", parse_mode="HTML")
-
-    except Exception as e:
-        bot.send_message(message.chat.id, "Erro ao procurar o card especial.")
-        print(f"Erro ao procurar o card especial: {e}")
-    finally:
-        fechar_conexao(cursor, conn)
-
-@bot.message_handler(commands=['diamantes'])
-def mostrar_diamantes(message):
-    id_usuario = message.from_user.id
-    conn, cursor = conectar_banco_dados()
-    try:
-        query = """
-        SELECT ce.nome 
-        FROM inventario_especial ie
-        JOIN cards_especiais ce ON ie.id_card = ce.id_card
-        WHERE ie.id_usuario = %s
-        """
-        cursor.execute(query, (id_usuario,))
-        cards = cursor.fetchall()
-
-        if cards:
-            resposta = "💎 Seus cards especiais:\n\n"
-            for card in cards:
-                resposta += f"💎 {card[0]}\n"
-        else:
-            resposta = "Você não possui nenhum card especial no momento."
-
-        bot.send_message(message.chat.id, resposta)
-
-    except Exception as e:
-        bot.send_message(message.chat.id, "Erro ao buscar seus cards especiais.")
-        print(f"Erro ao buscar cards especiais: {e}")
-    finally:
-        fechar_conexao(cursor, conn)
-
-@bot.message_handler(commands=['incrementar_banco'])
-def incrementar_banco_command(message):
-    try:
-        mensagens = incrementar_quantidades_banco()
-        if isinstance(mensagens, list):
-            for msg in mensagens:
-                bot.send_message(message.chat.id, msg)
-        else:
-            bot.send_message(message.chat.id, mensagens)
-    except Exception as e:
-        print(f"Erro ao incrementar quantidades no banco: {e}")
-        bot.send_message(message.chat.id, "Erro ao incrementar quantidades no banco.")
-
+        
 @bot.message_handler(commands=['banco'])
 def banco_command(message):
     try:
@@ -5188,50 +4943,6 @@ def banco_command(message):
         fechar_conexao(cursor, conn)
 
 
-def mostrar_cartas_banco(chat_id, pagina_atual, total_paginas, cartas_banco, total_cartas, message_id, categoria=None, subcategoria=None):
-    offset = (pagina_atual - 1) * 30
-    cartas_pagina = cartas_banco[offset:offset + 30]
-
-    mensagem_banco = f"🍎 <b>Peixes no Banco do Vilarejo - {categoria or 'Todas as Categorias'} {subcategoria or ''}</b>\n\n"
-    mensagem_banco += f"💰 Total de peixes: {total_cartas}\n\n"
-
-    for carta in cartas_pagina:
-        id_personagem, quantidade, nome, subcategoria_carta, emoji = carta
-        mensagem_banco += f"{emoji} <i>{nome}</i> - {subcategoria_carta} - {quantidade} disponíveis\n"
-
-    mensagem_banco += f"\nPágina {pagina_atual}/{total_paginas}"
-
-    markup = botoes_paginacao(pagina_atual, total_paginas, 'banco', categoria, subcategoria)
-
-    try:
-        if message_id:
-            bot.edit_message_text(mensagem_banco, chat_id=chat_id, message_id=message_id, reply_markup=markup, parse_mode="HTML")
-        else:
-            bot.send_message(chat_id, mensagem_banco, reply_markup=markup, parse_mode="HTML")
-    except telebot.apihelper.ApiException as e:
-        # Se houver um erro ao tentar editar a mensagem, enviar uma nova mensagem
-        if "message can't be edited" in str(e):
-            bot.send_message(chat_id, mensagem_banco, reply_markup=markup, parse_mode="HTML")
-        else:
-            print(f"Erro ao mostrar cartas do banco: {e}")
-            bot.send_message(chat_id, "Erro ao mostrar cartas do banco.")
-
-
-def botoes_paginacao(pagina_atual, total_paginas, comando_base, categoria=None, subcategoria=None):
-    markup = InlineKeyboardMarkup()
-    botoes = []
-
-    if pagina_atual > 1:
-        botoes.append(InlineKeyboardButton("⬅️", callback_data=f"{comando_base}_pagina_{pagina_atual-1}_{categoria or ''}_{subcategoria or ''}"))
-    if pagina_atual < total_paginas:
-        botoes.append(InlineKeyboardButton("➡️", callback_data=f"{comando_base}_pagina_{pagina_atual+1}_{categoria or ''}_{subcategoria or ''}"))
-
-    if botoes:
-        markup.row(*botoes)
-
-    return markup
-
-
 @bot.callback_query_handler(func=lambda call: call.data.startswith('banco_pagina_'))
 def callback_banco_pagina(call):
     data = call.data.split('_')
@@ -5262,8 +4973,6 @@ def callback_banco_pagina(call):
     mostrar_cartas_banco(call.message.chat.id, pagina, total_paginas, cartas_banco, total_cartas, call.message.message_id, categoria, subcategoria)
 
     fechar_conexao(cursor, conn)
-
-
 
 @bot.message_handler(commands=['armazém', 'armazem', 'amz'])
 def armazem_command(message):
@@ -5853,6 +5562,86 @@ def verificar_e_adicionar_card_especial(id_usuario, subcategoria):
         return None
     finally:
         fechar_conexao(cursor, conn)
+@bot.message_handler(commands=['diamante'])
+def mostrar_diamante_por_nome(message):
+    try:
+        args = message.text.split(' ', 1)
+        if len(args) < 2:
+            bot.reply_to(message, "Por favor, forneça o nome do card especial. Exemplo: /diamante Red Velvet")
+            return
+
+        nome_procurado = args[1].strip().lower()
+        id_usuario = message.from_user.id
+
+        conn, cursor = conectar_banco_dados()
+
+        # Verificar se o usuário possui um card especial com o nome especificado
+        query = """
+        SELECT ce.nome, ce.imagem 
+        FROM inventario_especial ie
+        JOIN cards_especiais ce ON ie.id_card = ce.id_card
+        WHERE ie.id_usuario = %s AND LOWER(ce.nome) = %s
+        """
+        cursor.execute(query, (id_usuario, nome_procurado))
+        card = cursor.fetchone()
+
+        if card:
+            nome_card, imagem_card = card
+            resposta = f"💎 {nome_card}"
+            if imagem_card:
+                bot.send_photo(message.chat.id, imagem_card, caption=resposta, parse_mode="HTML")
+            else:
+                bot.send_message(message.chat.id, resposta, parse_mode="HTML")
+        else:
+            bot.send_message(message.chat.id, f"Você não possui um card especial com o nome '{nome_procurado}'.", parse_mode="HTML")
+
+    except Exception as e:
+        bot.send_message(message.chat.id, "Erro ao procurar o card especial.")
+        print(f"Erro ao procurar o card especial: {e}")
+    finally:
+        fechar_conexao(cursor, conn)
+
+@bot.message_handler(commands=['diamantes'])
+def mostrar_diamantes(message):
+    id_usuario = message.from_user.id
+    conn, cursor = conectar_banco_dados()
+    try:
+        query = """
+        SELECT ce.nome 
+        FROM inventario_especial ie
+        JOIN cards_especiais ce ON ie.id_card = ce.id_card
+        WHERE ie.id_usuario = %s
+        """
+        cursor.execute(query, (id_usuario,))
+        cards = cursor.fetchall()
+
+        if cards:
+            resposta = "💎 Seus cards especiais:\n\n"
+            for card in cards:
+                resposta += f"💎 {card[0]}\n"
+        else:
+            resposta = "Você não possui nenhum card especial no momento."
+
+        bot.send_message(message.chat.id, resposta)
+
+    except Exception as e:
+        bot.send_message(message.chat.id, "Erro ao buscar seus cards especiais.")
+        print(f"Erro ao buscar cards especiais: {e}")
+    finally:
+        fechar_conexao(cursor, conn)
+
+@bot.message_handler(commands=['incrementar_banco'])
+def incrementar_banco_command(message):
+    try:
+        mensagens = incrementar_quantidades_banco()
+        if isinstance(mensagens, list):
+            for msg in mensagens:
+                bot.send_message(message.chat.id, msg)
+        else:
+            bot.send_message(message.chat.id, mensagens)
+    except Exception as e:
+        print(f"Erro ao incrementar quantidades no banco: {e}")
+        bot.send_message(message.chat.id, "Erro ao incrementar quantidades no banco.")
 
 @bot.message_handler(commands=['mecompat'])
 def mecompat_command(message):
@@ -6155,6 +5944,27 @@ def add_to_wish(message):
         fechar_conexao(cursor, conn)
 
 
+@bot.message_handler(commands=['iduser'])
+def handle_iduser_command(message):
+    if message.reply_to_message:
+        idusuario = message.reply_to_message.from_user.id
+        bot.send_message(chat_id=message.chat.id, text=f"O ID do usuário é <code>{idusuario}</code>", reply_to_message_id=message.message_id,parse_mode="HTML")
+
+@bot.message_handler(commands=['sair'])
+def sair_grupo(message):
+    try:
+        id_grupo = message.text.split(' ', 1)[1]
+        bot.leave_chat(id_grupo)
+        bot.reply_to(message, f"O bot saiu do grupo com ID {id_grupo}.")
+
+    except IndexError:
+        bot.reply_to(message, "Por favor, forneça o ID do grupo após o comando, por exemplo: /sair 123456789.")
+
+    except Exception as e:
+        print(f"Erro ao processar comando /sair: {e}")
+        bot.reply_to(message, "Ocorreu um erro ao processar sua solicitação.")
+
+     
 @bot.message_handler(commands=['ping'])
 def ping_command(message):
     start_time = time.time()
@@ -6494,7 +6304,101 @@ def enviar_mensagem_grupo(message):
     except Exception as e:
         print(f"Erro ao enviar mensagem para o grupo: {e}")
         bot.reply_to(message, "Ocorreu um erro ao enviar a mensagem para o grupo.")
+@bot.message_handler(commands=['help'])
+def help_command(message):
+    markup = telebot.types.InlineKeyboardMarkup()
+    markup.row(
+        telebot.types.InlineKeyboardButton("Cartas", callback_data="help_cartas"),
+        telebot.types.InlineKeyboardButton("Trocas", callback_data="help_trocas")
+    )
+    markup.row(
+        telebot.types.InlineKeyboardButton("Eventos", callback_data="help_eventos"),
+        telebot.types.InlineKeyboardButton("Usuário", callback_data="help_bugs")
+    )
+    markup.row(
+        telebot.types.InlineKeyboardButton("Outros", callback_data="help_tudo"),
+        telebot.types.InlineKeyboardButton("Sobre o Beta", callback_data="help_beta")
+    )
+    
+    markup.row(
+        telebot.types.InlineKeyboardButton("⚠️ IMPORTANTE! ⚠️", callback_data="help_imp")
+    )
+    
+    
+    bot.send_message(message.chat.id, "Selecione uma categoria para obter ajuda:", reply_markup=markup)
+@bot.message_handler(commands=['setnome'])
+def set_nome_command(message):
 
+    command_parts = message.text.split(maxsplit=1)
+
+    if len(command_parts) == 2:
+        novo_nome = command_parts[1]
+        id_usuario = message.from_user.id
+        atualizar_coluna_usuario(id_usuario, 'nome', novo_nome)
+        bot.send_message(message.chat.id, f"Nome atualizado para: {novo_nome}", reply_to_message_id=message.message_id)
+    else:
+        bot.send_message(message.chat.id,
+                         "Formato incorreto. Use /setnome seguido do novo nome, por exemplo: /setnome Manoela Gavassi", reply_to_message_id=message.message_id)
+@bot.message_handler(commands=['supergroupid'])
+def supergroup_id_command(message):
+    chat_id = message.chat.id
+    chat_type = message.chat.type
+
+    if chat_type == 'supergroup':
+        chat_info = bot.get_chat(chat_id)
+        bot.send_message(chat_id, f"O ID deste supergrupo é: <code>{chat_info.id}</code>", reply_to_message_id=message.message_id,parse_mode="HTML")
+    else:
+        bot.send_message(chat_id, "Este chat não é um supergrupo.")
+
+@bot.message_handler(commands=['idchat'])
+def handle_idchat_command(message):
+    chat_id = message.chat.id
+    bot.send_message(chat_id, f"O ID deste chat é<code>{chat_id}</code>", reply_to_message_id=message.message_id,parse_mode="HTML")
+
+@bot.message_handler(commands=['setuser'])
+def setuser_comando(message):
+    command_parts = message.text.split()
+    if len(command_parts) != 2:
+        bot.send_message(message.chat.id, "Formato incorreto. Use /setuser seguido do user desejado, por exemplo: /setuser novouser.", reply_to_message_id=message.message_id)
+        return
+
+    nome_usuario = command_parts[1].strip()
+
+    if not re.match("^[a-zA-Z0-9_]{1,20}$", nome_usuario):
+        bot.send_message(message.chat.id, "Nome de usuário inválido. Use apenas letras, números e '_' e não ultrapasse 20 caracteres.", reply_to_message_id=message.message_id)
+        return
+
+    try:
+        conn, cursor = conectar_banco_dados()
+        cursor.execute("SELECT 1 FROM usuarios WHERE user = %s", (nome_usuario,))
+        if cursor.fetchone():
+            bot.send_message(message.chat.id, "O nome de usuário já está em uso. Escolha outro nome de usuário.", reply_to_message_id=message.message_id)
+            return
+
+        cursor.execute("SELECT 1 FROM usuarios_banidos WHERE id_usuario = %s", (nome_usuario,))
+        if cursor.fetchone():
+            bot.send_message(message.chat.id, "O nome de usuário já está em uso. Escolha outro nome de usuário.", reply_to_message_id=message.message_id)
+            return
+
+        cursor.execute("UPDATE usuarios SET user = %s WHERE id_usuario = %s", (nome_usuario, message.from_user.id))
+        conn.commit()
+
+        bot.send_message(message.chat.id, f"O nome de usuário foi alterado para '{nome_usuario}'.", reply_to_message_id=message.message_id)
+
+    except mysql.connector.Error as err:
+        bot.send_message(message.chat.id, f"Erro ao processar comando /setuser: {err}", reply_to_message_id=message.message_id)
+
+    finally:
+        fechar_conexao(cursor, conn)
+@bot.message_handler(commands=['removefav'])
+def remove_fav_command(message):
+    id_usuario = message.from_user.id
+
+    conn, cursor = conectar_banco_dados()
+    cursor.execute("UPDATE usuarios SET fav = NULL WHERE id_usuario = %s", (id_usuario,))
+    conn.commit()
+
+    bot.send_message(message.chat.id, "Favorito removido com sucesso.", reply_to_message_id=message.message_id)
 
 @bot.message_handler(commands=['legenda'])
 def gerar_legenda(message):

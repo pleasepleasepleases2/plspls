@@ -122,61 +122,67 @@ def index():
 
 @bot.message_handler(commands=['jogodavelha'])
 def iniciar_jogo(message):
-    id_usuario = message.from_user.id
-    tabuleiro = inicializar_tabuleiro()
-    jogos_da_velha[id_usuario] = tabuleiro
-    
-    bot.send_message(message.chat.id, f"Vamos jogar Jogo da Velha! Você é o '✔️' e eu sou o '❌'.\n\n{mostrar_tabuleiro(tabuleiro)}")
-    
-    markup = criar_botoes_tabuleiro(tabuleiro)
-    bot.send_message(message.chat.id, "Escolha sua jogada (1-9):", reply_markup=markup)
-
+    try:
+        id_usuario = message.from_user.id
+        tabuleiro = inicializar_tabuleiro()
+        jogos_da_velha[id_usuario] = tabuleiro
+        
+        bot.send_message(message.chat.id, f"Vamos jogar Jogo da Velha! Você é o '✔️' e eu sou o '❌'.\n\n{mostrar_tabuleiro(tabuleiro)}")
+        
+        markup = criar_botoes_tabuleiro(tabuleiro)
+        bot.send_message(message.chat.id, "Escolha sua jogada (1-9):", reply_markup=markup)
+    except Exception as e:
+        print(f"Erro ao processar o jogo da velha): {e}")
+        traceback.print_exc()
 @bot.callback_query_handler(func=lambda call: call.data.startswith('jogada_'))
 def jogador_fazer_jogada(call):
-    id_usuario = call.from_user.id
-    if id_usuario not in jogos_da_velha:
-        bot.send_message(call.message.chat.id, "Você não iniciou um jogo da velha. Use /jogodavelha para começar.")
-        return
-
-    if call.data == "jogada_disabled":
-        bot.answer_callback_query(call.id, "Essa posição já está ocupada!")
-        return
-
-    tabuleiro = jogos_da_velha[id_usuario]
-    _, i, j = call.data.split('_')
-    i, j = int(i), int(j)
+    try: 
+        id_usuario = call.from_user.id
+        if id_usuario not in jogos_da_velha:
+            bot.send_message(call.message.chat.id, "Você não iniciou um jogo da velha. Use /jogodavelha para começar.")
+            return
     
-    if tabuleiro[i][j] != '⬜':
-        bot.answer_callback_query(call.id, "Essa posição já está ocupada!")
-        return
+        if call.data == "jogada_disabled":
+            bot.answer_callback_query(call.id, "Essa posição já está ocupada!")
+            return
     
-    tabuleiro[i][j] = '✔️'
+        tabuleiro = jogos_da_velha[id_usuario]
+        _, i, j = call.data.split('_')
+        i, j = int(i), int(j)
+        
+        if tabuleiro[i][j] != '⬜':
+            bot.answer_callback_query(call.id, "Essa posição já está ocupada!")
+            return
+        
+        tabuleiro[i][j] = '✔️'
+        
+        if verificar_vitoria(tabuleiro, '✔️'):
+            bot.edit_message_text(f"🎉 Parabéns! Você venceu!\n\n{mostrar_tabuleiro(tabuleiro)}", call.message.chat.id, call.message.message_id)
+            del jogos_da_velha[id_usuario]
+            return
+        
+        if verificar_empate(tabuleiro):
+            bot.edit_message_text(f"😐 Empate!\n\n{mostrar_tabuleiro(tabuleiro)}", call.message.chat.id, call.message.message_id)
+            del jogos_da_velha[id_usuario]
+            return
+        
+        tabuleiro = bot_fazer_jogada(tabuleiro, '❌', '✔️')
     
-    if verificar_vitoria(tabuleiro, '✔️'):
-        bot.edit_message_text(f"🎉 Parabéns! Você venceu!\n\n{mostrar_tabuleiro(tabuleiro)}", call.message.chat.id, call.message.message_id)
-        del jogos_da_velha[id_usuario]
-        return
-    
-    if verificar_empate(tabuleiro):
-        bot.edit_message_text(f"😐 Empate!\n\n{mostrar_tabuleiro(tabuleiro)}", call.message.chat.id, call.message.message_id)
-        del jogos_da_velha[id_usuario]
-        return
-    
-    tabuleiro = bot_fazer_jogada(tabuleiro, '❌', '✔️')
-
-    if verificar_vitoria(tabuleiro, '❌'):
-        bot.edit_message_text(f"😎 Eu venci! Melhor sorte da próxima vez.\n\n{mostrar_tabuleiro(tabuleiro)}", call.message.chat.id, call.message.message_id)
-        del jogos_da_velha[id_usuario]
-        return
-    
-    if verificar_empate(tabuleiro):
-        bot.edit_message_text(f"😐 Empate!\n\n{mostrar_tabuleiro(tabuleiro)}", call.message.chat.id, call.message.message_id)
-        del jogos_da_velha[id_usuario]
-        return
-    
-    markup = criar_botoes_tabuleiro(tabuleiro)
-    bot.edit_message_text(f"Seu turno!\n\n{mostrar_tabuleiro(tabuleiro)}", call.message.chat.id, call.message.message_id, reply_markup=markup)
-
+        if verificar_vitoria(tabuleiro, '❌'):
+            bot.edit_message_text(f"😎 Eu venci! Melhor sorte da próxima vez.\n\n{mostrar_tabuleiro(tabuleiro)}", call.message.chat.id, call.message.message_id)
+            del jogos_da_velha[id_usuario]
+            return
+        
+        if verificar_empate(tabuleiro):
+            bot.edit_message_text(f"😐 Empate!\n\n{mostrar_tabuleiro(tabuleiro)}", call.message.chat.id, call.message.message_id)
+            del jogos_da_velha[id_usuario]
+            return
+        
+        markup = criar_botoes_tabuleiro(tabuleiro)
+        bot.edit_message_text(f"Seu turno!\n\n{mostrar_tabuleiro(tabuleiro)}", call.message.chat.id, call.message.message_id, reply_markup=markup)
+    except Exception as e:
+        print(f"Erro ao processar o jogo da velha): {e}")
+        traceback.print_exc()
 @app.route(WEBHOOK_URL_PATH, methods=['POST'])
 def webhook():
     if flask.request.headers.get('content-type') == 'application/json':
@@ -252,124 +258,133 @@ def verificar_ids(message):
         
 @bot.message_handler(commands=['labirinto'])
 def iniciar_labirinto(message):
-    id_usuario = message.from_user.id
-    tamanho = 10  # Tamanho do labirinto (10x10 para mais complexidade)
-    
-    labirinto = gerar_labirinto_com_caminho_e_validacao(tamanho)
-    posicao_inicial = (1, 1)  # O jogador começa em uma posição inicial fixa ou aleatória
-    movimentos_restantes = 35  # Limite de movimentos para encontrar a saída
-    
-    jogadores_labirinto[id_usuario] = {
-        "labirinto": labirinto,
-        "posicao": posicao_inicial,
-        "movimentos": movimentos_restantes
-    }
-    
-    mapa = mostrar_labirinto(labirinto, posicao_inicial)
-    
-    # Criar os botões de navegação
-    markup = types.InlineKeyboardMarkup(row_width=4)
-    botao_cima = types.InlineKeyboardButton("⬆️", callback_data="norte")
-    botao_esquerda = types.InlineKeyboardButton("⬅️", callback_data="oeste")
-    botao_direita = types.InlineKeyboardButton("➡️", callback_data="leste")
-    botao_baixo = types.InlineKeyboardButton("⬇️", callback_data="sul")
-    markup.add(botao_cima, botao_esquerda, botao_direita, botao_baixo)
-    
-    bot.send_message(message.chat.id, f"🏰 Bem-vindo ao Labirinto! Você tem {movimentos_restantes} movimentos para escapar.\n\n{mapa}", reply_markup=markup)
-
-@bot.callback_query_handler(func=lambda call: call.data in ['norte', 'sul', 'leste', 'oeste'])
-def mover_labirinto(call):
-    id_usuario = call.from_user.id
-    if id_usuario not in jogadores_labirinto:
-        bot.send_message(call.message.chat.id, "👻 Você precisa iniciar o labirinto primeiro com o comando /labirinto.")
-        return
-    
-    direcao = call.data  # Pega a direção do botão clicado
-    jogador = jogadores_labirinto[id_usuario]
-    labirinto = jogador["labirinto"]
-    posicao_atual = jogador["posicao"]
-    movimentos_restantes = jogador["movimentos"]
-    
-    nova_posicao = mover_posicao(posicao_atual, direcao, len(labirinto), labirinto)
-    
-    if nova_posicao != posicao_atual:  # Se a nova posição for válida
-        jogadores_labirinto[id_usuario]["posicao"] = nova_posicao
-        jogadores_labirinto[id_usuario]["movimentos"] -= 1
-        movimentos_restantes -= 1
-        conteudo = labirinto[nova_posicao[0]][nova_posicao[1]]
+    try:
+        id_usuario = message.from_user.id
+        tamanho = 10  # Tamanho do labirinto (10x10 para mais complexidade)
         
-        # Verificar se o jogador chegou na saída
-        if conteudo == '🚪':
-            bot.edit_message_text(f"🏆 Parabéns! Você encontrou a saída e escapou do labirinto!\n\n{revelar_labirinto(labirinto)}",
-                                  call.message.chat.id, call.message.message_id)
-            del jogadores_labirinto[id_usuario]  # Remover o jogador do labirinto
-        elif movimentos_restantes == 0:
-            bot.edit_message_text(f"😢 Seus movimentos acabaram! Você não conseguiu escapar da maldição...\n\n{revelar_labirinto(labirinto)}",
-                                  call.message.chat.id, call.message.message_id)
-            del jogadores_labirinto[id_usuario]  # Fim do jogo, remover jogador
-        else:
-            mapa = mostrar_labirinto(labirinto, nova_posicao)
-            # Revelar o conteúdo do bloco ao chegar nele
-            if conteudo == '👻' or conteudo == '🎃':
-                # Remover o monstro ou abóbora do labirinto
-                labirinto[nova_posicao[0]][nova_posicao[1]] = '⬜'
-                
-                markup_opcoes = types.InlineKeyboardMarkup(row_width=2)
-                botao_encerrar = types.InlineKeyboardButton("Encerrar", callback_data="encerrar")
-                botao_continuar = types.InlineKeyboardButton("Continuar", callback_data="continuar")
-                markup_opcoes.add(botao_encerrar, botao_continuar)
-                
-                if conteudo == '👻':
-                    bot.edit_message_text(f"👻 Você encontrou um monstro e perdeu 20 cenouras! Você quer encerrar ou continuar?\n\n{mapa}",
-                                          call.message.chat.id, call.message.message_id, reply_markup=markup_opcoes)
-                    conn, cursor = conectar_banco_dados()
-                    cursor.execute("UPDATE usuarios SET cenouras = cenouras - 20 WHERE id_usuario = %s", (id_usuario,))
-                    conn.commit()
-                elif conteudo == '🎃':
-                    bot.edit_message_text(f"🎃 Você encontrou uma recompensa de 50 cenouras! Você quer encerrar ou continuar?\n\n{mapa}",
-                                          call.message.chat.id, call.message.message_id, reply_markup=markup_opcoes)
-                    conn, cursor = conectar_banco_dados()
-                    cursor.execute("UPDATE usuarios SET cenouras = cenouras + 50 WHERE id_usuario = %s", (id_usuario,))
-                    conn.commit()
-            else:
-                # Atualizar os botões de navegação
-                markup = types.InlineKeyboardMarkup(row_width=4)
-                botao_cima = types.InlineKeyboardButton("⬆️", callback_data="norte")
-                botao_esquerda = types.InlineKeyboardButton("⬅️", callback_data="oeste")
-                botao_direita = types.InlineKeyboardButton("➡️", callback_data="leste")
-                botao_baixo = types.InlineKeyboardButton("⬇️", callback_data="sul")
-                markup.add(botao_cima, botao_esquerda, botao_direita, botao_baixo)
-
-                bot.edit_message_text(f"🌕 Você avançou pelo labirinto. Movimentos restantes: {movimentos_restantes}\n\n{mapa}",
-                                      call.message.chat.id, call.message.message_id, reply_markup=markup)
-    else:
-        bot.answer_callback_query(call.id, "👻 Você não pode ir nessa direção!")
-
-@bot.callback_query_handler(func=lambda call: call.data in ['encerrar', 'continuar'])
-def encerrar_ou_continuar(call):
-    id_usuario = call.from_user.id
-    if call.data == 'encerrar':
-        bot.edit_message_text("💀 Você decidiu encerrar sua jornada no labirinto. Fim de jogo!", call.message.chat.id, call.message.message_id)
-        del jogadores_labirinto[id_usuario]  # Remover jogador
-    elif call.data == 'continuar':
-        jogador = jogadores_labirinto[id_usuario]
-        labirinto = jogador["labirinto"]
-        posicao = jogador["posicao"]
-        movimentos_restantes = jogador["movimentos"]
-
-        # Atualizar a mensagem com o labirinto e botões de navegação
-        mapa = mostrar_labirinto(labirinto, posicao)
+        labirinto = gerar_labirinto_com_caminho_e_validacao(tamanho)
+        posicao_inicial = (1, 1)  # O jogador começa em uma posição inicial fixa ou aleatória
+        movimentos_restantes = 35  # Limite de movimentos para encontrar a saída
+        
+        jogadores_labirinto[id_usuario] = {
+            "labirinto": labirinto,
+            "posicao": posicao_inicial,
+            "movimentos": movimentos_restantes
+        }
+        
+        mapa = mostrar_labirinto(labirinto, posicao_inicial)
+        
+        # Criar os botões de navegação
         markup = types.InlineKeyboardMarkup(row_width=4)
         botao_cima = types.InlineKeyboardButton("⬆️", callback_data="norte")
         botao_esquerda = types.InlineKeyboardButton("⬅️", callback_data="oeste")
         botao_direita = types.InlineKeyboardButton("➡️", callback_data="leste")
         botao_baixo = types.InlineKeyboardButton("⬇️", callback_data="sul")
         markup.add(botao_cima, botao_esquerda, botao_direita, botao_baixo)
+        
+        bot.send_message(message.chat.id, f"🏰 Bem-vindo ao Labirinto! Você tem {movimentos_restantes} movimentos para escapar.\n\n{mapa}", reply_markup=markup)
+    except Exception as e:
+        print(f"Erro ao processar o jogo da velha): {e}")
+        traceback.print_exc()
+@bot.callback_query_handler(func=lambda call: call.data in ['norte', 'sul', 'leste', 'oeste'])
+def mover_labirinto(call):
+    try:
+        id_usuario = call.from_user.id
+        if id_usuario not in jogadores_labirinto:
+            bot.send_message(call.message.chat.id, "👻 Você precisa iniciar o labirinto primeiro com o comando /labirinto.")
+            return
+        
+        direcao = call.data  # Pega a direção do botão clicado
+        jogador = jogadores_labirinto[id_usuario]
+        labirinto = jogador["labirinto"]
+        posicao_atual = jogador["posicao"]
+        movimentos_restantes = jogador["movimentos"]
+        
+        nova_posicao = mover_posicao(posicao_atual, direcao, len(labirinto), labirinto)
+        
+        if nova_posicao != posicao_atual:  # Se a nova posição for válida
+            jogadores_labirinto[id_usuario]["posicao"] = nova_posicao
+            jogadores_labirinto[id_usuario]["movimentos"] -= 1
+            movimentos_restantes -= 1
+            conteudo = labirinto[nova_posicao[0]][nova_posicao[1]]
+            
+            # Verificar se o jogador chegou na saída
+            if conteudo == '🚪':
+                bot.edit_message_text(f"🏆 Parabéns! Você encontrou a saída e escapou do labirinto!\n\n{revelar_labirinto(labirinto)}",
+                                      call.message.chat.id, call.message.message_id)
+                del jogadores_labirinto[id_usuario]  # Remover o jogador do labirinto
+            elif movimentos_restantes == 0:
+                bot.edit_message_text(f"😢 Seus movimentos acabaram! Você não conseguiu escapar da maldição...\n\n{revelar_labirinto(labirinto)}",
+                                      call.message.chat.id, call.message.message_id)
+                del jogadores_labirinto[id_usuario]  # Fim do jogo, remover jogador
+            else:
+                mapa = mostrar_labirinto(labirinto, nova_posicao)
+                # Revelar o conteúdo do bloco ao chegar nele
+                if conteudo == '👻' or conteudo == '🎃':
+                    # Remover o monstro ou abóbora do labirinto
+                    labirinto[nova_posicao[0]][nova_posicao[1]] = '⬜'
+                    
+                    markup_opcoes = types.InlineKeyboardMarkup(row_width=2)
+                    botao_encerrar = types.InlineKeyboardButton("Encerrar", callback_data="encerrar")
+                    botao_continuar = types.InlineKeyboardButton("Continuar", callback_data="continuar")
+                    markup_opcoes.add(botao_encerrar, botao_continuar)
+                    
+                    if conteudo == '👻':
+                        bot.edit_message_text(f"👻 Você encontrou um monstro e perdeu 20 cenouras! Você quer encerrar ou continuar?\n\n{mapa}",
+                                              call.message.chat.id, call.message.message_id, reply_markup=markup_opcoes)
+                        conn, cursor = conectar_banco_dados()
+                        cursor.execute("UPDATE usuarios SET cenouras = cenouras - 20 WHERE id_usuario = %s", (id_usuario,))
+                        conn.commit()
+                    elif conteudo == '🎃':
+                        bot.edit_message_text(f"🎃 Você encontrou uma recompensa de 50 cenouras! Você quer encerrar ou continuar?\n\n{mapa}",
+                                              call.message.chat.id, call.message.message_id, reply_markup=markup_opcoes)
+                        conn, cursor = conectar_banco_dados()
+                        cursor.execute("UPDATE usuarios SET cenouras = cenouras + 50 WHERE id_usuario = %s", (id_usuario,))
+                        conn.commit()
+                else:
+                    # Atualizar os botões de navegação
+                    markup = types.InlineKeyboardMarkup(row_width=4)
+                    botao_cima = types.InlineKeyboardButton("⬆️", callback_data="norte")
+                    botao_esquerda = types.InlineKeyboardButton("⬅️", callback_data="oeste")
+                    botao_direita = types.InlineKeyboardButton("➡️", callback_data="leste")
+                    botao_baixo = types.InlineKeyboardButton("⬇️", callback_data="sul")
+                    markup.add(botao_cima, botao_esquerda, botao_direita, botao_baixo)
+    
+                    bot.edit_message_text(f"🌕 Você avançou pelo labirinto. Movimentos restantes: {movimentos_restantes}\n\n{mapa}",
+                                          call.message.chat.id, call.message.message_id, reply_markup=markup)
+        else:
+            bot.answer_callback_query(call.id, "👻 Você não pode ir nessa direção!")
+    except Exception as e:
+        print(f"Erro ao processar o jogo da velha): {e}")
+        traceback.print_exc()
+@bot.callback_query_handler(func=lambda call: call.data in ['encerrar', 'continuar'])
+def encerrar_ou_continuar(call):
+        try:
+        id_usuario = call.from_user.id
+        if call.data == 'encerrar':
+            bot.edit_message_text("💀 Você decidiu encerrar sua jornada no labirinto. Fim de jogo!", call.message.chat.id, call.message.message_id)
+            del jogadores_labirinto[id_usuario]  # Remover jogador
+        elif call.data == 'continuar':
+            jogador = jogadores_labirinto[id_usuario]
+            labirinto = jogador["labirinto"]
+            posicao = jogador["posicao"]
+            movimentos_restantes = jogador["movimentos"]
+    
+            # Atualizar a mensagem com o labirinto e botões de navegação
+            mapa = mostrar_labirinto(labirinto, posicao)
+            markup = types.InlineKeyboardMarkup(row_width=4)
+            botao_cima = types.InlineKeyboardButton("⬆️", callback_data="norte")
+            botao_esquerda = types.InlineKeyboardButton("⬅️", callback_data="oeste")
+            botao_direita = types.InlineKeyboardButton("➡️", callback_data="leste")
+            botao_baixo = types.InlineKeyboardButton("⬇️", callback_data="sul")
+            markup.add(botao_cima, botao_esquerda, botao_direita, botao_baixo)
+    
+            bot.edit_message_text(f"🏃 Você decidiu continuar sua jornada! Movimentos restantes: {movimentos_restantes}\n\n{mapa}",
+                                  call.message.chat.id, call.message.message_id, reply_markup=markup)
 
-        bot.edit_message_text(f"🏃 Você decidiu continuar sua jornada! Movimentos restantes: {movimentos_restantes}\n\n{mapa}",
-                              call.message.chat.id, call.message.message_id, reply_markup=markup)
-
-
+    except Exception as e:
+        print(f"Erro ao processar o jogo da velha): {e}")
+        traceback.print_exc()
 
 def process_tasks():
     while True:

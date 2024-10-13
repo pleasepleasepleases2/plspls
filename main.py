@@ -95,7 +95,7 @@ bot = telebot.TeleBot(API_TOKEN)
 app = flask.Flask(__name__)
 newrelic.agent.initialize('newrelic.ini')
 
-grupodeerro = -4279935414
+grupodeerro = -1002209493474
 GRUPO_SUGESTOES = -4546359573
 cache_musicas_editadas = dc.Cache('./cache_musicas_editadas')
 song_cooldown_cache = TTLCache(maxsize=1000, ttl=15)  # 3 horas de cooldown

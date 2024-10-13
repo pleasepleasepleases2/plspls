@@ -186,7 +186,70 @@ def webhook():
         return ''
     else:
         flask.abort(403)
+@bot.message_handler(commands=['verificar'])
+def verificar_ids(message):
+    try:
+        print("Comando verificar acionado")    
+        if not message.reply_to_message:
+            bot.reply_to(message, "Por favor, responda a uma mensagem que contenha os IDs que você deseja verificar.")
+            return
+        texto_original = message.reply_to_message.text
+        soup = BeautifulSoup(texto_original, 'html.parser')
+        ids_code = [tag.text for tag in soup.find_all('code')]
 
+        ids_text = re.findall(r'\b\d{1,5}\b', texto_original)
+
+        ids = list(set(ids_code + ids_text))
+
+        if not ids:
+            bot.reply_to(message, "Nenhum ID válido encontrado na mensagem.")
+            return
+
+        ids = list(map(int, ids))
+        id_usuario = message.from_user.id
+
+        conn, cursor = conectar_banco_dados()
+        
+        inventario = []
+
+        for id_personagem in ids:
+            cursor.execute("SELECT nome FROM personagens WHERE id_personagem = %s", (id_personagem,))
+            resultado = cursor.fetchone()
+            if resultado:
+                nome_personagem = resultado[0]
+                cursor.execute("SELECT quantidade FROM inventario WHERE id_usuario = %s AND id_personagem = %s", (id_usuario, id_personagem))
+                quantidade = cursor.fetchone()
+                if quantidade and quantidade[0] > 0:
+                    inventario.append((id_personagem, nome_personagem, quantidade[0]))
+            else:
+                cursor.execute("SELECT nome FROM evento WHERE id_personagem = %s", (id_personagem,))
+                resultado = cursor.fetchone()
+                if resultado:
+                    nome_personagem = resultado[0]
+                    cursor.execute("SELECT quantidade FROM inventario WHERE id_usuario = %s AND id_personagem = %s", (id_usuario, id_personagem))
+                    quantidade = cursor.fetchone()
+                    if quantidade and quantidade[0] > 0:
+                        inventario.append((id_personagem, nome_personagem, quantidade[0]))
+
+        if not inventario:
+            bot.send_message(message.chat.id, "Você não possui nenhuma das cartas mencionadas.", reply_to_message_id=message.message_id)
+            return
+
+        inventario.sort(key=lambda x: x[0])
+
+        resposta = "🧺 Seu armazém:\n\n"
+        for id_personagem, nome, quantidade in inventario:
+            resposta += f"<code>{id_personagem}</code> — {nome}: {quantidade}x\n"
+
+        max_chars = 4096  
+        partes = [resposta[i:i + max_chars] for i in range(0, len(resposta), max_chars)]
+        for parte in partes:
+            bot.send_message(message.chat.id, parte, reply_to_message_id=message.message_id,parse_mode="HTML")
+
+    except Exception as e:
+        print(f"Erro ao verificar IDs: {e}")
+        bot.reply_to(message, "Não foi possivel verificar essa mensagem, tente copiar e colar para verificar novamente.")
+        
 @bot.message_handler(commands=['labirinto'])
 def iniciar_labirinto(message):
     id_usuario = message.from_user.id
@@ -2486,70 +2549,7 @@ def delcards_command(message):
         print(f"Erro ao deletar cartas do inventário: {e}")
         bot.reply_to(message, "Ocorreu um erro ao deletar as cartas do inventário.")
 
-@bot.message_handler(commands=['verificar'])
-def verificar_ids(message):
-    try:
-        print("Comando verificar acionado")    
-        if not message.reply_to_message:
-            bot.reply_to(message, "Por favor, responda a uma mensagem que contenha os IDs que você deseja verificar.")
-            return
-        texto_original = message.reply_to_message.text
-        soup = BeautifulSoup(texto_original, 'html.parser')
-        ids_code = [tag.text for tag in soup.find_all('code')]
 
-        ids_text = re.findall(r'\b\d{1,5}\b', texto_original)
-
-        ids = list(set(ids_code + ids_text))
-
-        if not ids:
-            bot.reply_to(message, "Nenhum ID válido encontrado na mensagem.")
-            return
-
-        ids = list(map(int, ids))
-        id_usuario = message.from_user.id
-
-        conn, cursor = conectar_banco_dados()
-        
-        inventario = []
-
-        for id_personagem in ids:
-            cursor.execute("SELECT nome FROM personagens WHERE id_personagem = %s", (id_personagem,))
-            resultado = cursor.fetchone()
-            if resultado:
-                nome_personagem = resultado[0]
-                cursor.execute("SELECT quantidade FROM inventario WHERE id_usuario = %s AND id_personagem = %s", (id_usuario, id_personagem))
-                quantidade = cursor.fetchone()
-                if quantidade and quantidade[0] > 0:
-                    inventario.append((id_personagem, nome_personagem, quantidade[0]))
-            else:
-                cursor.execute("SELECT nome FROM evento WHERE id_personagem = %s", (id_personagem,))
-                resultado = cursor.fetchone()
-                if resultado:
-                    nome_personagem = resultado[0]
-                    cursor.execute("SELECT quantidade FROM inventario WHERE id_usuario = %s AND id_personagem = %s", (id_usuario, id_personagem))
-                    quantidade = cursor.fetchone()
-                    if quantidade and quantidade[0] > 0:
-                        inventario.append((id_personagem, nome_personagem, quantidade[0]))
-
-        if not inventario:
-            bot.send_message(message.chat.id, "Você não possui nenhuma das cartas mencionadas.", reply_to_message_id=message.message_id)
-            return
-
-        inventario.sort(key=lambda x: x[0])
-
-        resposta = "🧺 Seu armazém:\n\n"
-        for id_personagem, nome, quantidade in inventario:
-            resposta += f"<code>{id_personagem}</code> — {nome}: {quantidade}x\n"
-
-        max_chars = 4096  
-        partes = [resposta[i:i + max_chars] for i in range(0, len(resposta), max_chars)]
-        for parte in partes:
-            bot.send_message(message.chat.id, parte, reply_to_message_id=message.message_id,parse_mode="HTML")
-
-    except Exception as e:
-        print(f"Erro ao verificar IDs: {e}")
-        bot.reply_to(message, "Não foi possivel verificar essa mensagem, tente copiar e colar para verificar novamente.")
-        
 @bot.message_handler(commands=['doar'])
 def doar(message):
     try:

@@ -6673,5 +6673,5 @@ def registrar_mensagens_privadas(message):
 
 
 if __name__ == "__main__":
-    app.run(host=WEBHOOK_LISTEN, port=int(WEBHOOK_PORT), debug=True)
+    app.run(host=WEBHOOK_LISTEN, port=int(WEBHOOK_PORT), debug=False)
 

@@ -1266,7 +1266,7 @@ def pedidovip_command(message):
         print(f"Erro ao processar o comando /pedidovip: {e}")
     finally:
         fechar_conexao(cursor, conn)
-llowed_user_ids = [5121550670, 5532809878, 531165369, 1805086442]
+allowed_user_ids = [5121550670, 5532809878, 531165369, 1805086442]
 @bot.message_handler(commands=['criarvendinha'])
 def criar_colagem(message):
     if message.from_user.id not in allowed_user_ids:

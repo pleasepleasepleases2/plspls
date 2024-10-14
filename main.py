@@ -1459,7 +1459,108 @@ def callback_subcategoria_handler(call):
     finally:
         fechar_conexao(cursor, conn)
 
+# Lista de IDs permitidos
+allowed_user_ids = [5121550670, 5532809878, 531165369, 1805086442]
+@bot.message_handler(commands=['criarvendinha'])
+def criar_colagem(message):
+    if message.from_user.id not in allowed_user_ids:
+        bot.send_message(message.chat.id, "Você não tem permissão para usar este comando.")
+        return
 
+    try:
+        cartas_aleatorias = obter_cartas_aleatorias()
+        data_atual_str = dt_module.date.today().strftime("%Y-%m-%d") 
+        if not cartas_aleatorias:
+            bot.send_message(message.chat.id, "Não foi possível obter cartas aleatórias.")
+            return
+
+        registrar_cartas_loja(cartas_aleatorias, data_atual_str)
+        imagens = []
+        for carta in cartas_aleatorias:
+            img_url = carta.get('imagem', '')
+            try:
+                if img_url:
+                    response = requests.get(img_url)
+                    if response.status_code == 200:
+                        img = Image.open(io.BytesIO(response.content))
+                        img = img.resize((300, 400), Image.LANCZOS)
+                    else:
+                        img = Image.new('RGB', (300, 400), color='black')
+                else:
+                    img = Image.new('RGB', (300, 400), color='black')
+            except Exception as e:
+                print(f"Erro ao abrir a imagem da carta {carta['id']}: {e}")
+                img = Image.new('RGB', (300, 400), color='black')
+            imagens.append(img)
+
+        altura_total = (len(imagens) // 3) * 400
+
+        colagem = Image.new('RGB', (900, altura_total))  
+        coluna_atual = 0
+        linha_atual = 0
+
+        for img in imagens:
+            colagem.paste(img, (coluna_atual, linha_atual))
+            coluna_atual += 300
+
+            if coluna_atual >= 900:
+                coluna_atual = 0
+                linha_atual += 400
+
+        colagem.save('colagem_cartas.png')
+        
+        mensagem_loja = "🐟 Peixes na vendinha hoje:\n\n"
+        for carta in cartas_aleatorias:
+            mensagem_loja += f"{carta['emoji']}| {carta['id']} • {carta['nome']} - {carta['subcategoria']}\n"
+        mensagem_loja += "\n🥕 Acesse usando o comando /vendinha"
+
+        with open('colagem_cartas.png', 'rb') as photo:
+            bot.send_photo(message.chat.id, photo, caption=mensagem_loja, reply_to_message_id=message.message_id)
+    except Exception as e:
+        print(f"Erro ao criar colagem: {e}")
+        bot.send_message(message.chat.id, "Erro ao criar colagem.")
+
+@bot.message_handler(commands=['vendinha'])
+def loja(message):
+    try:
+        verificar_id_na_tabela(message.from_user.id, "ban", "iduser")
+        keyboard = telebot.types.InlineKeyboardMarkup()
+
+        keyboard.row(telebot.types.InlineKeyboardButton(text="🎣 Peixes do dia", callback_data='loja_loja'))
+        keyboard.row(telebot.types.InlineKeyboardButton(text="🎴 Estou com sorte", callback_data='loja_geral'))
+        keyboard.row(telebot.types.InlineKeyboardButton(text="⛲ Fonte dos Desejos", callback_data='fazer_pedido'))
+        keyboard.row(telebot.types.InlineKeyboardButton(text="💼 Pacotes de Ações", callback_data='acoes_vendinha'))
+
+        image_url = "https://telegra.ph/file/ea116d98a5bd8d6179612.jpg"
+        bot.send_photo(message.chat.id, image_url,
+                       caption='Olá! Seja muito bem-vindo à vendinha da Mabi. Como posso te ajudar?',
+                       reply_markup=keyboard, reply_to_message_id=message.message_id)
+
+    except ValueError as e:
+        print(f"Erro: {e}")
+        mensagem_banido = "Você foi banido permanentemente do garden. Entre em contato com o suporte caso haja dúvidas."
+        bot.send_message(message.chat.id, mensagem_banido, reply_to_message_id=message.message_id)
+      
+@bot.message_handler(commands=['peixes'])
+def verificar_comando_peixes(message):
+    try:
+        parametros = message.text.split(' ', 2)[1:]  
+
+        if not parametros:
+            bot.reply_to(message, "Por favor, forneça a subcategoria.")
+            return
+        
+        subcategoria = " ".join(parametros)  
+        
+        if len(parametros) > 1 and parametros[0] == 'img':
+            subcategoria = " ".join(parametros[1:])
+            enviar_imagem_peixe(message, subcategoria)
+        else:
+            mostrar_lista_peixes(message, subcategoria)
+        
+    except Exception as e:
+        print(f"Erro ao processar comando /peixes: {e}")
+        bot.reply_to(message, "Ocorreu um erro ao processar sua solicitação.")
 @bot.message_handler(commands=['ervadaninha'])
 def listar_bloqueios(message):
     try:
@@ -1739,6 +1840,116 @@ def divorciar_command(message):
     finally:
         fechar_conexao(cursor, conn)
 
+@bot.message_handler(commands=['tag'])
+def verificar_comando_tag(message):
+    try:
+        parametros = message.text.split(' ', 1)[1:] 
+
+        if not parametros:
+            conn, cursor = conectar_banco_dados()
+            id_usuario = message.from_user.id
+            cursor.execute("SELECT DISTINCT nometag FROM tags WHERE id_usuario = %s", (id_usuario,))
+            tags = cursor.fetchall()
+            if tags:
+                resposta = "🔖| Suas tags:\n\n"
+                for tag in tags:
+                    resposta += f"• {tag[0]}\n"
+                bot.reply_to(message, resposta)
+            else:
+                bot.reply_to(message, "Você não possui nenhuma tag.")
+            fechar_conexao(cursor, conn)
+            return
+
+        nometag = parametros[0] 
+        id_usuario = message.from_user.id
+        mostrar_primeira_pagina_tag(message, nometag, id_usuario)
+
+    except Exception as e:
+        print(f"Erro ao processar comando /tag: {e}")
+
+@bot.message_handler(commands=['addtag'])
+def adicionar_tag(message):
+    try:
+        conn, cursor = conectar_banco_dados()
+        id_usuario = message.from_user.id
+        args = message.text.split(maxsplit=1)
+        
+        if len(args) == 2:
+            tag_info = args[1]
+            tag_parts = tag_info.split('|')
+            
+            if len(tag_parts) == 2:
+                ids_personagens_str = tag_parts[0].strip()
+                nometag = tag_parts[1].strip()
+                
+                if ids_personagens_str and nometag:
+                    ids_personagens = [id_personagem.strip() for id_personagem in ids_personagens_str.split(',')]
+                    
+                    for id_personagem in ids_personagens:
+                        cursor.execute(
+                            "INSERT INTO tags (id_usuario, id_personagem, nometag) VALUES (%s, %s, %s)", 
+                            (id_usuario, id_personagem, nometag)
+                        )
+                    
+                    conn.commit()
+                    bot.reply_to(message, f"Tag '{nometag}' adicionada com sucesso.")
+                else:
+                    bot.reply_to(message, "Formato incorreto. Use /addtag id1,id2,... | nometag")
+            else:
+                bot.reply_to(message, "Formato incorreto. Use /addtag id1,id2,... | nometag")
+        else:
+            bot.reply_to(message, "Formato incorreto. Use /addtag id1,id2,... | nometag")
+    
+    except mysql.connector.Error as err:
+        print(f"Erro de MySQL: {err}")
+        bot.reply_to(message, "Ocorreu um erro ao processar a operação no banco de dados.")
+    
+    except Exception as e:
+        print(f"Erro ao adicionar tag: {e}")
+        bot.reply_to(message, "Ocorreu um erro ao processar a operação.")
+    
+    finally:
+        fechar_conexao(cursor, conn)
+def enviar_pagina(chat_id, message_id, pagina, tipo, personagens, total_personagens, sub_nome, nome_usuario, imagem_subgrupo, id_usuario, is_first_page=False):
+    itens_por_pagina = 15  # Sempre paginar em 15 itens, independente do tipo
+    offset = (pagina - 1) * itens_por_pagina
+    ids_pagina = list(personagens.items())[offset:offset + itens_por_pagina]
+
+    if tipo == 'all':
+        mensagem = f"Peixes do subgrupo {sub_nome.capitalize()}:\n\n"
+    else:
+        mensagem = f"☀️ Peixes do subgrupo {sub_nome.capitalize()} na cesta de {nome_usuario}!\n\n"
+
+    # Adicionar a linha de páginas e quantidade para todos os tipos
+    if len(personagens) > itens_por_pagina:
+        mensagem += f"📑 | {pagina}/{(total_personagens // itens_por_pagina) + (1 if total_personagens % itens_por_pagina > 0 else 0)}\n"
+    
+    mensagem += f"🐟 | {len(personagens)}/{total_personagens}\n\n"
+
+    for id_personagem, (nome, subcategoria, emoji) in ids_pagina:  # Inclui o emoji na tupla
+        mensagem += f"{emoji} <code>{id_personagem}</code> • {nome} de {subcategoria}\n"  # Exibe o emoji
+
+    markup = types.InlineKeyboardMarkup()
+
+    # Adiciona botões de navegação apenas se houver mais de 15 itens
+    if len(personagens) > itens_por_pagina:
+        if pagina > 1:
+            markup.add(types.InlineKeyboardButton("⬅️", callback_data=f"{tipo}_pagina_{pagina-1}_{sub_nome}_{id_usuario}"))
+        if offset + itens_por_pagina < total_personagens:
+            markup.add(types.InlineKeyboardButton("➡️", callback_data=f"{tipo}_pagina_{pagina+1}_{sub_nome}_{id_usuario}"))
+
+    has_buttons = len(markup.to_dict().get('inline_keyboard', [])) > 0
+
+    if is_first_page:
+        if imagem_subgrupo:
+            bot.send_photo(chat_id, imagem_subgrupo, caption=mensagem, parse_mode="HTML", reply_markup=markup if has_buttons else None)
+        else:
+            bot.send_message(chat_id, mensagem, parse_mode="HTML", reply_markup=markup if has_buttons else None)
+    else:
+        if imagem_subgrupo:
+            bot.edit_message_media(media=types.InputMediaPhoto(imagem_subgrupo, caption=mensagem, parse_mode="HTML"), chat_id=chat_id, message_id=message_id, reply_markup=markup if has_buttons else None)
+        else:
+            bot.edit_message_text(mensagem, chat_id=chat_id, message_id=message_id, parse_mode="HTML", reply_markup=markup if has_buttons else None)
 
 @bot.message_handler(commands=['completos'])
 def handle_completos(message):
@@ -4481,116 +4692,6 @@ def command_historico(message):
             bot.send_message(id_usuario, "Nenhuma pesca encontrada para este usuário.")
 
 
-@bot.message_handler(commands=['tag'])
-def verificar_comando_tag(message):
-    try:
-        parametros = message.text.split(' ', 1)[1:] 
-
-        if not parametros:
-            conn, cursor = conectar_banco_dados()
-            id_usuario = message.from_user.id
-            cursor.execute("SELECT DISTINCT nometag FROM tags WHERE id_usuario = %s", (id_usuario,))
-            tags = cursor.fetchall()
-            if tags:
-                resposta = "🔖| Suas tags:\n\n"
-                for tag in tags:
-                    resposta += f"• {tag[0]}\n"
-                bot.reply_to(message, resposta)
-            else:
-                bot.reply_to(message, "Você não possui nenhuma tag.")
-            fechar_conexao(cursor, conn)
-            return
-
-        nometag = parametros[0] 
-        id_usuario = message.from_user.id
-        mostrar_primeira_pagina_tag(message, nometag, id_usuario)
-
-    except Exception as e:
-        print(f"Erro ao processar comando /tag: {e}")
-
-@bot.message_handler(commands=['addtag'])
-def adicionar_tag(message):
-    try:
-        conn, cursor = conectar_banco_dados()
-        id_usuario = message.from_user.id
-        args = message.text.split(maxsplit=1)
-        
-        if len(args) == 2:
-            tag_info = args[1]
-            tag_parts = tag_info.split('|')
-            
-            if len(tag_parts) == 2:
-                ids_personagens_str = tag_parts[0].strip()
-                nometag = tag_parts[1].strip()
-                
-                if ids_personagens_str and nometag:
-                    ids_personagens = [id_personagem.strip() for id_personagem in ids_personagens_str.split(',')]
-                    
-                    for id_personagem in ids_personagens:
-                        cursor.execute(
-                            "INSERT INTO tags (id_usuario, id_personagem, nometag) VALUES (%s, %s, %s)", 
-                            (id_usuario, id_personagem, nometag)
-                        )
-                    
-                    conn.commit()
-                    bot.reply_to(message, f"Tag '{nometag}' adicionada com sucesso.")
-                else:
-                    bot.reply_to(message, "Formato incorreto. Use /addtag id1,id2,... | nometag")
-            else:
-                bot.reply_to(message, "Formato incorreto. Use /addtag id1,id2,... | nometag")
-        else:
-            bot.reply_to(message, "Formato incorreto. Use /addtag id1,id2,... | nometag")
-    
-    except mysql.connector.Error as err:
-        print(f"Erro de MySQL: {err}")
-        bot.reply_to(message, "Ocorreu um erro ao processar a operação no banco de dados.")
-    
-    except Exception as e:
-        print(f"Erro ao adicionar tag: {e}")
-        bot.reply_to(message, "Ocorreu um erro ao processar a operação.")
-    
-    finally:
-        fechar_conexao(cursor, conn)
-def enviar_pagina(chat_id, message_id, pagina, tipo, personagens, total_personagens, sub_nome, nome_usuario, imagem_subgrupo, id_usuario, is_first_page=False):
-    itens_por_pagina = 15  # Sempre paginar em 15 itens, independente do tipo
-    offset = (pagina - 1) * itens_por_pagina
-    ids_pagina = list(personagens.items())[offset:offset + itens_por_pagina]
-
-    if tipo == 'all':
-        mensagem = f"Peixes do subgrupo {sub_nome.capitalize()}:\n\n"
-    else:
-        mensagem = f"☀️ Peixes do subgrupo {sub_nome.capitalize()} na cesta de {nome_usuario}!\n\n"
-
-    # Adicionar a linha de páginas e quantidade para todos os tipos
-    if len(personagens) > itens_por_pagina:
-        mensagem += f"📑 | {pagina}/{(total_personagens // itens_por_pagina) + (1 if total_personagens % itens_por_pagina > 0 else 0)}\n"
-    
-    mensagem += f"🐟 | {len(personagens)}/{total_personagens}\n\n"
-
-    for id_personagem, (nome, subcategoria, emoji) in ids_pagina:  # Inclui o emoji na tupla
-        mensagem += f"{emoji} <code>{id_personagem}</code> • {nome} de {subcategoria}\n"  # Exibe o emoji
-
-    markup = types.InlineKeyboardMarkup()
-
-    # Adiciona botões de navegação apenas se houver mais de 15 itens
-    if len(personagens) > itens_por_pagina:
-        if pagina > 1:
-            markup.add(types.InlineKeyboardButton("⬅️", callback_data=f"{tipo}_pagina_{pagina-1}_{sub_nome}_{id_usuario}"))
-        if offset + itens_por_pagina < total_personagens:
-            markup.add(types.InlineKeyboardButton("➡️", callback_data=f"{tipo}_pagina_{pagina+1}_{sub_nome}_{id_usuario}"))
-
-    has_buttons = len(markup.to_dict().get('inline_keyboard', [])) > 0
-
-    if is_first_page:
-        if imagem_subgrupo:
-            bot.send_photo(chat_id, imagem_subgrupo, caption=mensagem, parse_mode="HTML", reply_markup=markup if has_buttons else None)
-        else:
-            bot.send_message(chat_id, mensagem, parse_mode="HTML", reply_markup=markup if has_buttons else None)
-    else:
-        if imagem_subgrupo:
-            bot.edit_message_media(media=types.InputMediaPhoto(imagem_subgrupo, caption=mensagem, parse_mode="HTML"), chat_id=chat_id, message_id=message_id, reply_markup=markup if has_buttons else None)
-        else:
-            bot.edit_message_text(mensagem, chat_id=chat_id, message_id=message_id, parse_mode="HTML", reply_markup=markup if has_buttons else None)
 
 
 @bot.message_handler(commands=['sub'])
@@ -6109,108 +6210,7 @@ def doar(message):
         import traceback
         traceback.print_exc()
 
-# Lista de IDs permitidos
-allowed_user_ids = [5121550670, 5532809878, 531165369, 1805086442]
-@bot.message_handler(commands=['criarvendinha'])
-def criar_colagem(message):
-    if message.from_user.id not in allowed_user_ids:
-        bot.send_message(message.chat.id, "Você não tem permissão para usar este comando.")
-        return
 
-    try:
-        cartas_aleatorias = obter_cartas_aleatorias()
-        data_atual_str = dt_module.date.today().strftime("%Y-%m-%d") 
-        if not cartas_aleatorias:
-            bot.send_message(message.chat.id, "Não foi possível obter cartas aleatórias.")
-            return
-
-        registrar_cartas_loja(cartas_aleatorias, data_atual_str)
-        imagens = []
-        for carta in cartas_aleatorias:
-            img_url = carta.get('imagem', '')
-            try:
-                if img_url:
-                    response = requests.get(img_url)
-                    if response.status_code == 200:
-                        img = Image.open(io.BytesIO(response.content))
-                        img = img.resize((300, 400), Image.LANCZOS)
-                    else:
-                        img = Image.new('RGB', (300, 400), color='black')
-                else:
-                    img = Image.new('RGB', (300, 400), color='black')
-            except Exception as e:
-                print(f"Erro ao abrir a imagem da carta {carta['id']}: {e}")
-                img = Image.new('RGB', (300, 400), color='black')
-            imagens.append(img)
-
-        altura_total = (len(imagens) // 3) * 400
-
-        colagem = Image.new('RGB', (900, altura_total))  
-        coluna_atual = 0
-        linha_atual = 0
-
-        for img in imagens:
-            colagem.paste(img, (coluna_atual, linha_atual))
-            coluna_atual += 300
-
-            if coluna_atual >= 900:
-                coluna_atual = 0
-                linha_atual += 400
-
-        colagem.save('colagem_cartas.png')
-        
-        mensagem_loja = "🐟 Peixes na vendinha hoje:\n\n"
-        for carta in cartas_aleatorias:
-            mensagem_loja += f"{carta['emoji']}| {carta['id']} • {carta['nome']} - {carta['subcategoria']}\n"
-        mensagem_loja += "\n🥕 Acesse usando o comando /vendinha"
-
-        with open('colagem_cartas.png', 'rb') as photo:
-            bot.send_photo(message.chat.id, photo, caption=mensagem_loja, reply_to_message_id=message.message_id)
-    except Exception as e:
-        print(f"Erro ao criar colagem: {e}")
-        bot.send_message(message.chat.id, "Erro ao criar colagem.")
-
-@bot.message_handler(commands=['vendinha'])
-def loja(message):
-    try:
-        verificar_id_na_tabela(message.from_user.id, "ban", "iduser")
-        keyboard = telebot.types.InlineKeyboardMarkup()
-
-        keyboard.row(telebot.types.InlineKeyboardButton(text="🎣 Peixes do dia", callback_data='loja_loja'))
-        keyboard.row(telebot.types.InlineKeyboardButton(text="🎴 Estou com sorte", callback_data='loja_geral'))
-        keyboard.row(telebot.types.InlineKeyboardButton(text="⛲ Fonte dos Desejos", callback_data='fazer_pedido'))
-        keyboard.row(telebot.types.InlineKeyboardButton(text="💼 Pacotes de Ações", callback_data='acoes_vendinha'))
-
-        image_url = "https://telegra.ph/file/ea116d98a5bd8d6179612.jpg"
-        bot.send_photo(message.chat.id, image_url,
-                       caption='Olá! Seja muito bem-vindo à vendinha da Mabi. Como posso te ajudar?',
-                       reply_markup=keyboard, reply_to_message_id=message.message_id)
-
-    except ValueError as e:
-        print(f"Erro: {e}")
-        mensagem_banido = "Você foi banido permanentemente do garden. Entre em contato com o suporte caso haja dúvidas."
-        bot.send_message(message.chat.id, mensagem_banido, reply_to_message_id=message.message_id)
-      
-@bot.message_handler(commands=['peixes'])
-def verificar_comando_peixes(message):
-    try:
-        parametros = message.text.split(' ', 2)[1:]  
-
-        if not parametros:
-            bot.reply_to(message, "Por favor, forneça a subcategoria.")
-            return
-        
-        subcategoria = " ".join(parametros)  
-        
-        if len(parametros) > 1 and parametros[0] == 'img':
-            subcategoria = " ".join(parametros[1:])
-            enviar_imagem_peixe(message, subcategoria)
-        else:
-            mostrar_lista_peixes(message, subcategoria)
-        
-    except Exception as e:
-        print(f"Erro ao processar comando /peixes: {e}")
-        bot.reply_to(message, "Ocorreu um erro ao processar sua solicitação.")
         
 @bot.message_handler(commands=['colagem'])
 def criar_colagem(message):

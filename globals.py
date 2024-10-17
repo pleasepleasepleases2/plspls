@@ -37,3 +37,10 @@ bordas_urls = [
 
 # Criar um cache para as imagens com bordas aplicadas
 cache_imagens_com_bordas = {}
+
+# Listas de palavras separadas por quantidade de letras
+palavras_4_letras = ['doce', 'osso', 'fada', 'medo', 'gato', 'mago', 'lobo', 'teia', 'bala']
+palavras_5_letras = ['doces', 'morte', 'ossos', 'fadas', 'bruxa', 'magia', 'poção', 'zumbi', 'lobos', 'mumia', 'uivar', 'susto', 'tumba']
+palavras_6_letras = ['mortes', 'morder', 'sangue', 'caixão', 'aranha', 'presas', 'crânio', 'lápide', 'pocoes', 'bombom']
+palavras_7_letras = ['abobora', 'vampiro', 'malvado', 'demonio', 'maldade', 'sangrar', 'varinha', 'caveira', 'monstro', 'morcego']
+palavras_8_letras = ['fantasia', 'fantasma', 'vassoura']

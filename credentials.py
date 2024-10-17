@@ -10,4 +10,4 @@ DB_NAME="garden"
 WEBHOOK_URL_BASE = "https://plspls-production.up.railway.app/"
 WEBHOOK_URL_PATH = '/' + API_TOKEN + '/'
 WEBHOOK_LISTEN = "0.0.0.0"
-WEBHOOK_PORT = int(os.getenv('PORT', 5000))  #
+

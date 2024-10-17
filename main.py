@@ -125,7 +125,7 @@ def iniciar_jogo(message):
     try:
         id_usuario = message.from_user.id
         tabuleiro = inicializar_tabuleiro()
-        jogos_da_velha[id_usuario] = tabuleiro
+        global.jogos_da_velha[id_usuario] = tabuleiro
         
         bot.send_message(message.chat.id, f"Vamos jogar Jogo da Velha! Você é o '✔️' e eu sou o '❌'.\n\n{mostrar_tabuleiro(tabuleiro)}")
         

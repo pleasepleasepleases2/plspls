@@ -1,0 +1,13 @@
+grupodeerro = -1002209493474
+GRUPO_SUGESTOES = -4546359573
+API_TOKEN="7088149058:AAEoZ7PsVgaOAFDcW9q1t28k5Pj11o-6LCU"
+SPOTIFY_CLIENT_ID="804047efa98c4d1d81da250b0770c05d"
+SPOTIFY_CLIENT_SECRET="6deb00cb4cea42f79abe41cc4da05f13"
+DB_HOST="mysql.railway.internal"
+DB_USER="root"
+DB_PASS="ZGDCREJXfzPkyqxisMhnwAcJhtbYkfge"
+DB_NAME="garden"
+WEBHOOK_URL_BASE = "https://plspls-production.up.railway.app/"
+WEBHOOK_URL_PATH = '/' + API_TOKEN + '/'
+WEBHOOK_LISTEN = "0.0.0.0"
+WEBHOOK_PORT = int(os.getenv('PORT', 5000))  #

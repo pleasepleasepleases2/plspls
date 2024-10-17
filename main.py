@@ -17,6 +17,7 @@ import spotipy
 import math
 import logging
 from songs import *
+from credentials import *
 from mutagen.mp3 import MP3
 from mutagen.id3 import ID3
 from queue import Queue
@@ -78,15 +79,6 @@ processing_lock = threading.Lock()
 ids_proibidos = {164, 165, 163, 174, 192, 214, 215, 216}
 scheduler = BackgroundScheduler(timezone=utc)
 scheduler.start()
-API_TOKEN="7088149058:AAEoZ7PsVgaOAFDcW9q1t28k5Pj11o-6LCU"
-SPOTIFY_CLIENT_ID="804047efa98c4d1d81da250b0770c05d"
-SPOTIFY_CLIENT_SECRET="6deb00cb4cea42f79abe41cc4da05f13"
-DB_HOST="mysql.railway.internal"
-DB_USER="root"
-DB_PASS="ZGDCREJXfzPkyqxisMhnwAcJhtbYkfge"
-DB_NAME="garden"
-WEBHOOK_URL_BASE = "https://plspls-production.up.railway.app/"
-
 WEBHOOK_URL_PATH = '/' + API_TOKEN + '/'
 WEBHOOK_LISTEN = "0.0.0.0"
 WEBHOOK_PORT = int(os.getenv('PORT', 5000))  #
@@ -94,9 +86,6 @@ WEBHOOK_PORT = int(os.getenv('PORT', 5000))  #
 bot = telebot.TeleBot(API_TOKEN)
 app = flask.Flask(__name__)
 newrelic.agent.initialize('newrelic.ini')
-
-grupodeerro = -1002209493474
-GRUPO_SUGESTOES = -4546359573
 cache_musicas_editadas = dc.Cache('./cache_musicas_editadas')
 song_cooldown_cache = TTLCache(maxsize=1000, ttl=15)  # 3 horas de cooldown
 sp = spotipy.Spotify(auth_manager=SpotifyClientCredentials(client_id=SPOTIFY_CLIENT_ID, client_secret=SPOTIFY_CLIENT_SECRET))

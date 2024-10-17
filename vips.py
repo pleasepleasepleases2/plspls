@@ -248,3 +248,77 @@ def validar_formato_submenu(texto):
             return False
 
     return True
+from datetime import datetime
+from telebot import types
+from bd import conectar_banco_dados, fechar_conexao
+
+# Lógica para adicionar VIP
+def adicionar_vip_logic(message):
+    # Verificar se o usuário é autorizado
+    if message.from_user.id not in [5532809878, 1805086442, 5799169750]:
+        bot.reply_to(message, "Você não tem permissão para usar este comando.")
+        return
+
+    msg = bot.reply_to(message, "Por favor, envie o ID do usuário.")
+    bot.register_next_step_handler(msg, processar_id_vip)
+
+# Lógica para remover VIP
+def remover_vip_logic(message):
+    # Verificar se o usuário é autorizado
+    if message.from_user.id not in [5532809878, 1805086442, 5799169750]:
+        bot.reply_to(message, "Você não tem permissão para usar este comando.")
+        return
+
+    msg = bot.reply_to(message, "Por favor, envie o ID do usuário VIP a ser removido.")
+    bot.register_next_step_handler(msg, processar_remocao_vip)
+
+# Lógica para listar os VIPs
+def listar_vips_logic(message):
+    try:
+        # Verificar se o usuário é autorizado
+        if message.from_user.id not in [5532809878, 1805086442, 5799169750]:
+            return
+        
+        # Conectar ao banco de dados
+        conn, cursor = conectar_banco_dados()
+        query = """
+            SELECT id, nome, Dia_renovar
+            FROM vips;
+        """
+        cursor.execute(query)
+        vips = cursor.fetchall()
+
+        if not vips:
+            bot.send_message(message.chat.id, "Nenhum VIP encontrado.")
+            return
+
+        mensagem = "🎩 Lista de VIPs, IDs e dias restantes para renovação:\n\n"
+
+        for vip in vips:
+            id_vip, nome, dia_renovar = vip
+
+            # Calcular a próxima data de renovação
+            hoje = datetime.now()
+            dia_atual = hoje.day
+            mes_atual = hoje.month
+            ano_atual = hoje.year
+
+            # Se o dia de renovação já passou neste mês, calcular para o próximo mês
+            if dia_renovar < dia_atual:
+                proxima_renovacao = datetime(ano_atual, mes_atual + 1, dia_renovar)
+            else:
+                proxima_renovacao = datetime(ano_atual, mes_atual, dia_renovar)
+
+            dias_restantes = (proxima_renovacao - hoje).days
+
+            mensagem += f"ID: {id_vip} | {nome}: {dias_restantes} dias restantes\n"
+
+        bot.send_message(message.chat.id, mensagem)
+
+    except Exception as e:
+        print(f"Erro ao listar VIPs: {e}")
+        bot.send_message(message.chat.id, "Erro ao listar VIPs.")
+    
+    finally:
+        # Fechar a conexão com o banco de dados
+        fechar_conexao(cursor, conn)

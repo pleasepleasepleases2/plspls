@@ -281,17 +281,36 @@ def escolher_palavra():
     todas_palavras = palavras_4_letras + palavras_5_letras + palavras_6_letras + palavras_7_letras + palavras_8_letras
     return random.choice(todas_palavras)
 
-# Função para fornecer o feedback ao jogador
+# Função para fornecer o feedback ao jogador usando emojis coloridos
 def verificar_palpite(palavra_secreta, palpite):
-    resultado = []
+    resultado = ''
+    palavra_secreta_lista = list(palavra_secreta)
+    palpite_lista = list(palpite)
+    marcados = [False] * len(palavra_secreta)
+
+    # Primeiro, marcar as letras corretas na posição correta
     for i in range(len(palavra_secreta)):
-        if palpite[i] == palavra_secreta[i]:
-            resultado.append(f"✔️ {palpite[i]}")  # Letra e posição corretas
-        elif palpite[i] in palavra_secreta:
-            resultado.append(f"⚠️ {palpite[i]}")  # Letra correta, posição errada
+        if palpite_lista[i] == palavra_secreta_lista[i]:
+            resultado += '🟩'  # Letra correta na posição correta
+            marcados[i] = True
+            palpite_lista[i] = None  # Remover a letra do palpite para não ser considerada novamente
         else:
-            resultado.append(f"❌ {palpite[i]}")  # Letra errada
-    return ' '.join(resultado)
+            resultado += ' '  # Espaço reservado para ajustar depois
+
+    # Segundo, marcar as letras corretas na posição errada
+    for i in range(len(palavra_secreta)):
+        if resultado[i] == ' ':
+            if palpite_lista[i] and palpite_lista[i] in palavra_secreta_lista:
+                idx = palavra_secreta_lista.index(palpite_lista[i])
+                if not marcados[idx]:
+                    resultado = resultado[:i] + '🟨' + resultado[i+1:]  # Letra correta na posição errada
+                    marcados[idx] = True
+                    palpite_lista[i] = None  # Remover a letra do palpite
+                else:
+                    resultado = resultado[:i] + '⬛' + resultado[i+1:]  # Letra incorreta
+            else:
+                resultado = resultado[:i] + '⬛' + resultado[i+1:]  # Letra incorreta
+    return resultado
 
 # Dicionário para armazenar o jogo em andamento de cada usuário
 jogos_termo = {}
@@ -301,14 +320,15 @@ jogos_termo = {}
 def iniciar_termo(message):
     id_usuario = message.from_user.id
     palavra_secreta = escolher_palavra()
-    
+
     # Armazenar o jogo do usuário
     jogos_termo[id_usuario] = {
         "palavra_secreta": palavra_secreta,
-        "tentativas_restantes": 6
+        "tentativas_restantes": 6,
+        "tamanho_palavra": len(palavra_secreta)
     }
 
-    bot.send_message(message.chat.id, f"🎮 Bem-vindo ao Termo! A palavra tem {len(palavra_secreta)} letras. Você tem 6 tentativas. Envie sua primeira tentativa:")
+    bot.send_message(message.chat.id, f"🎮 Bem-vindo ao Termo!\nA palavra tem {len(palavra_secreta)} letras.\nVocê tem 6 tentativas.\n\nEnvie sua primeira tentativa:")
 
 # Lidar com as tentativas do jogador
 @bot.message_handler(func=lambda message: message.from_user.id in jogos_termo)
@@ -317,7 +337,7 @@ def tentar_termo(message):
     jogo = jogos_termo[id_usuario]
     palavra_secreta = jogo['palavra_secreta']
     tentativas_restantes = jogo['tentativas_restantes']
-    
+
     palpite = message.text.lower().strip()
 
     # Verificar se o palpite tem o mesmo número de letras
@@ -336,12 +356,20 @@ def tentar_termo(message):
     tentativas_restantes -= 1
     jogos_termo[id_usuario]['tentativas_restantes'] = tentativas_restantes
 
+    # Histórico de tentativas
+    if 'historico' not in jogos_termo[id_usuario]:
+        jogos_termo[id_usuario]['historico'] = []
+    jogos_termo[id_usuario]['historico'].append(f"{resultado} - {palpite}")
+
+    historico_texto = '\n'.join(jogos_termo[id_usuario]['historico'])
+
     # Verificar se o jogador ainda tem tentativas
     if tentativas_restantes > 0:
-        bot.send_message(message.chat.id, f"Feedback: {resultado}\nTentativas restantes: {tentativas_restantes}")
+        bot.send_message(message.chat.id, f"{historico_texto}\n\nTentativas restantes: {tentativas_restantes}")
     else:
-        bot.send_message(message.chat.id, f"💀 Suas tentativas acabaram! A palavra era '{palavra_secreta}'.")
+        bot.send_message(message.chat.id, f"{historico_texto}\n\n💀 Suas tentativas acabaram! A palavra era '{palavra_secreta}'.")
         del jogos_termo[id_usuario]  # Remover o jogo após terminar as tentativas
+
 
 @bot.message_handler(commands=['verificar'])
 def verificar_ids(message):

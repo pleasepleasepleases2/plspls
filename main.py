@@ -265,6 +265,84 @@ def webhook():
         return ''
     else:
         flask.abort(403)
+
+import random
+from telebot import types
+
+# Listas de palavras separadas por quantidade de letras
+palavras_4_letras = ['doce', 'osso', 'fada', 'medo', 'gato', 'mago', 'lobo', 'teia', 'bala']
+palavras_5_letras = ['doces', 'morte', 'ossos', 'fadas', 'bruxa', 'magia', 'poção', 'zumbi', 'lobos', 'mumia', 'uivar', 'susto', 'tumba']
+palavras_6_letras = ['mortes', 'morder', 'sangue', 'caixão', 'aranha', 'presas', 'crânio', 'lápide', 'pocoes', 'bombom']
+palavras_7_letras = ['abobora', 'vampiro', 'malvado', 'demonio', 'maldade', 'sangrar', 'varinha', 'caveira', 'monstro', 'morcego']
+palavras_8_letras = ['fantasia', 'fantasma', 'vassoura']
+
+# Função para escolher uma palavra aleatória com base no tamanho
+def escolher_palavra():
+    todas_palavras = palavras_4_letras + palavras_5_letras + palavras_6_letras + palavras_7_letras + palavras_8_letras
+    return random.choice(todas_palavras)
+
+# Função para fornecer o feedback ao jogador
+def verificar_palpite(palavra_secreta, palpite):
+    resultado = []
+    for i in range(len(palavra_secreta)):
+        if palpite[i] == palavra_secreta[i]:
+            resultado.append(f"✔️ {palpite[i]}")  # Letra e posição corretas
+        elif palpite[i] in palavra_secreta:
+            resultado.append(f"⚠️ {palpite[i]}")  # Letra correta, posição errada
+        else:
+            resultado.append(f"❌ {palpite[i]}")  # Letra errada
+    return ' '.join(resultado)
+
+# Dicionário para armazenar o jogo em andamento de cada usuário
+jogos_termo = {}
+
+# Comando para iniciar o jogo /termo
+@bot.message_handler(commands=['termo'])
+def iniciar_termo(message):
+    id_usuario = message.from_user.id
+    palavra_secreta = escolher_palavra()
+    
+    # Armazenar o jogo do usuário
+    jogos_termo[id_usuario] = {
+        "palavra_secreta": palavra_secreta,
+        "tentativas_restantes": 6
+    }
+
+    bot.send_message(message.chat.id, f"🎮 Bem-vindo ao Termo! A palavra tem {len(palavra_secreta)} letras. Você tem 6 tentativas. Envie sua primeira tentativa:")
+
+# Lidar com as tentativas do jogador
+@bot.message_handler(func=lambda message: message.from_user.id in jogos_termo)
+def tentar_termo(message):
+    id_usuario = message.from_user.id
+    jogo = jogos_termo[id_usuario]
+    palavra_secreta = jogo['palavra_secreta']
+    tentativas_restantes = jogo['tentativas_restantes']
+    
+    palpite = message.text.lower().strip()
+
+    # Verificar se o palpite tem o mesmo número de letras
+    if len(palpite) != len(palavra_secreta):
+        bot.send_message(message.chat.id, f"O palpite deve ter {len(palavra_secreta)} letras!")
+        return
+
+    # Verificar se o jogador acertou a palavra
+    if palpite == palavra_secreta:
+        bot.send_message(message.chat.id, f"🎉 Parabéns! Você acertou a palavra '{palavra_secreta}'!")
+        del jogos_termo[id_usuario]  # Remover o jogo após vencer
+        return
+
+    # Fornecer feedback ao jogador
+    resultado = verificar_palpite(palavra_secreta, palpite)
+    tentativas_restantes -= 1
+    jogos_termo[id_usuario]['tentativas_restantes'] = tentativas_restantes
+
+    # Verificar se o jogador ainda tem tentativas
+    if tentativas_restantes > 0:
+        bot.send_message(message.chat.id, f"Feedback: {resultado}\nTentativas restantes: {tentativas_restantes}")
+    else:
+        bot.send_message(message.chat.id, f"💀 Suas tentativas acabaram! A palavra era '{palavra_secreta}'.")
+        del jogos_termo[id_usuario]  # Remover o jogo após terminar as tentativas
+
 @bot.message_handler(commands=['verificar'])
 def verificar_ids(message):
     try:

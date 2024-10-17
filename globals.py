@@ -1,6 +1,7 @@
 import time
 from queue import Queue
 
+jogos_termo = {}
 ultimo_clique = {}
 cartas_compradas_dict = {}
 dict_peixes_por_pagina = {}

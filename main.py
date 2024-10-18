@@ -593,7 +593,7 @@ def handle_gnome(message):
             return
 
         # Salvar os resultados no dicionário global para navegação posterior
-        resultados_gnome[user_id] = resultados_personagens
+        globals.resultados_gnome[user_id] = resultados_personagens
 
         # Exibir a primeira carta
         enviar_carta_individual(chat_id, user_id, resultados_personagens, 0, message.message_id, 'text')
@@ -661,7 +661,7 @@ def callback_gnome_navigation(call):
     user_id = int(data[3])
 
     # Recuperar os resultados da pesquisa original
-    resultados_personagens = resultados_gnome.get(user_id, [])
+    globals.resultados_personagens = resultados_gnome.get(user_id, [])
 
     if resultados_personagens:
         enviar_carta_individual(call.message.chat.id, user_id, resultados_personagens, index, call.message.message_id, 'media')

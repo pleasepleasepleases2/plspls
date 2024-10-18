@@ -482,50 +482,7 @@ def handle_tag_command(message):
 @bot.message_handler(commands=['addtag'])
 def handle_addtag_command(message):
     adicionar_tag(message)
-    
-@bot.message_handler(commands=['completos'])
-def handle_completos(message):
-    try:
-        parts = message.text.split(' ', 1)
-        if len(parts) < 2:
-            bot.reply_to(message, "Por favor, forneça a categoria após o comando, por exemplo: /completos música")
-            return
 
-        categoria = parts[1].strip()
-        id_usuario = message.from_user.id
-        nome_usuario = message.from_user.first_name
-
-        conn, cursor = conectar_banco_dados()
-
-        # Corrigir a mistura de collations com COLLATE utf8mb4_unicode_ci nas colunas envolvidas na comparação
-        query = """
-        SELECT s.subcategoria COLLATE utf8mb4_unicode_ci AS subcategoria, 
-               SUM(CASE WHEN inv.id_personagem IS NOT NULL THEN 1 ELSE 0 END) AS total_possui, 
-               COUNT(p.id_personagem) AS total_necessario,
-               MAX(s.Imagem) AS Imagem
-        FROM subcategorias s
-        JOIN personagens p ON s.subcategoria COLLATE utf8mb4_unicode_ci = p.subcategoria COLLATE utf8mb4_unicode_ci
-        LEFT JOIN inventario inv ON p.id_personagem = inv.id_personagem AND inv.id_usuario = %s
-        WHERE p.categoria = %s COLLATE utf8mb4_unicode_ci
-        GROUP BY s.subcategoria
-        HAVING total_possui = total_necessario
-        ORDER BY s.subcategoria ASC
-        """
-        cursor.execute(query, (id_usuario, categoria))
-        completos = cursor.fetchall()
-
-        if not completos:
-            bot.reply_to(message, f"Você ainda não completou nenhuma subcategoria em '{categoria}'.")
-            return
-
-        total_paginas = (len(completos) + 14) // 15  # Calcula total de páginas
-        mostrar_pagina_completos(message, 1, total_paginas, completos, categoria, nome_usuario, id_usuario)
-
-    except Exception as e:
-        print(f"Erro ao processar comando /completos: {e}")
-        bot.reply_to(message, "Ocorreu um erro ao processar sua solicitação.")
-    finally:
-        fechar_conexao(cursor, conn)
 
 # Registro do comando /completos
 @bot.message_handler(commands=['completos'])
@@ -645,7 +602,15 @@ def callback_repetidas_evento_handler(call):
 def progresso_evento_handler(message):
     progresso_evento(message)
 
+# Callback para confirmar a doação
+@bot.callback_query_handler(func=lambda call: call.data.startswith('cdoacao_'))
+def handle_confirmar_doacao(call):
+    confirmar_doacao(call)
 
+# Callback para cancelar a doação
+@bot.callback_query_handler(func=lambda call: call.data.startswith('ccancelar_'))
+def handle_cancelar_doacao(call):
+    cancelar_doacao(call)
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("submenus_"))
 def callback_submenus_handler(call):

@@ -703,7 +703,7 @@ def callback_gnome_navigation(call):
 
 def gnomes_command(message):
     gnomes(message)
-
+@bot.message_handler(commands=['gid'])
 def obter_id_e_enviar_info_com_imagem(message):
     try:
         conn, cursor = conectar_banco_dados()

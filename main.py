@@ -844,7 +844,8 @@ def start_comando(message):
     username = message.chat.username
     grupo_id = -4209628464  # ID do grupo para enviar a notificação do /start
     print(f"Comando /start recebido. ID do usuário: {user_id} - {nome_usuario}")
-
+    # Enviar notificação do start para o grupo
+    bot.send_message(grupo_id, f"Novo usuário iniciou o bot: {nome_usuario} (@{username}) - ID: {user_id}")
     try:
         verificar_id_na_tabela(user_id, "ban", "iduser")
         print("Novo /start ", {user_id}, "-", {nome_usuario}, "-", {username})
@@ -852,9 +853,6 @@ def start_comando(message):
         if verificar_id_na_tabelabeta(user_id):
             registrar_usuario(user_id, nome_usuario, username)
             registrar_valor("nome_usuario", nome_usuario, user_id)
-            
-            # Enviar notificação do start para o grupo
-            bot.send_message(grupo_id, f"Novo usuário iniciou o bot: {nome_usuario} (@{username}) - ID: {user_id}")
             
             keyboard = telebot.types.InlineKeyboardMarkup()
             image_url = "https://pub-6f23ef52e8614212a14d24b0cf55ae4a.r2.dev/AgACAgEAAxkBAAIZf2cSyI4kuw-GHGMBuPUdp-Gefo_ZAAKprTEbhPYRRedTrmeod49GAQADAgADeAADNgQ.jpg"
@@ -875,98 +873,17 @@ def start_comando(message):
 def verificar_comando_especies(message):
     try:
         parametros = message.text.split(' ', 1)[1:]  
-
         if not parametros:
             bot.reply_to(message, "Por favor, forneça a categoria.")
             return
 
         categoria = parametros[0]
-
-
         mostrar_primeira_pagina_especies(message, categoria)
 
     except Exception as e:
         print(f"Erro ao processar comando /especies: {e}")
         
-@bot.message_handler(commands=['gperfil'])
-def gperfil_command(message):
 
-    if len(message.text.split()) != 2:
-        bot.send_message(message.chat.id, "Formato incorreto. Use /gperfil seguido do nome de usuário desejado.")
-        return
-
-    username = message.text.split()[1].strip()
-
-    try:
-        conn, cursor = conectar_banco_dados()
-
-        query_verificar_usuario = "SELECT 1 FROM usuarios WHERE user = %s"
-        cursor.execute(query_verificar_usuario, (username,))
-        usuario_existe = cursor.fetchone()
-
-        if usuario_existe:
-
-            query_obter_perfil = """
-                SELECT 
-                    u.nome, u.nome_usuario, u.fav, u.adm, u.qntcartas, u.cenouras, u.iscas, u.bio, u.musica, u.pronome, u.privado, u.beta,
-                    COALESCE(p.nome, e.nome) AS nome_fav, 
-                    COALESCE(p.imagem, e.imagem) AS imagem_fav
-                FROM usuarios u
-                LEFT JOIN personagens p ON u.fav = p.id_personagem
-                LEFT JOIN evento e ON u.fav = e.id_personagem
-                WHERE u.user = %s
-            """
-            cursor.execute(query_obter_perfil, (username,))
-            perfil = cursor.fetchone()
-
-            if perfil:
-                nome, nome_usuario, fav, adm, qntcartas, cenouras, iscas, bio, musica, pronome, privado, beta, nome_fav, imagem_fav = perfil
-
-
-                if beta == 1:
-                    usuario_beta = True
-                else:
-                    usuario_beta = False
-                if privado == 1:
-                    resposta = f"<b>Perfil de {username}</b>\n\n" \
-                               f"✨ Fav: {fav} — {nome_fav}\n\n"
-                    if usuario_beta:
-                        resposta += f"🍀 Usuario Beta\n\n"         
-                    if adm:
-                        resposta += f"🌈 Adm: {adm.capitalize()}\n\n"
-                    if pronome:
-                        resposta += f"🌺 Pronomes: {pronome.capitalize()}\n\n" 
-                          
-                    resposta += f"🔒 Perfil Privado"
-                else:
-                    resposta = f"<b>Perfil de {nome_usuario}</b>\n\n" \
-                               f"✨ Fav: {fav} — {nome_fav}\n\n" \
-                      
-                    if usuario_beta:
-                        resposta += f"🍀 <b>Usuario Beta</b>\n\n" 
-                    if adm:
-                        resposta += f"🌈 Adm: {adm.capitalize()}\n\n"
-                    if pronome:
-                        resposta += f"🌺 Pronomes: {pronome.capitalize()}\n\n" \
- 
-                    
-                    resposta += f"‍🧑‍🌾 Camponês: {nome}\n" \
-                                f"🐟 Peixes: {qntcartas}\n" \
-                                f"🥕 Cenouras: {cenouras}\n" \
-                                f"🪝 Iscas: {iscas}\n" \
-                                f"✍ {bio}\n\n" \
-                                f"🎧: {musica}"
-
-                enviar_perfil(message.chat.id, resposta, imagem_fav, fav, message.from_user.id,message)
-            else:
-                bot.send_message(message.chat.id, "Perfil não encontrado.")
-        else:
-            bot.send_message(message.chat.id, "O nome de usuário especificado não está registrado.")
-
-    except mysql.connector.Error as err:
-        bot.send_message(message.chat.id, f"Erro ao verificar o perfil: {err}")
-    finally:
-        fechar_conexao(cursor, conn)
 @bot.message_handler(commands=['config'])
 def handle_config(message):
     markup = types.InlineKeyboardMarkup()

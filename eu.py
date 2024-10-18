@@ -9,7 +9,6 @@ import spotipy
 from spotipy.oauth2 import SpotifyClientCredentials
 from credentials import *
 
-sp = spotipy.Spotify(auth_manager=SpotifyClientCredentials())
         
 def enviar_perfil(chat_id, legenda, imagem_fav, fav, id_usuario,message):
     gif_url = obter_gif_url(fav, id_usuario)

@@ -134,3 +134,75 @@ def mostrar_primeira_pagina_tag(message, nometag, id_usuario):
     except Exception as e:
         print(f"Erro ao processar comando /tag: {e}")
         bot.reply_to(message, "Ocorreu um erro ao processar sua solicitação.")
+
+# Função para lidar com o comando /tag
+def verificar_comando_tag(message):
+    try:
+        parametros = message.text.split(' ', 1)[1:] 
+
+        if not parametros:
+            conn, cursor = conectar_banco_dados()
+            id_usuario = message.from_user.id
+            cursor.execute("SELECT DISTINCT nometag FROM tags WHERE id_usuario = %s", (id_usuario,))
+            tags = cursor.fetchall()
+            if tags:
+                resposta = "🔖| Suas tags:\n\n"
+                for tag in tags:
+                    resposta += f"• {tag[0]}\n"
+                bot.reply_to(message, resposta)
+            else:
+                bot.reply_to(message, "Você não possui nenhuma tag.")
+            fechar_conexao(cursor, conn)
+            return
+
+        # Se uma tag foi fornecida, mostrar a primeira página da tag
+        nometag = parametros[0] 
+        id_usuario = message.from_user.id
+        mostrar_primeira_pagina_tag(message, nometag, id_usuario)
+
+    except Exception as e:
+        print(f"Erro ao processar comando /tag: {e}")
+
+# Função para adicionar tags com o comando /addtag
+def adicionar_tag(message):
+    try:
+        conn, cursor = conectar_banco_dados()
+        id_usuario = message.from_user.id
+        args = message.text.split(maxsplit=1)
+        
+        if len(args) == 2:
+            tag_info = args[1]
+            tag_parts = tag_info.split('|')
+            
+            if len(tag_parts) == 2:
+                ids_personagens_str = tag_parts[0].strip()
+                nometag = tag_parts[1].strip()
+                
+                if ids_personagens_str and nometag:
+                    ids_personagens = [id_personagem.strip() for id_personagem in ids_personagens_str.split(',')]
+                    
+                    for id_personagem in ids_personagens:
+                        cursor.execute(
+                            "INSERT INTO tags (id_usuario, id_personagem, nometag) VALUES (%s, %s, %s)", 
+                            (id_usuario, id_personagem, nometag)
+                        )
+                    
+                    conn.commit()
+                    bot.reply_to(message, f"Tag '{nometag}' adicionada com sucesso.")
+                else:
+                    bot.reply_to(message, "Formato incorreto. Use /addtag id1,id2,... | nometag")
+            else:
+                bot.reply_to(message, "Formato incorreto. Use /addtag id1,id2,... | nometag")
+        else:
+            bot.reply_to(message, "Formato incorreto. Use /addtag id1,id2,... | nometag")
+    
+    except mysql.connector.Error as err:
+        print(f"Erro de MySQL: {err}")
+        bot.reply_to(message, "Ocorreu um erro ao processar a operação no banco de dados.")
+    
+    except Exception as e:
+        print(f"Erro ao adicionar tag: {e}")
+        bot.reply_to(message, "Ocorreu um erro ao processar a operação.")
+    
+    finally:
+        fechar_conexao(cursor, conn)

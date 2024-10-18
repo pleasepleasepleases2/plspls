@@ -16,7 +16,7 @@ import diskcache as dc
 import spotipy
 import math
 import logging
-from vips import is_vip
+
 from mutagen.mp3 import MP3
 from mutagen.id3 import ID3
 from queue import Queue
@@ -127,7 +127,20 @@ import tempfile
 import os
 from telebot import types
 from bd import conectar_banco_dados, fechar_conexao
+def is_vip(id_usuario):
+    """Verifica se o usuário é VIP consultando a tabela vips."""
+    conn, cursor = conectar_banco_dados()
+    
+    # Verifica se o usuário está na tabela de VIPs
+    cursor.execute("SELECT id_usuario FROM vips WHERE id_usuario = %s", (id_usuario,))
+    resultado = cursor.fetchone()  # Usa fetchone para obter um único resultado
 
+    # Fechar o cursor e a conexão
+    cursor.fetchall()  # Garante que todos os resultados foram processados, se houver
+    fechar_conexao(cursor, conn)
+
+    # Retorna True se o usuário for VIP, False caso contrário
+    return resultado is not None
 # Função para atualizar as pétalas do usuário
 def atualizar_petalas(id_usuario):
     """Atualiza o número de pétalas do usuário de acordo com o tempo decorrido e se é VIP."""

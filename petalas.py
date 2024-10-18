@@ -157,8 +157,6 @@ def atualizar_petalas(id_usuario):
     else:
         TEMPO_REGENERACAO = 3  # 3 horas para não VIP
         MAX_PETALAS = 8   # Não VIP pode acumular até 1 dia de pétalas (8 pétalas)
-    
-    print(f"DEBUG: Regeneração definida para {TEMPO_REGENERACAO} horas. Máximo de pétalas: {MAX_PETALAS}")
 
     # Buscar o número atual de pétalas e a última regeneração
     cursor.execute("SELECT petalas, ultima_regeneracao_petalas FROM usuarios WHERE id_usuario = %s", (id_usuario,))
@@ -167,13 +165,11 @@ def atualizar_petalas(id_usuario):
     if resultado:
         petalas_atual, ultima_regeneracao = resultado
         petalas_atual = petalas_atual if petalas_atual is not None else 0  # Inicializar com 0 se estiver NULL
-        print(f"DEBUG: Pétalas atuais: {petalas_atual}. Última regeneração: {ultima_regeneracao}")
         agora = datetime.now()
 
         # Verificar se a última regeneração é válida
         if ultima_regeneracao is None:
             ultima_regeneracao = agora
-            print(f"DEBUG: Última regeneração estava nula. Atualizando com o valor atual.")
             cursor.execute("""
                 UPDATE usuarios SET ultima_regeneracao_petalas = %s WHERE id_usuario = %s
             """, (ultima_regeneracao, id_usuario))
@@ -181,7 +177,6 @@ def atualizar_petalas(id_usuario):
 
         # Calcular o tempo desde a última regeneração
         horas_passadas = (agora - ultima_regeneracao).total_seconds() / 3600
-        print(f"DEBUG: Horas passadas desde a última regeneração: {horas_passadas}")
 
         # Calcular quantas pétalas regenerar
         petalas_regeneradas = int(horas_passadas // TEMPO_REGENERACAO)  # Divide as horas passadas pelo tempo de regeneração
@@ -190,7 +185,6 @@ def atualizar_petalas(id_usuario):
 
         # Se houver novas pétalas a serem adicionadas, atualizar no banco
         if novas_petalas > petalas_atual:
-            print(f"DEBUG: Atualizando pétalas no banco para {novas_petalas}.")
             cursor.execute("""
                 UPDATE usuarios
                 SET petalas = %s, ultima_regeneracao_petalas = %s
@@ -253,8 +247,8 @@ def roseira_command(message):
             for carta in cartas_aleatorias:
                 try:
                     # Verificar se a imagem com borda já está no cache
-                    if carta[0] in cache_imagens_com_bordas:
-                        imagens_cartas.append(cache_imagens_com_bordas[carta[0]])
+                    if carta[0] in globals.cache_imagens_com_bordas:
+                        imagens_cartas.append(globals.cache_imagens_com_bordas[carta[0]])
                     else:
                         # Tentar fazer o download e abrir a imagem da carta
                         response = requests.get(carta[2])

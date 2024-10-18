@@ -36,8 +36,8 @@ def criar_lista_paginas(personagens_ids_quantidade, items_por_pagina):
 def editar_mensagem_tag(message, nometag, pagina_atual, id_usuario, total_paginas):
     try:
         conn, cursor = conectar_banco_dados()
-        offset = (pagina_atual - 1) * 10
-        query = "SELECT id_personagem FROM tags WHERE nometag = %s LIMIT 10 OFFSET %s"
+        offset = (pagina_atual - 1) * 15
+        query = "SELECT id_personagem FROM tags WHERE nometag = %s LIMIT 15 OFFSET %s"
         cursor.execute(query, (nometag, offset))
         resultados = cursor.fetchall()
 
@@ -90,13 +90,13 @@ def mostrar_primeira_pagina_tag(message, nometag, id_usuario):
         cursor.execute(query_total, (nometag, id_usuario))
         total_registros = cursor.fetchone()[0]
 
-        total_paginas = (total_registros // 10) + (1 if total_registros % 10 > 0 else 0)
+        total_paginas = (total_registros // 15) + (1 if total_registros % 15 > 0 else 0)
 
         if total_registros == 0:
             bot.reply_to(message, f"Nenhum registro encontrado para a tag '{nometag}'.")
             return
 
-        query = "SELECT id_personagem FROM tags WHERE nometag = %s AND id_usuario = %s LIMIT 10"
+        query = "SELECT id_personagem FROM tags WHERE nometag = %s AND id_usuario = %s LIMIT 15"
         cursor.execute(query, (nometag, id_usuario))
         resultados = cursor.fetchall()
 

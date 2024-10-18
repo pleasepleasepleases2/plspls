@@ -547,15 +547,92 @@ def gperfil_command(message):
 def config_command(message):
     from eu import handle_config
     handle_config(message)
-    
-@bot.message_handler(commands=['gnome'])
-def gnome_command(message):
-    from peixes import gnome
-    gnome(message)
+def enviar_carta_individual(chat_id, user_id, resultados_personagens, index):
+    id_personagem, nome, subcategoria, categoria, quantidade_usuario, imagem_url = resultados_personagens[index]
 
+    # Criação da mensagem para a carta
+    mensagem = f"💌 | Personagem:\n\n<code>{id_personagem}</code> • {nome}\nde {subcategoria}\n"
+    if quantidade_usuario > 0:
+        mensagem += f"☀ | {quantidade_usuario}⤫"
+    else:
+        mensagem += f"🌧 | Tempo fechado..."
+
+    # Botões de navegação
+    keyboard = types.InlineKeyboardMarkup()
+    if index > 0:
+        keyboard.add(types.InlineKeyboardButton("⬅️ Anterior", callback_data=f"gnome_prev_{index-1}_{user_id}"))
+    if index < len(resultados_personagens) - 1:
+        keyboard.add(types.InlineKeyboardButton("Próxima ➡️", callback_data=f"gnome_next_{index+1}_{user_id}"))
+
+    # Verificar se existe uma imagem GIF ou URL para a carta
+    gif_url = obter_gif_url(id_personagem, user_id)
+    if gif_url:
+        imagem_url = gif_url
+
+    # Envio da imagem e mensagem
+    if imagem_url.lower().endswith(".gif"):
+        bot.send_animation(chat_id, imagem_url, caption=mensagem, reply_markup=keyboard, parse_mode="HTML")
+    elif imagem_url.lower().endswith(".mp4"):
+        bot.send_video(chat_id, imagem_url, caption=mensagem, reply_markup=keyboard, parse_mode="HTML")
+    elif imagem_url.lower().endswith((".jpeg", ".jpg", ".png")):
+        bot.send_photo(chat_id, imagem_url, caption=mensagem, reply_markup=keyboard, parse_mode="HTML")
+    else:
+        bot.send_message(chat_id, mensagem, reply_markup=keyboard, parse_mode="HTML")    
+@bot.message_handler(commands=['gnome'])
+def handle_gnome(message):
+    chat_id = message.chat.id
+    user_id = message.from_user.id
+
+    try:
+        partes = message.text.split()
+        if 'e' in partes:
+            nome = ' '.join(partes[2:])
+            sql_personagens = """
+                SELECT
+                    e.id_personagem,
+                    e.nome,
+                    e.subcategoria,
+                    e.categoria,
+                    COALESCE(i.quantidade, 0) AS quantidade_usuario,
+                    e.imagem
+                FROM evento e
+                LEFT JOIN inventario i ON e.id_personagem = i.id_personagem AND i.id_usuario = %s
+                WHERE e.nome LIKE %s
+            """
+        else:
+            nome = ' '.join(partes[1:])
+            sql_personagens = """
+                SELECT
+                    p.id_personagem,
+                    p.nome,
+                    p.subcategoria,
+                    p.categoria,
+                    COALESCE(i.quantidade, 0) AS quantidade_usuario,
+                    p.imagem
+                FROM personagens p
+                LEFT JOIN inventario i ON p.id_personagem = i.id_personagem AND i.id_usuario = %s
+                WHERE p.nome LIKE %s
+            """
+
+        values_personagens = (user_id, f"%{nome}%")
+        conn, cursor = conectar_banco_dados()
+        cursor.execute(sql_personagens, values_personagens)
+        resultados_personagens = cursor.fetchall()
+
+        if not resultados_personagens:
+            bot.send_message(chat_id, f"Nenhum personagem encontrado com o nome '{nome}'.")
+            return
+
+        # Enviar a primeira carta
+        enviar_carta_individual(chat_id, user_id, resultados_personagens, 0)
+
+    except Exception as e:
+        print(f"Erro: {e}")
+    finally:
+        fechar_conexao(cursor, conn)
+        
 @bot.message_handler(commands=['gnomes'])
 def gnomes_command(message):
-    from peixes import gnomes
     gnomes(message)
 
 @bot.message_handler(commands=['gid'])

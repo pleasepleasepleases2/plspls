@@ -85,3 +85,104 @@ def doar(message):
 
     finally:
         fechar_conexao(cursor, conn)
+# Callback para confirmar a doação
+def confirmar_doacao(call):
+    try:
+        data = call.data.split('_')
+        if len(data) != 5:
+            bot.send_message(call.message.chat.id, "Dados de doação inválidos.")
+            return
+
+        eu = int(data[1])
+        minhacarta = int(data[2])
+        destinatario_id = int(data[3])
+        quantidade = int(data[4])
+        message = call.message
+
+        conn, cursor = conectar_banco_dados()
+
+        # Verificar quantidade de cartas no inventário do doador
+        cursor.execute("SELECT quantidade FROM inventario WHERE id_usuario = %s AND id_personagem = %s", (eu, minhacarta))
+        quantidade_doador_anterior = cursor.fetchone()
+        if not quantidade_doador_anterior:
+            bot.send_message(call.message.chat.id, "Você não possui essa carta no inventário.")
+            return
+        quantidade_doador_anterior = quantidade_doador_anterior[0]
+
+        # Verificar quantidade de cenouras do doador
+        cursor.execute("SELECT cenouras FROM usuarios WHERE id_usuario = %s", (eu,))
+        cenouras_doador = cursor.fetchone()[0]
+
+        if quantidade_doador_anterior >= quantidade and cenouras_doador >= quantidade:
+            cursor.execute("SELECT quantidade FROM inventario WHERE id_usuario = %s AND id_personagem = %s", (destinatario_id, minhacarta))
+            quantidade_destinatario_anterior = cursor.fetchone()
+            if quantidade_destinatario_anterior:
+                quantidade_destinatario_anterior = quantidade_destinatario_anterior[0]
+            else:
+                quantidade_destinatario_anterior = 0
+
+            # Atualizar inventário do doador
+            cursor.execute("UPDATE inventario SET quantidade = quantidade - %s WHERE id_usuario = %s AND id_personagem = %s", (quantidade, eu, minhacarta))
+
+            # Atualizar inventário do destinatário
+            cursor.execute("SELECT quantidade FROM inventario WHERE id_usuario = %s AND id_personagem = %s", (destinatario_id, minhacarta))
+            quantidade_destinatario = cursor.fetchone()
+
+            if quantidade_destinatario:
+                cursor.execute("UPDATE inventario SET quantidade = quantidade + %s WHERE id_usuario = %s AND id_personagem = %s", (quantidade, destinatario_id, minhacarta))
+            else:
+                cursor.execute("INSERT INTO inventario (id_usuario, id_personagem, quantidade) VALUES (%s, %s, %s)", (destinatario_id, minhacarta, quantidade))
+
+            # Atualizar cenouras do doador
+            cursor.execute("UPDATE usuarios SET cenouras = cenouras - %s WHERE id_usuario = %s", (quantidade, eu))
+
+            # Obter quantidades atualizadas para confirmação
+            cursor.execute("SELECT quantidade FROM inventario WHERE id_usuario = %s AND id_personagem = %s", (eu, minhacarta))
+            quantidade_doador_atual = cursor.fetchone()[0]
+
+            cursor.execute("SELECT quantidade FROM inventario WHERE id_usuario = %s AND id_personagem = %s", (destinatario_id, minhacarta))
+            quantidade_destinatario_atual = cursor.fetchone()[0]
+
+            conn.commit()
+
+            # Registrar no histórico de doações
+            cursor.execute("""
+                INSERT INTO historico_doacoes (id_usuario_doacao, id_usuario_recebedor, id_personagem_carta, data_hora, quantidade, 
+                                               quantidade_anterior_doacao, quantidade_atual_doacao, 
+                                               quantidade_anterior_recebedor, quantidade_atual_recebedor)
+                VALUES (%s, %s, %s, NOW(), %s, %s, %s, %s, %s)
+            """, (eu, destinatario_id, minhacarta, quantidade, 
+                  quantidade_doador_anterior, quantidade_doador_atual, 
+                  quantidade_destinatario_anterior, quantidade_destinatario_atual))
+            conn.commit()
+
+            # Obter informações dos usuários para a mensagem de confirmação
+            user_info = bot.get_chat(destinatario_id)
+            seunome = user_info.first_name
+            user_info1 = bot.get_chat(eu)
+            meunome = user_info1.first_name
+            doacao_str = f"uma unidade da carta {minhacarta}" if quantidade == 1 else f"{quantidade} unidades da carta {minhacarta}"
+            texto_confirmacao = f"Doação de {doacao_str} realizada com sucesso!\n\n"
+            texto_confirmacao += f"🧺 De {meunome}: {quantidade_doador_anterior}↝{quantidade_doador_atual}\n\n"
+            texto_confirmacao += f"🧺 Para {seunome}: {quantidade_destinatario_anterior}↝{quantidade_destinatario_atual}\n"
+            bot.edit_message_text(texto_confirmacao, chat_id=call.message.chat.id, message_id=call.message.message_id)
+        else:
+            if quantidade_doador_anterior < quantidade:
+                bot.edit_message_text("Você não possui cartas suficientes para fazer a doação.", chat_id=call.message.chat.id, message_id=call.message.message_id)
+            elif cenouras_doador < quantidade:
+                bot.edit_message_text("Você não possui cenouras suficientes para fazer a doação.", chat_id=call.message.chat.id, message_id=call.message.message_id)
+    except Exception as e:
+        print(f"Erro ao confirmar a doação: {e}")
+        newrelic.agent.record_exception()    
+        bot.send_message(call.message.chat.id, "Erro ao confirmar a doação. Tente novamente!")
+    finally:
+        fechar_conexao(cursor, conn)
+
+# Callback para cancelar a doação
+def cancelar_doacao(call):
+    try:
+        bot.edit_message_text("Doação cancelada.", chat_id=call.message.chat.id, message_id=call.message.message_id)
+    except Exception as e:
+        print(f"Erro ao cancelar a doação: {e}")
+        newrelic.agent.record_exception()    
+        bot.send_message(call.message.chat.id, "Erro ao cancelar a doação.")

@@ -255,7 +255,7 @@ def roseira_command(message):
                         img = Image.open(BytesIO(response.content))
 
                         # Baixar e aplicar uma borda aleatória
-                        borda_response = requests.get(random.choice(bordas_urls))
+                        borda_response = requests.get(random.choice(globals.bordas_urls))
                         borda_aleatoria = Image.open(BytesIO(borda_response.content))
                         img_com_borda = aplicar_borda(img, borda_aleatoria)
 

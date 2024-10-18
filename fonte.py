@@ -8,12 +8,14 @@ import globals
 
 def process_wish(message):
     try:
+        print(f"DEBUG: Mensagem recebida no 'process_wish': {message.text}")
         chat_id = message.chat.id
         user_id = message.from_user.id
         command_parts = message.text.split()
         id_cartas = list(map(int, command_parts[:-1]))[:5]  
         quantidade_cenouras = int(command_parts[-1])
-
+        # Debug sobre os dados divididos da mensagem
+        print(f"DEBUG: command_parts: {command_parts}")
         if quantidade_cenouras < 10 or quantidade_cenouras > 20:
             bot.send_message(chat_id, "A quantidade de cenouras deve ser entre 10 e 20.")
             return
@@ -47,6 +49,7 @@ def process_wish(message):
                 bot.send_message(chat_id, "<i>A fonte nem se move ao receber suas cenouras, elas apenas desaparecem no meio da água calma. Talvez você deva tentar novamente mais tarde... </i>", parse_mode="HTML")
     
             log_wish_attempt(user_id, id_cartas, quantidade_cenouras, results)
+            
         else:
             results = []
             debug_info = []
@@ -204,17 +207,19 @@ def handle_fazer_pedido(call):
         bot.register_next_step_handler(call.message, process_wish)
 def processar_pedido_peixes(call):
     try:
+        print(f"DEBUG: Entrando no 'processar_pedido_peixes' com call data: {call.data}")
         image_url = "https://telegra.ph/file/94c9c66af4ca4d6f0a3e5.jpg"
         caption = ("<b>⛲: Para pedir os seus peixes é simples!</b> \n\nMe envie até <b>5 IDs</b> dos peixes e a quantidade de cenouras que você quer doar "
                    "\n(eu aceito qualquer quantidade entre 10 e 20 cenouras...) \n\n<i>exemplo: ID1 ID2 ID3 ID4 ID5 cenouras</i>")
         media = InputMediaPhoto(image_url, caption=caption, parse_mode="HTML")
         bot.edit_message_media(media, chat_id=call.message.chat.id, message_id=call.message.message_id)
 
-        # Registrar o próximo passo para processar o pedido
+        print("DEBUG: Registrando 'next_step_handler' para process_wish")
         bot.register_next_step_handler(call.message, process_wish)
 
     except Exception as e:
         print(f"Erro ao processar o pedido de peixes: {e}")
+
 def handle_poco_dos_desejos(call):
     usuario = call.from_user.first_name
     image_url = "https://telegra.ph/file/94c9c66af4ca4d6f0a3e5.jpg"
@@ -226,25 +231,4 @@ def handle_poco_dos_desejos(call):
     media = InputMediaPhoto(image_url, caption=caption, parse_mode="HTML")
     bot.edit_message_media(media, chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=create_wish_buttons())
 
-def handle_fazer_pedido(call):
-    user_id = call.from_user.id  # Adicionando a identificação do usuário
-
-    can_make_wish, time_remaining = check_wish_time(user_id)
-    if not can_make_wish:
-        hours, remainder = divmod(time_remaining.total_seconds(), 3600)
-        minutes, _ = divmod(remainder, 60)
-        image_url = "https://telegra.ph/file/94c9c66af4ca4d6f0a3e5.jpg"
-        caption = (f"<b>Você já fez um pedido recentemente.</b> Por favor, aguarde {int(hours)} horas e {int(minutes)} minutos "
-                   "para fazer um novo pedido.")
-        media = InputMediaPhoto(image_url, caption=caption, parse_mode="HTML")
-        bot.send_photo(chat_id=call.message.chat.id, photo=image_url, caption=caption, parse_mode="HTML")
-        return
-    else:
-        image_url = "https://telegra.ph/file/94c9c66af4ca4d6f0a3e5.jpg"
-        caption = ("<b>⛲: Para pedir os seus peixes é simples!</b> \n\nMe envie até <b>5 IDs</b> dos peixes e a quantidade de cenouras que você quer doar "
-                   "\n(eu aceito qualquer quantidade entre 10 e 20 cenouras...) \n\n<i>exemplo: ID1 ID2 ID3 ID4 ID5 cenouras</i>")
-        media = InputMediaPhoto(image_url, caption=caption, parse_mode="HTML")
-        bot.edit_message_media(media, chat_id=call.message.chat.id, message_id=call.message.message_id)
-        
-        bot.register_next_step_handler(call.message, process_wish)
 

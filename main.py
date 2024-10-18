@@ -75,7 +75,6 @@ from admin import *
 from peixes import *
 from halloween import *
 from vips import *
-from vip import *
 from petalas import *
 # Configuração de Webhook
 WEBHOOK_URL_PATH = '/' + API_TOKEN + '/'

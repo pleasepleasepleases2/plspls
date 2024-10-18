@@ -1,5 +1,6 @@
 import time
 from queue import Queue
+resultados_gnome = {}
 
 jogos_termo = {}
 ultimo_clique = {}

@@ -314,7 +314,7 @@ def verificar_comando_peixes(message):
         print(f"Erro ao processar comando /peixes: {e}")
         bot.reply_to(message, "Ocorreu um erro ao processar sua solicitação.")
 
- import mysql.connector
+
 
 # Função para lidar com o comando /completos
 def handle_completos(message):

@@ -704,10 +704,115 @@ def callback_gnome_navigation(call):
 def gnomes_command(message):
     gnomes(message)
 
-@bot.message_handler(commands=['gid'])
-def gid_command(message):
-    from peixes import obter_id_e_enviar_info_com_imagem
-    obter_id_e_enviar_info_com_imagem(message)
+def obter_id_e_enviar_info_com_imagem(message):
+    try:
+        conn, cursor = conectar_banco_dados()
+        user_id = message.from_user.id
+        chat_id = message.chat.id
+
+        command_parts = message.text.split()
+        if len(command_parts) == 2 and command_parts[1].isdigit():
+            id_pesquisa = command_parts[1]
+
+            # Verificar se o ID pertence a um evento
+            is_evento = verificar_evento(cursor, id_pesquisa)
+
+            # Se for evento, usa a query de evento
+            if is_evento:
+                sql_evento = """
+                    SELECT
+                        e.id_personagem,
+                        e.nome,
+                        e.subcategoria,
+                        COALESCE(i.quantidade, 0) AS quantidade_usuario,
+                        e.imagem
+                    FROM evento e
+                    LEFT JOIN inventario i ON e.id_personagem = i.id_personagem AND i.id_usuario = %s
+                    WHERE e.id_personagem = %s
+                """
+                values_evento = (user_id, id_pesquisa)
+
+                cursor.execute(sql_evento, values_evento)
+                resultado_evento = cursor.fetchone()
+
+                if resultado_evento:
+                    enviar_mensagem_personagem(chat_id, resultado_evento, message.message_id)
+                else:
+                    bot.send_message(chat_id, f"Nenhum resultado encontrado para o ID '{id_pesquisa}'.", reply_to_message_id=message.message_id)
+
+            # Se não for evento, trata como personagem regular
+            else:
+                sql_normal = """
+                    SELECT
+                        p.id_personagem,
+                        p.nome,
+                        p.subcategoria,
+                        COALESCE(i.quantidade, 0) AS quantidade_usuario,
+                        p.imagem,
+                        p.cr
+                    FROM personagens p
+                    LEFT JOIN inventario i ON p.id_personagem = i.id_personagem AND i.id_usuario = %s
+                    WHERE p.id_personagem = %s
+                """
+                values_normal = (user_id, id_pesquisa)
+
+                cursor.execute(sql_normal, values_normal)
+                resultado_normal = cursor.fetchone()
+
+                if resultado_normal:
+                    enviar_mensagem_personagem(chat_id, resultado_normal, message.message_id)
+                else:
+                    bot.send_message(chat_id, f"Nenhum resultado encontrado para o ID '{id_pesquisa}'.", reply_to_message_id=message.message_id)
+        else:
+            bot.send_message(chat_id, "Formato incorreto. Use /gid seguido do ID desejado, por exemplo: /gid 123", reply_to_message_id=message.message_id)
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        erro = traceback.print_exc()
+        mensagem = f"Erro ao processar o ID: {id_pesquisa}. Erro: {e}"
+        bot.send_message(grupodeerro, mensagem, parse_mode="HTML")
+    finally:
+        fechar_conexao(cursor, conn)
+
+
+def enviar_mensagem_personagem(chat_id, resultado_personagem, message_id):
+    id_personagem, nome, subcategoria, quantidade_usuario, imagem_url = resultado_personagem[:5]
+    cr = resultado_personagem[5] if len(resultado_personagem) > 5 else None
+
+    # Montar a mensagem
+    mensagem = f"💌 | Personagem:\n\n<code>{id_personagem}</code> • {nome}\nde {subcategoria}"
+    if quantidade_usuario > 0:
+        mensagem += f"\n\n☀ | {quantidade_usuario}⤫"
+    else:
+        mensagem += f"\n\n🌧 | Tempo fechado..."
+
+    if cr:
+        link_cr = obter_link_formatado(cr)
+        mensagem += f"\n\n{link_cr}"
+
+    markup = InlineKeyboardMarkup()
+    markup.row_width = 1
+    markup.add(InlineKeyboardButton("💟", callback_data=f"total_{id_personagem}"))
+
+    gif_url = obter_gif_url(id_personagem, chat_id)
+
+    if gif_url:
+        imagem_url = gif_url
+
+    # Enviar mídia
+    try:
+        if imagem_url.lower().endswith(".gif"):
+            bot.send_animation(chat_id, imagem_url, caption=mensagem, reply_markup=markup, reply_to_message_id=message_id, parse_mode="HTML")
+        elif imagem_url.lower().endswith(".mp4"):
+            bot.send_video(chat_id, imagem_url, caption=mensagem, reply_markup=markup, reply_to_message_id=message_id, parse_mode="HTML")
+        elif imagem_url.lower().endswith((".jpeg", ".jpg", ".png")):
+            bot.send_photo(chat_id, imagem_url, caption=mensagem, reply_markup=markup, reply_to_message_id=message_id, parse_mode="HTML")
+        else:
+            bot.send_message(chat_id, mensagem, reply_markup=markup, parse_mode="HTML")
+    except Exception as e:
+        print(f"Erro ao enviar a mídia: {e}")
+        bot.send_message(chat_id, mensagem, reply_markup=markup, parse_mode="HTML")
+
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith('toggle_'))
 def handle_toggle_config(call):

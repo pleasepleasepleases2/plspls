@@ -342,9 +342,7 @@ def handle_listar_pedidos_vips(message):
 # Registro do comando para ver a ficha de um VIP
 @bot.message_handler(commands=['ficha'])
 def handle_ver_ficha_vip(message):
-    ver_ficha_vip_logic(message
-                        
-from operacoes import toggle_config, toggle_casamento
+    ver_ficha_vip_logic(message)
 
 # Callback para alternar configurações gerais
 @bot.callback_query_handler(func=lambda call: call.data.startswith('toggle_'))
@@ -356,15 +354,10 @@ def handle_toggle_config(call):
 def handle_toggle_casamento(call):
     toggle_casamento(call)
 
-    
-from operacoes import doar
-
 # Registro do comando de doação de cartas
 @bot.message_handler(commands=['doar'])
 def handle_doar(message):
     doar(message)
-
-from petala import roseira_command, callback_escolher_carta
 
 # Registro do comando /roseira
 @bot.message_handler(commands=['roseira'])

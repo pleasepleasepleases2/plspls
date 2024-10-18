@@ -17,7 +17,61 @@ from pescar import *
 from trocas import *
 from gif import *
 import html
+def add_to_inventory(id_usuario, id_personagem, max_retries=5):
+    attempt = 0
+    id_usuario = int(id_usuario)
+    id_personagem = int(id_personagem)
+    
+    while attempt < max_retries:
+        try:
+            conn, cursor = conectar_banco_dados()
 
+            # Iniciar uma transação
+            conn.start_transaction()
+
+            # Ordenar as operações em ordem específica para evitar deadlocks
+            if id_usuario < id_personagem:
+                cursor.execute("SELECT quantidade FROM inventario WHERE id_usuario = %s AND id_personagem = %s FOR UPDATE",
+                               (id_usuario, id_personagem))
+            else:
+                cursor.execute("SELECT quantidade FROM inventario WHERE id_personagem = %s AND id_usuario = %s FOR UPDATE",
+                               (id_personagem, id_usuario))
+
+            existing_carta = cursor.fetchone()
+
+            if existing_carta:
+                nova_quantidade = existing_carta[0] + 1
+                cursor.execute("UPDATE inventario SET quantidade = %s WHERE id_usuario = %s AND id_personagem = %s",
+                               (nova_quantidade, id_usuario, id_personagem))
+            else:
+                cursor.execute("INSERT INTO inventario (id_personagem, id_usuario, quantidade) VALUES (%s, %s, 1)",
+                               (id_personagem, id_usuario))
+
+            cursor.execute("UPDATE personagens SET total = IFNULL(total, 0) + 1 WHERE id_personagem = %s", (id_personagem,))
+
+            # Confirmar a transação
+            conn.commit()
+            break  # Saia do loop se a transação for bem-sucedida
+
+        except mysql.connector.errors.DatabaseError as db_err:
+            if db_err.errno == 1205:  # Código de erro para lock wait timeout exceeded
+                attempt += 1
+                time.sleep(1)  # Esperar um pouco antes de tentar novamente
+                if attempt >= max_retries:
+                    mensagem = "Erro: Excedido o número máximo de tentativas para resolver o deadlock."
+                    bot.send_message(grupodeerro, mensagem, parse_mode="HTML")
+            else:
+                mensagem = f"Erro ao adicionar carta ao inventário: {db_err}"
+                bot.send_message(grupodeerro, mensagem, parse_mode="HTML")
+                break
+        except Exception as e:
+            traceback.print_exc()
+            erro = traceback.format_exc()
+            mensagem = f"Adição de personagem com erro: {id_personagem} - usuário {id_usuario}. erro: {e}\n{erro}"
+            bot.send_message(grupodeerro, mensagem, parse_mode="HTML")
+            break
+        finally:
+            fechar_conexao(cursor, conn)
 def loja_geral_callback(call):
     try:
         id_usuario = call.from_user.id

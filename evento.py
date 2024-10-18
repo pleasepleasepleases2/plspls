@@ -147,4 +147,22 @@ def get_random_subcategories_all_valentine(connection):
     subcategories_valentine = [row[0] for row in cursor.fetchall()]
 
     cursor.close()
-    return subcategories_valentine          
+    return subcategories_valentine      
+
+import newrelic.agent
+import traceback
+
+def callback_subcategory(call):
+    try:
+        subcategory_data = call.data.split("_")
+        subcategory = subcategory_data[1]
+        card = get_random_card_valentine(subcategory)
+        if card:
+            evento_aleatorio = card
+            send_card_message(call.message, evento_aleatorio)
+        else:
+            bot.answer_callback_query(call.id, "Ocorreu um erro ao processar sua solicitação. Tente novamente mais tarde.")
+    except Exception as e:
+        newrelic.agent.record_exception()    
+        print(f"Erro ao processar callback de subcategoria: {e}")
+        traceback.print_exc()

@@ -15,12 +15,14 @@ from operacoes import *
 from inventario import *
 from gif import *
 import random
+import traceback
+
 def comando_evento_s(id_usuario, evento, subcategoria, cursor, usuario_inicial, page=1):
     subcategoria = subcategoria.strip().title()
     def formatar_id(id_personagem):
         return str(id_personagem).zfill(4)
     
-    items_per_page = 15
+    items_per_page = 20
     offset = (page - 1) * items_per_page
     
     sql_usuario = f"""
@@ -63,7 +65,7 @@ def comando_evento_f(id_usuario, evento, subcategoria, cursor, usuario_inicial, 
     def formatar_id(id_personagem):
         return str(id_personagem).zfill(4)
     
-    items_per_page = 15
+    items_per_page = 20
     offset = (page - 1) * items_per_page
     
     sql_faltantes = f"""
@@ -199,7 +201,7 @@ def handle_evento_command(message):
         elif message.text.startswith('/evento f'):
             resposta_completa = comando_evento_f(id_usuario, evento, subcategoria, cursor, usuario)
         else:
-            resposta = "Comando inválido. Use /evento s <evento> <subcategoria> ou /evento f <evento> <subcategoria>."
+            resposta = "Comando inválido. Use /evento s <evento> ou /evento f <evento>."
             bot.send_message(message.chat.id, resposta)
             return
 
@@ -209,16 +211,13 @@ def handle_evento_command(message):
 
             markup = InlineKeyboardMarkup()
             if total_pages > 1:
-                markup.add(InlineKeyboardButton("Próxima", callback_data=f"evt_next_{id_usuario}_{evento[:10]}_{subcategoria_pesquisada[:10]}_2"))
+                markup.add(InlineKeyboardButton("Próxima", callback_data=f"evt_next_{id_usuario}_{evento[:20]}_{subcategoria_pesquisada[:20]}_2"))
 
             bot.send_message(message.chat.id, resposta, reply_markup=markup)
         else:
             bot.send_message(message.chat.id, resposta_completa)
-    except ValueError as e:
-        print(f"Erro: {e}")
-        newrelic.agent.record_exception()    
-        mensagem_banido = "Você foi banido permanentemente do garden. Entre em contato com o suporte caso haja dúvidas."
-        bot.send_message(message.chat.id, mensagem_banido)
+    except Exception as e:
+        traceback.print_exc()
     finally:
         fechar_conexao(cursor, conn)
 
@@ -257,9 +256,8 @@ def handle_callback_query_evento(call):
             bot.edit_message_text(resposta, chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=markup)
         else:
             bot.edit_message_text(resposta_completa, chat_id=call.message.chat.id, message_id=call.message.message_id)
-    except mysql.connector.Error as err:
-        bot.send_message(call.message.chat.id, f"Erro ao buscar perfil: {err}")
-        newrelic.agent.record_exception()     
+    except Exception as e:
+        traceback.print_exc()
     finally:
         fechar_conexao(cursor, conn)
 

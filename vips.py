@@ -248,29 +248,40 @@ def validar_formato_submenu(texto):
             return False
 
     return True
-from datetime import datetime
-from telebot import types
-from bd import conectar_banco_dados, fechar_conexao
 
-# Lógica para adicionar VIP
+
 def adicionar_vip_logic(message):
-    # Verificar se o usuário é autorizado
     if message.from_user.id not in [5532809878, 1805086442, 5799169750]:
         bot.reply_to(message, "Você não tem permissão para usar este comando.")
         return
 
-    msg = bot.reply_to(message, "Por favor, envie o ID do usuário.")
+    msg = bot.reply_to(message, "Por favor, envie o ID do usuário para adicionar como VIP.")
     bot.register_next_step_handler(msg, processar_id_vip)
 
-# Lógica para remover VIP
+def processar_id_vip(message):
+    try:
+        id_usuario = int(message.text)
+        # Lógica para adicionar o VIP ao banco de dados
+        bot.send_message(message.chat.id, f"Usuário {id_usuario} foi adicionado como VIP.")
+    except ValueError:
+        bot.reply_to(message, "ID inválido. Por favor, envie um ID numérico válido.")
+
 def remover_vip_logic(message):
-    # Verificar se o usuário é autorizado
     if message.from_user.id not in [5532809878, 1805086442, 5799169750]:
         bot.reply_to(message, "Você não tem permissão para usar este comando.")
         return
 
     msg = bot.reply_to(message, "Por favor, envie o ID do usuário VIP a ser removido.")
     bot.register_next_step_handler(msg, processar_remocao_vip)
+
+def processar_remocao_vip(message):
+    try:
+        id_usuario = int(message.text)
+        # Lógica para remover o VIP do banco de dados
+        bot.send_message(message.chat.id, f"Usuário {id_usuario} foi removido dos VIPs.")
+    except ValueError:
+        bot.reply_to(message, "ID inválido. Por favor, envie um ID numérico válido.")
+
 
 # Lógica para listar os VIPs
 def listar_vips_logic(message):
@@ -322,10 +333,6 @@ def listar_vips_logic(message):
     finally:
         # Fechar a conexão com o banco de dados
         fechar_conexao(cursor, conn)
-
-from datetime import datetime
-from telebot import types
-from bd import conectar_banco_dados, fechar_conexao
 
 # Lógica para listar os pedidos dos VIPs
 def listar_pedidos_vips_logic(message):

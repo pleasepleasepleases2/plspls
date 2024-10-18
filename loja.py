@@ -629,3 +629,19 @@ def handle_callback_confirmar_compra(call):
         newrelic.agent.record_exception()
     finally:
         fechar_conexao(cursor, conn)
+
+def obter_informacoes_loja(ids_do_dia):
+    try:
+        conn, cursor = conectar_banco_dados()
+        placeholders = ', '.join(['%s' for _ in ids_do_dia])
+        cursor.execute(
+            f"SELECT id_personagem, emoji, nome, subcategoria FROM personagens WHERE id_personagem IN ({placeholders})",
+            tuple(ids_do_dia))
+        cartas_loja = cursor.fetchall()
+        return cartas_loja
+
+    except mysql.connector.Error as err:
+        print(f"Erro ao obter informações da loja: {err}")
+    finally:
+        cursor.close()
+        conn.close()

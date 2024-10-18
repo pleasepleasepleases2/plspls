@@ -595,8 +595,8 @@ def handle_gnome(message):
         # Salvar os resultados no dicionário global para navegação posterior
         globals.resultados_gnome[user_id] = resultados_personagens
 
-        # Exibir a primeira carta (como texto inicialmente)
-        enviar_carta_individual(chat_id, user_id, resultados_personagens, 0, message.message_id, 'text')
+        # Exibir a primeira carta (sempre como mídia)
+        enviar_carta_individual(chat_id, user_id, resultados_personagens, 0, message.message_id)
 
     except Exception as e:
         print(f"Erro: {e}")
@@ -604,7 +604,7 @@ def handle_gnome(message):
         fechar_conexao(cursor, conn)
 
 
-def enviar_carta_individual(chat_id, user_id, resultados_personagens, index, message_id, tipo_mensagem):
+def enviar_carta_individual(chat_id, user_id, resultados_personagens, index, message_id):
     id_personagem, nome, subcategoria, categoria, quantidade_usuario, imagem_url = resultados_personagens[index]
 
     # Criação da mensagem para a carta
@@ -626,31 +626,19 @@ def enviar_carta_individual(chat_id, user_id, resultados_personagens, index, mes
     if gif_url:
         imagem_url = gif_url
 
-    # Se a mensagem inicial foi um texto, edite como texto
-    if tipo_mensagem == 'text':
-        try:
-            bot.edit_message_text(mensagem, chat_id=chat_id, message_id=message_id, reply_markup=keyboard, parse_mode="HTML")
-        except Exception:
-            # Caso o Telegram não permita editar como texto, edite como mídia
-            enviar_carta_individual(chat_id, user_id, resultados_personagens, index, message_id, 'media')
-    
-    # Se a mensagem original foi uma mídia (foto, gif, etc.), edite como mídia
-    elif tipo_mensagem == 'media':
-        try:
-            if imagem_url.lower().endswith(".gif"):
-                bot.edit_message_media(media=types.InputMediaAnimation(media=imagem_url, caption=mensagem, parse_mode="HTML"),
-                                       chat_id=chat_id, message_id=message_id, reply_markup=keyboard)
-            elif imagem_url.lower().endswith(".mp4"):
-                bot.edit_message_media(media=types.InputMediaVideo(media=imagem_url, caption=mensagem, parse_mode="HTML"),
-                                       chat_id=chat_id, message_id=message_id, reply_markup=keyboard)
-            elif imagem_url.lower().endswith((".jpeg", ".jpg", ".png")):
-                bot.edit_message_media(media=types.InputMediaPhoto(media=imagem_url, caption=mensagem, parse_mode="HTML"),
-                                       chat_id=chat_id, message_id=message_id, reply_markup=keyboard)
-            else:
-                bot.edit_message_text(mensagem, chat_id=chat_id, message_id=message_id, reply_markup=keyboard, parse_mode="HTML")
-        except:
-            # Caso não seja possível editar a mensagem, redefinir a mensagem como texto (último recurso)
+    # Enviar como mídia, sem apagar a mensagem original
+    try:
+        if imagem_url.lower().endswith(".gif"):
+            bot.send_animation(chat_id, animation=imagem_url, caption=mensagem, reply_markup=keyboard, parse_mode="HTML")
+        elif imagem_url.lower().endswith(".mp4"):
+            bot.send_video(chat_id, video=imagem_url, caption=mensagem, reply_markup=keyboard, parse_mode="HTML")
+        elif imagem_url.lower().endswith((".jpeg", ".jpg", ".png")):
+            bot.send_photo(chat_id, photo=imagem_url, caption=mensagem, reply_markup=keyboard, parse_mode="HTML")
+        else:
             bot.send_message(chat_id, mensagem, reply_markup=keyboard, parse_mode="HTML")
+    except Exception as e:
+        print(f"Erro ao enviar a mídia: {e}")
+        bot.send_message(chat_id, mensagem, reply_markup=keyboard, parse_mode="HTML")
 
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith('gnome_'))
@@ -664,10 +652,15 @@ def callback_gnome_navigation(call):
     resultados_personagens = globals.resultados_gnome.get(user_id, [])
 
     if resultados_personagens:
-        enviar_carta_individual(call.message.chat.id, user_id, resultados_personagens, index, call.message.message_id, 'media')
+        # Editar a mensagem existente com a nova carta
+        try:
+            bot.delete_message(call.message.chat.id, call.message.message_id)
+            enviar_carta_individual(call.message.chat.id, user_id, resultados_personagens, index, call.message.message_id)
+        except Exception as e:
+            bot.answer_callback_query(call.id, "Erro ao processar a navegação.")
+            print(f"Erro ao processar callback de navegação: {e}")
     else:
         bot.answer_callback_query(call.id, "Não foi possível encontrar os resultados. Tente novamente.")
-
 
 def gnomes_command(message):
     gnomes(message)

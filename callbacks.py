@@ -15,6 +15,7 @@ from wish import *
 from cenourar import *
 from pescar import *
 from trocas import *
+from operacoes import *
 from gif import *
 import html
 def add_to_inventory(id_usuario, id_personagem, max_retries=5):

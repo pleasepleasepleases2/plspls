@@ -289,4 +289,28 @@ def diminuir_giros(id_usuario, quantidade):
     finally:
         fechar_conexao(cursor, conn)
 
+def verificar_comando_peixes(message):
+    try:
+        # Separar os parâmetros do comando
+        parametros = message.text.split(' ', 2)[1:]  
+
+        if not parametros:
+            bot.reply_to(message, "Por favor, forneça a subcategoria.")
+            return
+        
+        # Combinar os parâmetros restantes para formar a subcategoria
+        subcategoria = " ".join(parametros)  
+        
+        # Se o primeiro parâmetro for 'img', enviar a imagem do peixe
+        if len(parametros) > 1 and parametros[0].lower() == 'img':
+            subcategoria = " ".join(parametros[1:])
+            enviar_imagem_peixe(message, subcategoria)
+        else:
+            # Caso contrário, mostrar a lista de peixes da subcategoria
+            mostrar_lista_peixes(message, subcategoria)
+        
+    except Exception as e:
+        print(f"Erro ao processar comando /peixes: {e}")
+        bot.reply_to(message, "Ocorreu um erro ao processar sua solicitação.")
+
         

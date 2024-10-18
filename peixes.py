@@ -329,6 +329,7 @@ def gnome(message):
     chat_id = message.chat.id
     user_id = message.from_user.id
     idmens = message.message_id
+
     try:
         partes = message.text.split()
         if 'e' in partes:
@@ -339,7 +340,7 @@ def gnome(message):
                     e.nome,
                     e.subcategoria,
                     e.categoria,
-                    i.quantidade AS quantidade_usuario,
+                    COALESCE(i.quantidade, 0) AS quantidade_usuario,
                     e.imagem
                 FROM evento e
                 LEFT JOIN inventario i ON e.id_personagem = i.id_personagem AND i.id_usuario = %s
@@ -353,7 +354,7 @@ def gnome(message):
                     p.nome,
                     p.subcategoria,
                     p.categoria,
-                    i.quantidade AS quantidade_usuario,
+                    COALESCE(i.quantidade, 0) AS quantidade_usuario,
                     p.imagem
                 FROM personagens p
                 LEFT JOIN inventario i ON p.id_personagem = i.id_personagem AND i.id_usuario = %s
@@ -365,64 +366,58 @@ def gnome(message):
         cursor.execute(sql_personagens, values_personagens)
         resultados_personagens = cursor.fetchall()
 
-        if len(resultados_personagens) == 1:
-            mensagem = resultados_personagens[0]
-            id_personagem, nome, subcategoria, categoria, quantidade_usuario, imagem_url = mensagem
-            mensagem = f"💌 | Personagem: \n\n<code>{id_personagem}</code> • {nome}\nde {subcategoria}"
-            if quantidade_usuario is None:
-                mensagem += f"\n\n🌧 | Tempo fechado..."
-            elif quantidade_usuario > 0:
-                mensagem += f"\n\n☀ | {quantidade_usuario}⤫"
+        if not resultados_personagens:
+            bot.send_message(chat_id, f"Nenhum personagem encontrado com o nome '{nome}'.")
+            return
+
+        total_personagens = len(resultados_personagens)
+
+        # Função para exibir uma carta por vez
+        def enviar_carta_individual(index):
+            id_personagem, nome, subcategoria, categoria, quantidade_usuario, imagem_url = resultados_personagens[index]
+            
+            # Criação da mensagem para a carta
+            mensagem = f"💌 | Personagem:\n\n<code>{id_personagem}</code> • {nome}\nde {subcategoria}\n"
+            if quantidade_usuario > 0:
+                mensagem += f"☀ | {quantidade_usuario}⤫"
             else:
-                mensagem += f"\n\n🌧 | Tempo fechado..."
+                mensagem += f"🌧 | Tempo fechado..."
 
+            # Verificar se existe uma imagem GIF ou URL para a carta
             gif_url = obter_gif_url(id_personagem, user_id)
-
             if gif_url:
                 imagem_url = gif_url
-                if imagem_url.lower().endswith(".gif"):
-                    bot.send_animation(chat_id, imagem_url, caption=mensagem, parse_mode="HTML")
-                elif imagem_url.lower().endswith(".mp4"):
-                    bot.send_video(chat_id, imagem_url, caption=mensagem, parse_mode="HTML")
-                elif imagem_url.lower().endswith((".jpeg", ".jpg", ".png")):
-                    bot.send_photo(chat_id, imagem_url, caption=mensagem, parse_mode="HTML")
-                else:
-                    send_message_with_buttons(chat_id, idmens, [(None, mensagem)], reply_to_message_id=message.message_id)
+
+            # Botões de navegação
+            keyboard = types.InlineKeyboardMarkup()
+            if index > 0:
+                keyboard.add(types.InlineKeyboardButton("⬅️ Anterior", callback_data=f"gnome_prev_{index-1}"))
+            if index < total_personagens - 1:
+                keyboard.add(types.InlineKeyboardButton("Próxima ➡️", callback_data=f"gnome_next_{index+1}"))
+
+            # Envio da imagem e mensagem
+            if imagem_url.lower().endswith(".gif"):
+                bot.send_animation(chat_id, imagem_url, caption=mensagem, reply_markup=keyboard, parse_mode="HTML")
+            elif imagem_url.lower().endswith(".mp4"):
+                bot.send_video(chat_id, imagem_url, caption=mensagem, reply_markup=keyboard, parse_mode="HTML")
+            elif imagem_url.lower().endswith((".jpeg", ".jpg", ".png")):
+                bot.send_photo(chat_id, imagem_url, caption=mensagem, reply_markup=keyboard, parse_mode="HTML")
             else:
-                if imagem_url.lower().endswith(".gif"):
-                    bot.send_animation(chat_id, imagem_url, caption=mensagem, parse_mode="HTML")
-                elif imagem_url.lower().endswith(".mp4"):
-                    bot.send_video(chat_id, imagem_url, caption=mensagem, parse_mode="HTML")
-                elif imagem_url.lower().endswith((".jpeg", ".jpg", ".png")):
-                    bot.send_photo(chat_id, imagem_url, caption=mensagem, parse_mode="HTML")
-                else:
-                    send_message_with_buttons(chat_id, idmens, [(None, mensagem)], reply_to_message_id=message.message_id)
+                bot.send_message(chat_id, mensagem, reply_markup=keyboard, parse_mode="HTML")
 
-            user_id = chat_id
-            save_user_state(chat_id, [mensagem])
+        # Enviar a primeira carta
+        enviar_carta_individual(0)
 
-        else:
-            mensagens = []
-            for resultado_personagem in resultados_personagens:
-                id_personagem, nome, subcategoria, categoria, quantidade_usuario, imagem_url = resultado_personagem
-                mensagem = f"💌 | Personagem: \n\n<code>{id_personagem}</code> • {nome}\nde {subcategoria}"
-                if quantidade_usuario is None:
-                    mensagem += f"\n\n🌧 | Tempo fechado..."
-                elif quantidade_usuario > 0:
-                    mensagem += f"\n\n☀ | {quantidade_usuario}⤫"
-                else:
-                    mensagem += f"\n\n🌧 | Tempo fechado..."
+        # Função de callback para navegar entre as cartas
+        @bot.callback_query_handler(func=lambda call: call.data.startswith('gnome_'))
+        def handle_navigation(call):
+            action, index_str = call.data.split('_')[1:3]
+            index = int(index_str)
 
-                gif_url = obter_gif_url(id_personagem, user_id)
-                if gif_url:
-                    mensagens.append((gif_url, mensagem))
-                elif imagem_url:
-                    mensagens.append((imagem_url, mensagem))
-                else:
-                    mensagens.append((None, mensagem))
-
-            save_user_state(chat_id, mensagens)
-            send_message_with_buttons(chat_id, idmens, mensagens, reply_to_message_id=message.message_id)
+            if action == 'prev':
+                enviar_carta_individual(index)
+            elif action == 'next':
+                enviar_carta_individual(index)
 
     except Exception as e:
         import traceback
@@ -430,6 +425,7 @@ def gnome(message):
         newrelic.agent.record_exception()
     finally:
         fechar_conexao(cursor, conn)
+
 
 
 def gnomes(message):

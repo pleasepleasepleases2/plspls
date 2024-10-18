@@ -18,6 +18,29 @@ from trocas import *
 from operacoes import *
 from gif import *
 import html
+
+def diminuir_cenouras(id_usuario, valor):
+    try:
+        conn, cursor = conectar_banco_dados()
+        cursor.execute("SELECT cenouras FROM usuarios WHERE id_usuario = %s", (id_usuario,))
+        resultado = cursor.fetchone()
+
+        if resultado:
+            cenouras_atuais = int(resultado[0]) 
+            if cenouras_atuais >= valor:
+                nova_quantidade = cenouras_atuais - valor
+                cursor.execute("UPDATE usuarios SET cenouras = %s WHERE id_usuario = %s", (nova_quantidade, id_usuario))
+                conn.commit()
+            else:
+                print("Erro: Não há cenouras suficientes para diminuir.")
+        else:
+            print("Erro: Usuário não encontrado.")
+
+    except Exception as e:
+        print(f"Erro ao diminuir cenouras: {e}")
+
+    finally:
+        fechar_conexao(cursor, conn)
 def add_to_inventory(id_usuario, id_personagem, max_retries=5):
     attempt = 0
     id_usuario = int(id_usuario)

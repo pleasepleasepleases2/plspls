@@ -205,3 +205,123 @@ def dividir_em_paginas(lista, tamanho_pagina):
     for i in range(0, len(lista), tamanho_pagina):
         paginas[(i // tamanho_pagina) + 1] = lista[i:i + tamanho_pagina]
     return paginas
+
+def processar_notificacao_personagem(call):
+    try:
+        id_personagem = int(call.data.split('_')[1])
+        conn, cursor = conectar_banco_dados()
+
+        # Verificar quantas vezes a carta foi rodada
+        cursor.execute("SELECT rodados FROM cartas WHERE id_personagem = %s", (id_personagem,))
+        quantidade_personagem = cursor.fetchone()
+
+        if quantidade_personagem is not None and quantidade_personagem[0] >= 0:
+            bot.answer_callback_query(call.id, f"Esta carta foi rodada {quantidade_personagem[0]} vezes!")
+        else:
+            bot.answer_callback_query(call.id, f"Esta carta não foi rodada ainda :(!")
+    except Exception as e:
+        print(f"Erro ao lidar com o callback: {e}")
+    finally:
+        fechar_conexao(cursor, conn)
+def handle_navigate_messages(call):
+    try:
+        chat_id = call.message.chat.id
+        data_parts = call.data.split('_')
+
+        if len(data_parts) == 4 and data_parts[0] in ('next', 'prev'):
+            direction, current_index, total_count = data_parts[0], int(data_parts[2]), int(data_parts[3])
+        else:
+            raise ValueError("Callback_data com número incorreto de partes ou formato inválido.")
+
+        user_id = call.from_user.id
+        mensagens, _ = load_user_state(user_id, 'gnomes')
+        if direction == 'next':
+            current_index += 1
+        elif direction == 'prev':
+            current_index -= 1
+        media_url, mensagem = mensagens[current_index]
+        markup = create_navigation_markup(current_index, len(mensagens))
+
+        if media_url:
+            if media_url.lower().endswith(".gif"):
+                bot.edit_message_media(chat_id=chat_id, message_id=call.message.message_id, media=telebot.types.InputMediaAnimation(media=media_url, caption=mensagem, parse_mode="HTML"), reply_markup=markup)
+            elif media_url.lower().endswith(".mp4"):
+                bot.edit_message_media(chat_id=chat_id, message_id=call.message.message_id, media=telebot.types.InputMediaVideo(media=media_url, caption=mensagem, parse_mode="HTML"), reply_markup=markup)
+            elif media_url.lower().endswith((".jpeg", ".jpg", ".png")):
+                bot.edit_message_media(chat_id=chat_id, message_id=call.message.message_id, media=telebot.types.InputMediaPhoto(media=media_url, caption=mensagem, parse_mode="HTML"), reply_markup=markup)
+            else:
+                bot.edit_message_text(chat_id=chat_id, message_id=call.message.message_id, text=mensagem, reply_markup=markup, parse_mode="HTML")
+        else:
+            bot.edit_message_text(chat_id=chat_id, message_id=call.message.message_id, text=mensagem, reply_markup=markup, parse_mode="HTML")
+
+    except Exception as e:
+        print("Erro ao processar callback dos botões de navegação:", str(e))
+
+
+def handle_navigate_gnome_results(call):
+    try:
+        chat_id = call.message.chat.id
+        data_parts = call.data.split('_')
+
+        if len(data_parts) == 4 and data_parts[0] in ('prox', 'ant'):
+            direction, current_page, total_pages = data_parts[0], int(data_parts[2]), int(data_parts[3])
+        else:
+            raise ValueError("Callback_data com número incorreto de partes ou formato inválido.")
+
+        user_id = call.from_user.id
+        resultados, _, message_id = globals.load_state(user_id, 'gnomes')
+        if direction == 'prox':
+            current_page = min(current_page + 1, total_pages)
+        elif direction == 'ant':
+            current_page = max(current_page - 1, 1)
+            
+        resultados_pagina_atual = resultados[(current_page - 1) * 15 : current_page * 15]
+        lista_resultados = [f"{emoji} - {id_personagem} - {nome} de {subcategoria}" for emoji, id_personagem, nome, subcategoria in resultados_pagina_atual]
+        mensagem_final = f"🐠 Peixes de nome', página {current_page}/{total_pages}:\n\n" + "\n".join(lista_resultados)
+        markup = create_navegacao_markup(current_page, total_pages)
+
+        bot.edit_message_text(chat_id=chat_id, message_id=message_id, text=mensagem_final, reply_markup=markup)
+
+    except Exception as e:
+        print("Erro ao processar callback dos botões de navegação:", str(e))
+import traceback
+
+
+def handle_callback_total_personagem(call):
+    try:
+        conn, cursor = conectar_banco_dados()
+        chat_id = call.message.chat.id
+        id_pesquisa = call.data.split('_')[1]
+
+        sql_total = "SELECT total FROM personagens WHERE id_personagem = %s"
+        cursor.execute(sql_total, (id_pesquisa,))
+        total_pescados = cursor.fetchone()
+
+        if total_pescados is not None and total_pescados[0] is not None:
+            if total_pescados[0] > 1:
+                response_text = f"O personagem foi pescado {total_pescados[0]} vezes!"
+            elif total_pescados[0] == 1:
+                response_text = f"O personagem foi pescado {total_pescados[0]} vez!"
+            else:
+                response_text = "Esse personagem ainda não foi pescado :("
+        else:
+            response_text = "Esse personagem ainda não foi pescado :("
+
+        try:
+            bot.answer_callback_query(call.id, text=response_text, show_alert=True)
+        except Exception as e:
+            traceback.print_exc()
+            erro = traceback.format_exc()
+            mensagem = f"Alerta de erro carta pescadas. Erro: {e}\n{erro}"
+            bot.send_message(grupodeerro, mensagem, parse_mode="HTML")
+
+    except Exception as e:
+        traceback.print_exc()
+        erro = traceback.format_exc()
+        mensagem = f"Alerta de erro carta pescadas. Erro: {e}\n{erro}"
+        bot.send_message(grupodeerro, mensagem, parse_mode="HTML")
+
+    finally:
+        cursor.close()
+        conn.close()
+

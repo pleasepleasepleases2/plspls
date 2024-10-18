@@ -533,3 +533,76 @@ def encerrar_ou_continuar(call):
     except Exception as e:
         print(f"Erro ao processar o jogo da velha): {e}")
         traceback.print_exc()
+import traceback
+from telebot import types
+import globals
+
+# Função para escolher a palavra secreta (você deve implementar ou importar essa função)
+def escolher_palavra():
+    return "exemplo"
+
+# Função para verificar o palpite do jogador (comparar com a palavra secreta)
+def verificar_palpite(palavra_secreta, palpite):
+    resultado = []
+    for i in range(len(palavra_secreta)):
+        if palpite[i] == palavra_secreta[i]:
+            resultado.append(f"{palpite[i]}✔️")
+        elif palpite[i] in palavra_secreta:
+            resultado.append(f"{palpite[i]}~")
+        else:
+            resultado.append(f"{palpite[i]}❌")
+    return ' '.join(resultado)
+
+# Função que inicia o jogo do termo
+def iniciar_termo(message):
+    id_usuario = message.from_user.id
+    palavra_secreta = escolher_palavra()
+
+    # Armazenar o jogo do usuário
+    globals.jogos_termo[id_usuario] = {
+        "palavra_secreta": palavra_secreta,
+        "tentativas_restantes": 6,
+        "tamanho_palavra": len(palavra_secreta)
+    }
+
+    bot.send_message(message.chat.id, f"🎮 Bem-vindo ao Termo!\nA palavra tem {len(palavra_secreta)} letras.\nVocê tem 6 tentativas.\n\nEnvie sua primeira tentativa:")
+
+# Lidar com as tentativas do jogador
+@bot.message_handler(func=lambda message: message.from_user.id in globals.jogos_termo)
+def tentar_termo(message):
+    id_usuario = message.from_user.id
+    jogo = globals.jogos_termo[id_usuario]
+    palavra_secreta = jogo['palavra_secreta']
+    tentativas_restantes = jogo['tentativas_restantes']
+
+    palpite = message.text.lower().strip()
+
+    # Verificar se o palpite tem o mesmo número de letras
+    if len(palpite) != len(palavra_secreta):
+        bot.send_message(message.chat.id, f"O palpite deve ter {len(palavra_secreta)} letras!")
+        return
+
+    # Verificar se o jogador acertou a palavra
+    if palpite == palavra_secreta:
+        bot.send_message(message.chat.id, f"🎉 Parabéns! Você acertou a palavra '{palavra_secreta}'!")
+        del globals.jogos_termo[id_usuario]  # Remover o jogo após vencer
+        return
+
+    # Fornecer feedback ao jogador
+    resultado = verificar_palpite(palavra_secreta, palpite)
+    tentativas_restantes -= 1
+    globals.jogos_termo[id_usuario]['tentativas_restantes'] = tentativas_restantes
+
+    # Histórico de tentativas
+    if 'historico' not in globals.jogos_termo[id_usuario]:
+        globals.jogos_termo[id_usuario]['historico'] = []
+    globals.jogos_termo[id_usuario]['historico'].append(f"{resultado} - {palpite}")
+
+    historico_texto = '\n'.join(globals.jogos_termo[id_usuario]['historico'])
+
+    # Verificar se o jogador ainda tem tentativas
+    if tentativas_restantes > 0:
+        bot.send_message(message.chat.id, f"{historico_texto}\n\nTentativas restantes: {tentativas_restantes}")
+    else:
+        bot.send_message(message.chat.id, f"{historico_texto}\n\n💀 Suas tentativas acabaram! A palavra era '{palavra_secreta}'.")
+        del globals.jogos_termo[id_usuario]  # Remover o jogo após terminar as tentativas

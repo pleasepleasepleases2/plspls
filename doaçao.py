@@ -1,4 +1,5 @@
 import random
+from credentials import *
 from pesquisas import *
 from user import *
 from bd import *

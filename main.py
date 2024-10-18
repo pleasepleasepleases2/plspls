@@ -49,6 +49,7 @@ from spotipy.oauth2 import SpotifyClientCredentials
 import logging
 import newrelic.agent
 #Módulos Personalizados do Projeto
+from halloween import *
 from doaçao import *
 from songs import *
 from credentials import *

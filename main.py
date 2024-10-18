@@ -537,6 +537,31 @@ def obter_username_por_comando(message):
 def me_command(message):
     from eu import handle_me_command
     handle_me_command(message)
+    
+@bot.message_handler(commands=['gperfil'])
+def gperfil_command(message):
+    from eu import handle_gperfil_command
+    handle_gperfil_command(message)
+
+@bot.message_handler(commands=['config'])
+def config_command(message):
+    from eu import handle_config
+    handle_config(message)
+    
+@bot.message_handler(commands=['gnome'])
+def gnome_command(message):
+    from peixes import gnome
+    gnome(message)
+
+@bot.message_handler(commands=['gnomes'])
+def gnomes_command(message):
+    from peixes import gnomes
+    gnomes(message)
+
+@bot.message_handler(commands=['gid'])
+def gid_command(message):
+    from peixes import obter_id_e_enviar_info_com_imagem
+    obter_id_e_enviar_info_com_imagem(message)
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith('toggle_'))
 def handle_toggle_config(call):
@@ -882,302 +907,8 @@ def verificar_comando_especies(message):
 
     except Exception as e:
         print(f"Erro ao processar comando /especies: {e}")
-        
-
-@bot.message_handler(commands=['config'])
-def handle_config(message):
-    markup = types.InlineKeyboardMarkup()
-    btn1 = types.InlineKeyboardButton('Pronomes', callback_data='bpronomes_')
-    btn2 = types.InlineKeyboardButton('Privacidade', callback_data='privacy')
-    btn3 = types.InlineKeyboardButton('Lembretes', callback_data='lembretes')
-    btn_cancelar = types.InlineKeyboardButton('❌ Cancelar', callback_data='pcancelar')
-    markup.add(btn1, btn2)
-    markup.add(btn3, btn_cancelar)
-    bot.send_message(message.chat.id, "Escolha uma opção:", reply_markup=markup)
-
-@bot.message_handler(commands=['gnome'])
-def gnome(message):
-    chat_id = message.chat.id
-    user_id = message.from_user.id
-    idmens = message.message_id
-    try:
-        partes = message.text.split()
-        if 'e' in partes:
-            nome = ' '.join(partes[2:])  
-            sql_personagens = """
-                SELECT
-                    e.id_personagem,
-                    e.nome,
-                    e.subcategoria,
-                    e.categoria,
-                    i.quantidade AS quantidade_usuario,
-                    e.imagem
-                FROM evento e
-                LEFT JOIN inventario i ON e.id_personagem = i.id_personagem AND i.id_usuario = %s
-                WHERE e.nome LIKE %s
-            """
-        else:
-            nome = ' '.join(partes[1:]) 
-            sql_personagens = """
-                SELECT
-                    p.id_personagem,
-                    p.nome,
-                    p.subcategoria,
-                    p.categoria,
-                    i.quantidade AS quantidade_usuario,
-                    p.imagem
-                FROM personagens p
-                LEFT JOIN inventario i ON p.id_personagem = i.id_personagem AND i.id_usuario = %s
-                WHERE p.nome LIKE %s
-            """
-
-        values_personagens = (user_id, f"%{nome}%")
-        conn, cursor = conectar_banco_dados()
-        cursor.execute(sql_personagens, values_personagens)
-        resultados_personagens = cursor.fetchall()
-
-        if len(resultados_personagens) == 1:
-
-            mensagem = resultados_personagens[0]
-            id_personagem, nome, subcategoria, categoria, quantidade_usuario, imagem_url = mensagem
-
-            mensagem = f"💌 | Personagem: \n\n<code>{id_personagem}</code> • {nome}\nde {subcategoria}"
-            if quantidade_usuario is None:
-                mensagem += f"\n\n🌧 | Tempo fechado..."
-            elif quantidade_usuario > 0:
-                mensagem += f"\n\n☀ | {quantidade_usuario}⤫"
-            else:
-                mensagem += f"\n\n🌧 | Tempo fechado..."
-
-            gif_url = obter_gif_url(id_personagem, user_id)
-
-            if gif_url:
-                imagem_url = gif_url
-                if imagem_url.lower().endswith(".gif"):
-                    bot.send_animation(chat_id, imagem_url, caption=mensagem,parse_mode="HTML")                  
-                elif imagem_url.lower().endswith(".mp4"):
-                    bot.send_video(chat_id, imagem_url, caption=mensagem,parse_mode="HTML") 
-                elif imagem_url.lower().endswith((".jpeg", ".jpg", ".png")):
-                    bot.send_photo(chat_id, imagem_url, caption=mensagem,parse_mode="HTML")                
-                else:
-                    send_message_with_buttons(chat_id, idmens, [(None, mensagem)], reply_to_message_id=message.message_id)
-            else:
-                if  imagem_url.lower().endswith(".gif"):
-                    bot.send_animation(chat_id, imagem_url, caption=mensagem,parse_mode="HTML")                  
-                elif imagem_url.lower().endswith(".mp4"):
-                    bot.send_video(chat_id, imagem_url, caption=mensagem,parse_mode="HTML") 
-                elif imagem_url.lower().endswith((".jpeg", ".jpg", ".png")):
-                    bot.send_photo(chat_id, imagem_url, caption=mensagem,parse_mode="HTML")                
-                else:
-                    send_message_with_buttons(chat_id, idmens, [(None, mensagem)], reply_to_message_id=message.message_id)
-                
-            user_id = chat_id
-            save_user_state(chat_id, [mensagem])  
-
-        else:
-            mensagens = []
-            for resultado_personagem in resultados_personagens:
-                id_personagem, nome, subcategoria, categoria, quantidade_usuario, imagem_url = resultado_personagem
-                mensagem = f"💌 | Personagem: \n\n<code>{id_personagem}</code> • {nome}\nde {subcategoria}"
-                if quantidade_usuario is None:
-                    mensagem += f"\n\n🌧 | Tempo fechado..."
-                elif quantidade_usuario > 0:
-                    mensagem += f"\n\n☀ | {quantidade_usuario}⤫"
-                else:
-                    mensagem += f"\n\n🌧 | Tempo fechado..."
-
-                gif_url = obter_gif_url(id_personagem, user_id)
-                if gif_url:
-                    mensagens.append((gif_url, mensagem))
-                elif imagem_url:
-                    mensagens.append((imagem_url, mensagem))
-                else:
-                    mensagens.append((None, mensagem))
-
-            save_user_state(chat_id, mensagens)
-            send_message_with_buttons(chat_id, idmens, mensagens, reply_to_message_id=message.message_id)
-
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
-        newrelic.agent.record_exception()
-    finally:
-        fechar_conexao(cursor, conn)
-
-@bot.message_handler(commands=['gnomes'])
-def gnome(message):
-    chat_id = message.chat.id
-    user_id = message.from_user.id
-    conn, cursor = conectar_banco_dados()
-
-    try:
-        nome = message.text.split('/gnomes', 1)[1].strip()
-        if len(nome) <= 2:
-            bot.send_message(chat_id, "Por favor, forneça um nome com mais de 3 letras.", reply_to_message_id=message.message_id)
-            return
-        sql_personagens = """
-            SELECT
-                p.emoji,
-                p.id_personagem,
-                p.nome,
-                p.subcategoria
-            FROM personagens p
-            WHERE p.nome LIKE %s
-        """
-        values_personagens = (f"%{nome}%",)
-        pesquisa = nome
-        cursor.execute(sql_personagens, values_personagens)
-        resultados_personagens = cursor.fetchall()
-
-        if resultados_personagens:
-            total_resultados = len(resultados_personagens)
-            resultados_por_pagina = 15
-            total_paginas = -(-total_resultados // resultados_por_pagina)  
-            pagina_solicitada = 1
-
-            if total_resultados > resultados_por_pagina:
-                if len(message.text.split()) == 3 and message.text.split()[2].isdigit():
-                    pagina_solicitada = min(int(message.text.split()[2]), total_paginas)
-                resultados_pagina_atual = resultados_personagens[(pagina_solicitada - 1) * resultados_por_pagina : pagina_solicitada * resultados_por_pagina]
-                lista_resultados = [F"{emoji} <code>{id_personagem}</code> • {nome}\nde {subcategoria}"  for emoji, id_personagem, nome, subcategoria in resultados_pagina_atual]
-
-                mensagem_final = f"🐠 Peixes de nome <b>{pesquisa}</b>:\n\n" + "\n".join(lista_resultados)+ f"\n\nPágina {pagina_solicitada}/{total_paginas}:"
-                markup = create_navigation_markup(pagina_solicitada, total_paginas)
-                message = bot.send_message(chat_id, mensagem_final, reply_markup=markup, reply_to_message_id=message.message_id,parse_mode="HTML")
-                
-                save_state(user_id, 'gnomes', resultados_personagens, chat_id, message.message_id)
-            else:
-                lista_resultados = [f"{emoji} <code>{id_personagem}</code> • {nome}\nde {subcategoria}" for emoji, id_personagem, nome, subcategoria in resultados_personagens]
-
-                mensagem_final = f"🐠 Peixes de nome <b>{pesquisa}</b>:\n\n" + "\n".join(lista_resultados)
-                bot.send_message(chat_id, mensagem_final, reply_to_message_id=message.message_id,parse_mode='HTML')
-
-        else:
-            bot.send_message(chat_id, f"Nenhum resultado encontrado para o nome '{nome}'.", reply_to_message_id=message.message_id)
-    finally:
-        fechar_conexao(cursor, conn)
-
-@bot.message_handler(commands=['gid'])
-def obter_id_e_enviar_info_com_imagem(message):
-    try:
-        conn, cursor = conectar_banco_dados()
-        user_id = message.from_user.id
-        chat_id = message.chat.id
-
-        command_parts = message.text.split()
-        if len(command_parts) == 2 and command_parts[1].isdigit():
-            id_pesquisa = command_parts[1]
-
-            is_evento = verificar_evento(cursor, id_pesquisa)
-
-            if is_evento:
-                sql_evento = """
-                    SELECT
-                        e.id_personagem,
-                        e.nome,
-                        e.subcategoria,
-                        e.categoria,
-                        i.quantidade AS quantidade_usuario,
-                        e.imagem
-                    FROM evento e
-                    LEFT JOIN inventario i ON e.id_personagem = i.id_personagem AND i.id_usuario = %s
-                    WHERE e.id_personagem = %s
-                """
-                values_evento = (message.from_user.id, id_pesquisa)
-
-                cursor.execute(sql_evento, values_evento)
-                resultado_evento = cursor.fetchone()
-
-                if resultado_evento:
-                    id_personagem, nome, subcategoria, categoria, quantidade_usuario, imagem_url = resultado_evento
-
-                    mensagem = f"💌 | Personagem: \n\n<code>{id_personagem}</code> • {nome}\nde {subcategoria}"
-
-                    if quantidade_usuario == None:
-                        mensagem += f"\n\n🌧 | Tempo fechado..."
-                    elif quantidade_usuario == 1:
-                        mensagem += f"\n\n{'☀  '}"
-                    else:
-                        mensagem += f"\n\n{'☀ 𖡩'}"
-
-                    try:
-                        if imagem_url.lower().endswith(('.jpg', '.jpeg', '.png')):
-                            bot.send_photo(chat_id=message.chat.id, photo=imagem_url, caption=mensagem, reply_to_message_id=message.message_id,parse_mode="HTML")
-                        elif imagem_url.lower().endswith(('.mp4', '.gif')):
-                            bot.send_video(chat_id=message.chat.id, video=imagem_url, caption=mensagem, reply_to_message_id=message.message_id,parse_mode="HTML")
-                    except Exception as e:
-                        bot.send_message(chat_id, mensagem, reply_to_message_id=message.message_id,parse_mode="HTML")
-                else:
-                    bot.send_message(chat_id, f"Nenhum resultado encontrado para o ID '{id_pesquisa}'.", reply_to_message_id=message.message_id)
-
-            else:
-                sql_normal = """
-                    SELECT
-                        p.id_personagem,
-                        p.nome,
-                        p.subcategoria,
-                        p.categoria,
-                        i.quantidade AS quantidade_usuario,
-                        p.imagem,
-                        p.cr
-                    FROM personagens p
-                    LEFT JOIN inventario i ON p.id_personagem = i.id_personagem AND i.id_usuario = %s
-                    WHERE p.id_personagem = %s
-                """
-                values_normal = (message.from_user.id, id_pesquisa)
-
-                cursor.execute(sql_normal, values_normal)
-                resultado_normal = cursor.fetchone()
-
-                if resultado_normal:
-                    id_personagem, nome, subcategoria, categoria, quantidade_usuario, imagem_url, cr = resultado_normal
-
-                    mensagem = f"💌 | Personagem: \n\n{id_personagem} • {nome}\nde {subcategoria}"
-
-                    if quantidade_usuario is not None and quantidade_usuario > 0:
-                        mensagem += f"\n\n☀ | {quantidade_usuario}⤫"
-                    else:
-                        mensagem += f"\n\n🌧 | Tempo fechado..."
 
 
-                    if cr:
-                        link_cr = obter_link_formatado(cr)
-                        mensagem += f"\n\n{link_cr}"
-
-                    markup = InlineKeyboardMarkup()
-                    markup.row_width = 1
-                    markup.add(InlineKeyboardButton("💟", callback_data=f"total_{id_pesquisa}"))
-
-                    gif_url = obter_gif_url(id_personagem, user_id)
-                    if gif_url:
-                        imagem_url = gif_url
-                        if  imagem_url.lower().endswith(".gif"):
-                            bot.send_video(chat_id=message.chat.id, video=imagem_url, caption=mensagem, reply_markup=markup, reply_to_message_id=message.message_id,parse_mode="HTML")
-                        elif imagem_url.lower().endswith(".mp4"):
-                            bot.send_video(chat_id=message.chat.id, video=imagem_url, caption=mensagem, reply_markup=markup, reply_to_message_id=message.message_id,parse_mode="HTML")
-                        elif imagem_url.lower().endswith((".jpeg", ".jpg", ".png")):
-                            bot.send_photo(chat_id=message.chat.id, photo=imagem_url, caption=mensagem, reply_markup=markup, reply_to_message_id=message.message_id,parse_mode="HTML")
-                        else:
-                            bot.send_message(chat_id, mensagem)
-                    else:
-                        if  imagem_url.lower().endswith(".gif"):
-                            bot.send_video(chat_id=message.chat.id, video=imagem_url, caption=mensagem, reply_markup=markup, reply_to_message_id=message.message_id,parse_mode="HTML")
-                        elif imagem_url.lower().endswith(".mp4"):
-                            bot.send_video(chat_id=message.chat.id, video=imagem_url, caption=mensagem, reply_markup=markup, reply_to_message_id=message.message_id,parse_mode="HTML")
-                        elif imagem_url.lower().endswith((".jpeg", ".jpg", ".png")):
-                            bot.send_photo(chat_id=message.chat.id, photo=imagem_url, caption=mensagem, reply_markup=markup, reply_to_message_id=message.message_id,parse_mode="HTML")
-                        else:
-                            bot.send_message(chat_id, mensagem) 
-                else:
-                    bot.send_message(chat_id, f"Nenhum resultado encontrado para o ID '{id_pesquisa}'.", reply_to_message_id=message.message_id)
-        else:
-            bot.send_message(chat_id, "Formato incorreto. Use /gid seguido do ID desejado, por exemplo: /gid 123", reply_to_message_id=message.message_id)
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
-        erro = traceback.print_exc()
-        mensagem=(f"carta com erro: {id_personagem}. erro:",e)
-        bot.send_message(grupodeerro, mensagem,parse_mode="HTML")
 @bot.message_handler(commands=['cesta'])
 def verificar_cesta(message):
     try:

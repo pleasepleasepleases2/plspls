@@ -3468,7 +3468,7 @@ def enviar_gif(message):
         fechar_conexao(cursor, conn)
 
 @bot.message_handler(commands=['admin'])
-def doar(message):
+def admin(message):
     try:
         id_usuario = message.from_user.id
         if verificar_autorizacao(id_usuario):

@@ -630,7 +630,37 @@ def handle_gnome(message):
         print(f"Erro: {e}")
     finally:
         fechar_conexao(cursor, conn)
-        
+# Callback para navegação entre as cartas
+@bot.callback_query_handler(func=lambda call: call.data.startswith('gnome_'))
+def callback_gnome_navigation(call):
+    data = call.data.split('_')
+    action = data[1]  # 'prev' ou 'next'
+    index = int(data[2])
+    user_id = int(data[3])
+
+    conn, cursor = conectar_banco_dados()
+
+    # Recuperar os resultados da pesquisa original
+    sql = """
+        SELECT
+            p.id_personagem,
+            p.nome,
+            p.subcategoria,
+            p.categoria,
+            COALESCE(i.quantidade, 0) AS quantidade_usuario,
+            p.imagem
+        FROM personagens p
+        LEFT JOIN inventario i ON p.id_personagem = i.id_personagem AND i.id_usuario = %s
+        WHERE p.nome LIKE %s
+    """
+    cursor.execute(sql, (user_id, "%"))
+    resultados_personagens = cursor.fetchall()
+
+    if resultados_personagens:
+        enviar_carta_individual(call.message.chat.id, user_id, resultados_personagens, index)
+
+    cursor.close()
+    conn.close()        
 @bot.message_handler(commands=['gnomes'])
 def gnomes_command(message):
     gnomes(message)

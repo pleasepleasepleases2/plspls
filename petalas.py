@@ -260,7 +260,7 @@ def roseira_command(message):
                         img_com_borda = aplicar_borda(img, borda_aleatoria)
 
                         # Adicionar ao cache
-                        cache_imagens_com_bordas[carta[0]] = img_com_borda
+                        globals.cache_imagens_com_bordas[carta[0]] = img_com_borda
                         imagens_cartas.append(img_com_borda)
 
                 except (UnidentifiedImageError, IOError):

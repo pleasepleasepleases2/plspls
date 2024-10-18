@@ -73,9 +73,9 @@ from banco import *
 from diary import *
 from admin import *
 from peixes import *
-from halloween import iniciar_labirinto, mover_labirinto, encerrar_ou_continuar, iniciar_termo, tentar_termo, jogador_fazer_jogada
+from halloween import *
 from vips import *
-from vip import adicionar_vip_logic, remover_vip_logic, listar_vips_logic
+from vip import *
 from petalas import *
 # Configuração de Webhook
 WEBHOOK_URL_PATH = '/' + API_TOKEN + '/'

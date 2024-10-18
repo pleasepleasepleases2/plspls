@@ -672,7 +672,7 @@ def callback_gnome_navigation(call):
         enviar_carta_individual(call.message.chat.id, user_id, resultados_personagens, index, call.message.message_id, 'media')
     else:
         bot.answer_callback_query(call.id, "Não foi possível encontrar os resultados. Tente novamente.")
-'])
+
 def gnomes_command(message):
     gnomes(message)
 

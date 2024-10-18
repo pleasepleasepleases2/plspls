@@ -194,13 +194,10 @@ def webhook():
     else:
         flask.abort(403)
 
-from halloween import iniciar_termo, tentar_termo  # Importa as funções do arquivo halloween.py
-
 # Registra o comando para iniciar o jogo Termo
 @bot.message_handler(commands=['termo'])
 def handle_termo(message):
     iniciar_termo(message)  # Chama a função iniciar_termo do arquivo halloween.py
-
 
 @bot.message_handler(commands=['verificar'])
 def verificar_ids(message):
@@ -331,8 +328,6 @@ def handle_remover_vip(message):
 def handle_listar_vips(message):
     listar_vips_logic(message)
 
-from vip import listar_pedidos_vips_logic, ver_ficha_vip_logic
-
 # Registro do comando para listar pedidos dos VIPs
 @bot.message_handler(commands=['pedidos'])
 def handle_listar_pedidos_vips(message):
@@ -367,7 +362,7 @@ def handle_roseira_command(message):
 @bot.callback_query_handler(func=lambda call: call.data.startswith("escolher_"))
 def handle_callback_escolher_carta(call):
     callback_escolher_carta(call)
-from vips import pedido_submenu_command, pedidovip_command
+
 
 # Registro do comando /pedidosubmenu
 @bot.message_handler(commands=['pedidosubmenu'])
@@ -461,8 +456,6 @@ def handle_delgif(message):
 @bot.message_handler(commands=['raspadinha'])
 def handle_sorte(message):
     comando_sorte(message)
-
-from evento import casar_command, confirmar_casamento, divorciar_command
 
 # Registro do comando /casar
 @bot.message_handler(commands=['casar'])
@@ -558,8 +551,7 @@ def handle_acoes_vendinha(call):
 @bot.callback_query_handler(func=lambda call: call.data.startswith('comprar_acao_vendinha_'))
 def handle_confirmar_compra_vendinha(call):
     confirmar_compra_vendinha(call)
-    
-from banco import processar_compra_vendinha_categoria
+
 
 # Callback para processar a compra de pacotes de cartas por categoria
 @bot.callback_query_handler(func=lambda call: call.data.startswith('confirmar_categoria_'))
@@ -707,12 +699,10 @@ def navigate_gnome_results(call):
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("cesta_"))
 def callback_query_cesta(call):
-    from cestas import handle_callback_query_cesta
     handle_callback_query_cesta(call)
         
 @bot.callback_query_handler(func=lambda call: call.data.startswith('total_'))
 def callback_total_personagem(call):
-    from peixes import handle_callback_total_personagem
     handle_callback_total_personagem(call)
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith(('armazem_anterior_', 'armazem_proxima_','armazem_ultima_','armazem_primeira_')))
@@ -721,7 +711,6 @@ def callback_paginacao_armazem(call):
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith('subcategory_'))
 def handle_callback_subcategory(call):
-    from evento import callback_subcategory
     callback_subcategory(call)
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith('cenourar_sim_'))

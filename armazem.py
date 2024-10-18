@@ -120,7 +120,8 @@ def handle_callback_paginacao_armazem(call):
 
         else:
             bot.answer_callback_query(callback_query_id=call.id, text="Nenhuma carta encontrada.")
-    except mysql.connector.Error as err:
-        print(f"Erro de SQL: {err}") 
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
     finally:
         fechar_conexao(cursor, conn)

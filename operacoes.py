@@ -314,4 +314,49 @@ def verificar_comando_peixes(message):
         print(f"Erro ao processar comando /peixes: {e}")
         bot.reply_to(message, "Ocorreu um erro ao processar sua solicitação.")
 
-        
+ import mysql.connector
+
+# Função para lidar com o comando /completos
+def handle_completos(message):
+    try:
+        parts = message.text.split(' ', 1)
+        if len(parts) < 2:
+            bot.reply_to(message, "Por favor, forneça a categoria após o comando, por exemplo: /completos música")
+            return
+
+        categoria = parts[1].strip()
+        id_usuario = message.from_user.id
+        nome_usuario = message.from_user.first_name
+
+        conn, cursor = conectar_banco_dados()
+
+        # Corrigir a mistura de collations com COLLATE utf8mb4_unicode_ci nas colunas envolvidas na comparação
+        query = """
+        SELECT s.subcategoria COLLATE utf8mb4_unicode_ci AS subcategoria, 
+               SUM(CASE WHEN inv.id_personagem IS NOT NULL THEN 1 ELSE 0 END) AS total_possui, 
+               COUNT(p.id_personagem) AS total_necessario,
+               MAX(s.Imagem) AS Imagem
+        FROM subcategorias s
+        JOIN personagens p ON s.subcategoria COLLATE utf8mb4_unicode_ci = p.subcategoria COLLATE utf8mb4_unicode_ci
+        LEFT JOIN inventario inv ON p.id_personagem = inv.id_personagem AND inv.id_usuario = %s
+        WHERE p.categoria = %s COLLATE utf8mb4_unicode_ci
+        GROUP BY s.subcategoria
+        HAVING total_possui = total_necessario
+        ORDER BY s.subcategoria ASC
+        """
+        cursor.execute(query, (id_usuario, categoria))
+        completos = cursor.fetchall()
+
+        if not completos:
+            bot.reply_to(message, f"Você ainda não completou nenhuma subcategoria em '{categoria}'.")
+            return
+
+        total_paginas = (len(completos) + 14) // 15  # Calcula total de páginas
+        mostrar_pagina_completos(message, 1, total_paginas, completos, categoria, nome_usuario, id_usuario)
+
+    except Exception as e:
+        print(f"Erro ao processar comando /completos: {e}")
+        bot.reply_to(message, "Ocorreu um erro ao processar sua solicitação.")
+    finally:
+        fechar_conexao(cursor, conn)
+       

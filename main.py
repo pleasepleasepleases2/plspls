@@ -361,7 +361,20 @@ def handle_fazer_pedido(call):
         
         bot.register_next_step_handler(call.message, process_wish)
 
+def processar_pedido_peixes(call):
+    try:
+        print(f"DEBUG: Entrando no 'processar_pedido_peixes' com call data: {call.data}")
+        image_url = "https://telegra.ph/file/94c9c66af4ca4d6f0a3e5.jpg"
+        caption = ("<b>⛲: Para pedir os seus peixes é simples!</b> \n\nMe envie até <b>5 IDs</b> dos peixes e a quantidade de cenouras que você quer doar "
+                   "\n(eu aceito qualquer quantidade entre 10 e 20 cenouras...) \n\n<i>exemplo: ID1 ID2 ID3 ID4 ID5 cenouras</i>")
+        media = InputMediaPhoto(image_url, caption=caption, parse_mode="HTML")
+        bot.edit_message_media(media, chat_id=call.message.chat.id, message_id=call.message.message_id)
 
+        print("DEBUG: Registrando 'next_step_handler' para process_wish")
+        bot.register_next_step_handler(call.message, process_wish)
+
+    except Exception as e:
+        print(f"Erro ao processar o pedido de peixes: {e}")
 @bot.message_handler(commands=['sugestao'])
 def sugestao_command(message):
     try:

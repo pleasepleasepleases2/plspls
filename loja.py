@@ -2,7 +2,6 @@ import random
 from pesquisas import *
 from user import *
 from bd import *
-from pescar import add_to_inventory
 from loja import *
 from pescar import *
 from operacoes import *

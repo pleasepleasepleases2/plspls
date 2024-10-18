@@ -128,4 +128,22 @@ def verificar_id_na_tabelabeta(user_id):
         cursor.close()
         conn.close()
 
+import traceback
+
+def callback_cenourar(call):
+    try:
+        data_parts = call.data.split("_")
+        acao = data_parts[1]
+        id_usuario = int(data_parts[2])
+        id_personagem = data_parts[3] if len(data_parts) >= 3 else ""
+        print(data_parts)
+        
+        if acao == "sim":
+            cenourar_carta(call, id_usuario, id_personagem)
+        elif acao == "nao":
+            bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text="Operação de cenoura cancelada.")
+    except Exception as e:
+        print(f"Erro ao processar callback de cenoura: {e}")
+        bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text="Erro ao processar a cenoura.")
+        traceback.print_exc()
 

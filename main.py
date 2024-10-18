@@ -821,64 +821,6 @@ def callback_tag(call):
     except Exception as e:
         print(f"Erro ao processar callback de página para a tag: {e}")
 
-@bot.callback_query_handler(func=lambda call: call.data.startswith('loja_compras'))
-def callback_loja_compras(call):
-    try:
-        message_data = call.data.replace('loja_', '')
-        if message_data:
-            conn, cursor = conectar_banco_dados()
-            id_usuario = call.from_user.id
-            cursor.execute("SELECT cenouras FROM usuarios WHERE id_usuario = %s", (id_usuario,))
-            result = cursor.fetchone()
-
-            imagem_url = 'https://telegra.ph/file/a4c194082eab84886cbd4.jpg'
-            original_message_id = call.message.message_id
-
-            keyboard = telebot.types.InlineKeyboardMarkup()
-            primeira_coluna = [
-                telebot.types.InlineKeyboardButton(text="🐟 Comprar Iscas", callback_data='compras_iscas_callback')
-            ]
-            segunda_coluna = [
-                telebot.types.InlineKeyboardButton(text="🥕 Doar Cenouras", callback_data=f'doar_cenoura_{id_usuario}_{original_message_id}')
-            ]
-            keyboard.row(*primeira_coluna)
-            keyboard.row(*segunda_coluna)
-
-            if result:
-                qnt_cenouras = int(result[0])
-            else:
-                qnt_cenouras = 0
-
-            mensagem = f"🐇 Bem vindo a nossa lojinha. O que você quer levar?\n\n🥕 Saldo Atual: {qnt_cenouras}"
-            bot.edit_message_caption(chat_id=call.message.chat.id, message_id=original_message_id, caption=mensagem, reply_markup=keyboard)
-        else:
-            bot.reply_to(call.message, "Erro ao processar comando.")
-    except Exception as e:
-        print(f"Erro ao processar comando: {e}")
-        newrelic.agent.record_exception()
-    finally:
-        cursor.close()
-        conn.close()
-
-@bot.callback_query_handler(func=lambda call: call.data.startswith('compras_iscas_'))
-def callback_compras_iscas(call):
-    try:
-        compras_iscas_callback(call)
-    except Exception as e:
-        print(f"Erro ao processar callback de compras iscas: {e}")
-        newrelic.agent.record_exception()
-@bot.callback_query_handler(func=lambda call: call.data.startswith('tcancelar'))
-def callback_tcancelar(call):
-    try:
-        data = call.data.split('_')
-        destinatario_id = int(data[1])
-        if destinatario_id == call.from_user.id:
-            bot.delete_message(call.message.chat.id, call.message.message_id)
-        else:
-            bot.answer_callback_query(callback_query_id=call.id, text="Você não pode aceitar esta doação.")
-    except Exception as e:
-        print(f"Erro ao processar callback de cancelar: {e}")
-
 @bot.callback_query_handler(func=lambda call: call.data.startswith('aprovar_'))
 def callback_aprovar(call):
     try:
@@ -906,126 +848,18 @@ def callback_repor(call):
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith('loja_loja'))
 def callback_loja_loja(call):
-    try:
-        message_data = call.data.replace('loja_', '')
-        if message_data == "loja":
-            data_atual = datetime.today().strftime("%Y-%m-%d")
-            id_usuario = call.from_user.id
-            ids_do_dia = obter_ids_loja_do_dia(data_atual)
-            imagem_url = 'https://telegra.ph/file/a60b21f603ad26eb8608a.jpg'
-            original_message_id = call.message.message_id
-            keyboard = telebot.types.InlineKeyboardMarkup()
-            primeira_coluna = [
-                telebot.types.InlineKeyboardButton(text="☁️", callback_data=f'compra_musica_{id_usuario}_{original_message_id}'),
-                telebot.types.InlineKeyboardButton(text="🍄", callback_data=f'compra_series_{id_usuario}_{original_message_id}'),
-                telebot.types.InlineKeyboardButton(text="🍰", callback_data=f'compra_filmes_{id_usuario}_{original_message_id}')
-            ]
-            segunda_coluna = [
-                telebot.types.InlineKeyboardButton(text="🍂", callback_data=f'compra_miscelanea_{id_usuario}_{original_message_id}'),
-                telebot.types.InlineKeyboardButton(text="🧶", callback_data=f'compra_jogos_{id_usuario}_{original_message_id}'),
-                telebot.types.InlineKeyboardButton(text="🌷", callback_data=f'compra_animanga_{id_usuario}_{original_message_id}')
-            ]
-            keyboard.row(*primeira_coluna)
-            keyboard.row(*segunda_coluna)
+    from loja import handle_callback_loja_loja
+    handle_callback_loja_loja(call)
 
-            mensagem = "𝐀𝐡, 𝐨𝐥𝐚́! 𝐕𝐨𝐜𝐞̂ 𝐜𝐡𝐞𝐠𝐨𝐮 𝐧𝐚 𝐡𝐨𝐫𝐚 𝐜𝐞𝐫𝐭𝐚! \n\nNosso pescador acabou de chegar com os peixes fresquinhos de hoje:\n\n"
-
-            for carta_id in ids_do_dia:
-                id_personagem, emoji, nome, subcategoria = obter_informacoes_carta(carta_id)
-                mensagem += f"{emoji} - {nome} de {subcategoria}\n"
-
-            bot.edit_message_media(
-                chat_id=call.message.chat.id,
-                message_id=call.message.message_id,
-                reply_markup=keyboard,
-                media=telebot.types.InputMediaPhoto(media=imagem_url, caption=mensagem)
-            )
-    except Exception as e:
-        newrelic.agent.record_exception()    
-        print(f"Erro ao processar loja_loja_callback: {e}")
 @bot.callback_query_handler(func=lambda call: call.data.startswith('compra_'))
 def callback_compra(call):
-    try:
-        chat_id = call.message.chat.id
-        parts = call.data.split('_')
-        categoria = parts[1]
-        id_usuario = parts[2]
-        original_message_id = parts[3]
-        conn, cursor = conectar_banco_dados()
-        cursor.execute("SELECT cenouras FROM usuarios WHERE id_usuario = %s", (id_usuario,))
-        result = cursor.fetchone()
+    from loja import handle_callback_compra
+    handle_callback_compra(call)
 
-        if result:
-            qnt_cenouras = int(result[0])
-        else:
-            qnt_cenouras = 0
-
-        if qnt_cenouras >= 5:
-            cursor.execute(
-                "SELECT loja.id_personagem, personagens.nome, personagens.subcategoria, personagens.emoji "
-                "FROM loja "
-                "JOIN personagens ON loja.id_personagem = personagens.id_personagem "
-                "WHERE loja.categoria = %s AND loja.data = %s ORDER BY RAND() LIMIT 1",
-                (categoria, datetime.today().strftime("%Y-%m-%d"))
-            )
-            carta_comprada = cursor.fetchone()
-
-            if carta_comprada:
-                id_personagem, nome, subcategoria, emoji = carta_comprada
-                mensagem = f"Você tem {qnt_cenouras} cenouras. \nDeseja usar 5 para comprar o seguinte peixe: \n\n{emoji} {id_personagem} - {nome} \nde {subcategoria}?"
-                keyboard = telebot.types.InlineKeyboardMarkup()
-                keyboard.row(
-                    telebot.types.InlineKeyboardButton(text="Sim", callback_data=f'confirmar_compra_{categoria}_{id_usuario}'),
-                    telebot.types.InlineKeyboardButton(text="Não", callback_data='cancelar_compra')
-                )
-                imagem_url = "https://telegra.ph/file/d4d5d0af60ec66f35e29c.jpg"
-                bot.edit_message_media(
-                    chat_id=chat_id,
-                    message_id=original_message_id,
-                    reply_markup=keyboard,
-                    media=telebot.types.InputMediaPhoto(media=imagem_url, caption=mensagem)
-                )
-            else:
-                print(f"Nenhuma carta disponível para compra na categoria {categoria} hoje.")
-        else:
-            print("Usuário não tem cenouras suficientes para comprar.")
-    except Exception as e:
-        print(f"Erro ao processar a compra: {e}")
-        newrelic.agent.record_exception()    
-    finally:
-        fechar_conexao(cursor, conn)
 @bot.callback_query_handler(func=lambda call: call.data.startswith('confirmar_compra_'))
 def callback_confirmar_compra(call):
-    try:
-        parts = call.data.split('_')
-        categoria = parts[2]
-        id_usuario = parts[3]
-        data_atual = datetime.today().strftime("%Y-%m-%d")
-        conn, cursor = conectar_banco_dados()
-        cursor.execute(
-            "SELECT p.id_personagem, p.nome, p.subcategoria, p.imagem, p.emoji "
-            "FROM loja AS l "
-            "JOIN personagens AS p ON l.id_personagem = p.id_personagem "
-            "WHERE l.categoria = %s AND l.data = %s ORDER BY RAND() LIMIT 1",
-            (categoria, data_atual)
-        )
-        carta_comprada = cursor.fetchone()
-
-        if carta_comprada:
-            id_personagem, nome, subcategoria, imagem, emoji = carta_comprada
-            mensagem = f"𝐂𝐨𝐦𝐩𝐫𝐚 𝐟𝐞𝐢𝐭𝐚 𝐜𝐨𝐦 𝐬𝐮𝐜𝐞𝐬𝐬𝐨! \n\nO seguinte peixe foi adicionado à sua cesta: \n\n{emoji} {id_personagem} • {nome}\nde {subcategoria}\n\n𝐕𝐨𝐥𝐭𝐞 𝐬𝐞𝐦𝐩𝐫𝐞!"
-            add_to_inventory(id_usuario, id_personagem)
-            diminuir_cenouras(id_usuario, 5)
-
-            bot.edit_message_media(
-                chat_id=call.message.chat.id,
-                message_id=call.message.message_id,
-                media=telebot.types.InputMediaPhoto(media=imagem, caption=mensagem)
-            )
-        else:
-            print(f"Nenhuma carta disponível para compra na categoria {categoria} hoje.")
-    except Exception as e:
-        print(f"Erro ao processar a compra para o usuário {id_usuario}: {e}")
+    from loja import handle_callback_confirmar_compra
+    handle_callback_confirmar_compra(call)
 
         
 @bot.message_handler(commands=['setmusica','setmusic'])

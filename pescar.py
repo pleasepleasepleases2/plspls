@@ -488,4 +488,67 @@ def register_card_history(message,id_usuario, id_carta):
         print(f"Erro ao registrar o histórico da carta: {err}")
     finally:
         fechar_conexao(cursor, conn)
+import telebot
+from datetime import datetime
+from bd import verificar_id_na_tabela, verificar_tempo_passado, diminuir_giros, verificar_giros, verificar_id_na_tabelabeta
+
+ultima_interacao = {}
+
+# Função para o comando de pesca
+def pescar(message):
+    try:
+        print("Comando pescar acionado")
+        nome = message.from_user.first_name
+        user_id = message.from_user.id
+
+        # Verificar se o usuário está banido
+        verificar_id_na_tabela(user_id, "ban", "iduser")
+        if message.chat.type != 'private':
+            bot.send_message(message.chat.id, "Este comando só pode ser usado em uma conversa privada.")
+            return
+
+        # Verificar a quantidade de iscas disponíveis
+        qtd_iscas = verificar_giros(user_id)
+        if qtd_iscas == 0:
+            bot.send_message(message.chat.id, "Você está sem iscas.", reply_to_message_id=message.message_id)
+        else:
+            # Verificar se o tempo desde a última interação é suficiente
+            if not verificar_tempo_passado(message.chat.id):
+                return
+            else:
+                ultima_interacao[message.chat.id] = datetime.now()
+
+            # Verificar se o usuário é beta tester
+            if verificar_id_na_tabelabeta(user_id):
+                # Diminuir o número de iscas
+                diminuir_giros(user_id, 1)
+
+                # Criar o teclado de categorias para escolha
+                keyboard = telebot.types.InlineKeyboardMarkup()
+
+                primeira_coluna = [
+                    telebot.types.InlineKeyboardButton(text="☁  Música", callback_data='pescar_musica'),
+                    telebot.types.InlineKeyboardButton(text="🌷 Anime", callback_data='pescar_animanga'),
+                    telebot.types.InlineKeyboardButton(text="🧶  Jogos", callback_data='pescar_jogos')
+                ]
+                segunda_coluna = [
+                    telebot.types.InlineKeyboardButton(text="🍰  Filmes", callback_data='pescar_filmes'),
+                    telebot.types.InlineKeyboardButton(text="🍄  Séries", callback_data='pescar_series'),
+                    telebot.types.InlineKeyboardButton(text="🍂  Misc", callback_data='pescar_miscelanea')
+                ]
+
+                keyboard.add(*primeira_coluna)
+                keyboard.add(*segunda_coluna)
+                keyboard.row(telebot.types.InlineKeyboardButton(text="🫧  Geral", callback_data='pescar_geral'))
+
+                # Enviar a imagem e o teclado de categorias
+                photo = "https://telegra.ph/file/b3e6d2a41b68c2ceec8e5.jpg"
+                bot.send_photo(message.chat.id, photo=photo, caption=f'<i>Olá! {nome}, \nVocê tem disponível: {qtd_iscas} iscas. \nBoa pesca!\n\nSelecione uma categoria:</i>', reply_markup=keyboard, reply_to_message_id=message.message_id, parse_mode="HTML")
+            else:
+                bot.send_message(message.chat.id, "Ei visitante, você não foi convidado! 😡", reply_to_message_id=message.message_id)
+
+    except ValueError as e:
+        print(f"Erro: {e}")
+        newrelic.agent.record_exception()    
+        bot.send_message(message.chat.id, "Você foi banido permanentemente do garden. Entre em contato com o suporte caso haja dúvidas.", reply_to_message_id=message.message_id)
 

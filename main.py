@@ -71,9 +71,7 @@ from historico import *
 from tag import *
 from banco import *
 from diary import *
-from admin import obter_id_beta, remover_beta, verificar_ban, 
-                    obter_id_cenouras, obter_id_iscas, remover_id_cenouras, 
-                    remover_id_iscas, verificar_autorizacao
+from admin import *
 from peixes import *
 from halloween import iniciar_labirinto, mover_labirinto, encerrar_ou_continuar, iniciar_termo, tentar_termo, jogador_fazer_jogada
 from vips import *

@@ -169,3 +169,50 @@ def comando_sorte(message):
         bot.send_message(message.chat.id, f"Ocorreu um erro ao processar o comando /raspadinha: {e}")
     finally:
         fechar_conexao(cursor, conn)
+
+def handle_poco_dos_desejos(call):
+    usuario = call.from_user.first_name
+    image_url = "https://telegra.ph/file/94c9c66af4ca4d6f0a3e5.jpg"
+    caption = (f"<i>Enquanto os demais camponeses estavam distraídos com suas pescas, {usuario} caminhava para um lugar mais distante, até que encontrou uma floresta mágica.\n\n</i>"
+               "<i>Já havia escutado seus colegas falando da mesma mas sempre duvidou que era real.</i>\n\n"
+               "⛲: <i><b>Oh! Olá camponês, imagino que a dona do jardim tenha te mandado pra cá, certo?</b></i>\n\n"
+               "<i>Apesar da confusão com a voz repentina, perguntou a fonte o que aquilo significava.\n\n</i>"
+               "⛲: <i><b>Sou uma fonte dos desejos! você tem direito a fazer um pedido, em troca eu peço apenas algumas cenouras. Se os peixes que você deseja estiverem disponíveis e a sorte ao seu favor eles irão aparecer no seu armazém. Se não, volte mais tarde com outras cenouras.</b></i>")
+    media = InputMediaPhoto(image_url, caption=caption, parse_mode="HTML")
+    bot.edit_message_media(media, chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=create_wish_buttons())
+
+def handle_fazer_pedido(call):
+    user_id = call.from_user.id  # Adicionando a identificação do usuário
+
+    can_make_wish, time_remaining = check_wish_time(user_id)
+    if not can_make_wish:
+        hours, remainder = divmod(time_remaining.total_seconds(), 3600)
+        minutes, _ = divmod(remainder, 60)
+        image_url = "https://telegra.ph/file/94c9c66af4ca4d6f0a3e5.jpg"
+        caption = (f"<b>Você já fez um pedido recentemente.</b> Por favor, aguarde {int(hours)} horas e {int(minutes)} minutos "
+                   "para fazer um novo pedido.")
+        media = InputMediaPhoto(image_url, caption=caption, parse_mode="HTML")
+        bot.send_photo(chat_id=call.message.chat.id, photo=image_url, caption=caption, parse_mode="HTML")
+        return
+    else:
+        image_url = "https://telegra.ph/file/94c9c66af4ca4d6f0a3e5.jpg"
+        caption = ("<b>⛲: Para pedir os seus peixes é simples!</b> \n\nMe envie até <b>5 IDs</b> dos peixes e a quantidade de cenouras que você quer doar "
+                   "\n(eu aceito qualquer quantidade entre 10 e 20 cenouras...) \n\n<i>exemplo: ID1 ID2 ID3 ID4 ID5 cenouras</i>")
+        media = InputMediaPhoto(image_url, caption=caption, parse_mode="HTML")
+        bot.edit_message_media(media, chat_id=call.message.chat.id, message_id=call.message.message_id)
+        
+        bot.register_next_step_handler(call.message, process_wish)
+def processar_pedido_peixes(call):
+    try:
+        image_url = "https://telegra.ph/file/94c9c66af4ca4d6f0a3e5.jpg"
+        caption = ("<b>⛲: Para pedir os seus peixes é simples!</b> \n\nMe envie até <b>5 IDs</b> dos peixes e a quantidade de cenouras que você quer doar "
+                   "\n(eu aceito qualquer quantidade entre 10 e 20 cenouras...) \n\n<i>exemplo: ID1 ID2 ID3 ID4 ID5 cenouras</i>")
+        media = InputMediaPhoto(image_url, caption=caption, parse_mode="HTML")
+        bot.edit_message_media(media, chat_id=call.message.chat.id, message_id=call.message.message_id)
+
+        # Registrar o próximo passo para processar o pedido
+        bot.register_next_step_handler(call.message, process_wish)
+
+    except Exception as e:
+        print(f"Erro ao processar o pedido de peixes: {e}")
+

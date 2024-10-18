@@ -1,47 +1,62 @@
+#Bibliotecas para interagir com o Telegram e HTTP
 import telebot
-import mysql.connector
-import random
 import requests
+import flask
+import http.server
+import socketserver
+from telebot.types import InputMediaPhoto, InlineKeyboardMarkup, InlineKeyboardButton
+from http.server import HTTPServer, BaseHTTPRequestHandler
+from socketserver import ThreadingMixIn
+#Conexão com o Banco de Dados
+import mysql.connector
+from mysql.connector import Error
+#Manipulação de Data e Tempo
 import time
 import datetime
-import re
-import datetime as dt_module  
-import io
-import functools
-import json
-import threading
-import os
-import Levenshtein
-import diskcache as dc
-import spotipy
-import math
-import logging
-from songs import *
-from credentials import *
+from datetime import datetime, timedelta, date
+import datetime as dt_module
+from apscheduler.schedulers.background import BackgroundScheduler
+from pytz import utc
+#Manipulação de Imagens e Áudio
+from PIL import Image, ImageDraw, ImageFont, ImageOps, ImageFilter, UnidentifiedImageError
 from mutagen.mp3 import MP3
 from mutagen.id3 import ID3
-from queue import Queue
-from telebot.types import InputMediaPhoto
-from datetime import datetime, timedelta
-from datetime import date
-from PIL import Image, ImageDraw, ImageFont, ImageOps
 from io import BytesIO
-from telebot import types
-from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
+import tempfile
+#Análise e Manipulação de Strings e Web
+import re
+import Levenshtein
+from bs4 import BeautifulSoup
 from urllib.parse import urlparse
-from mysql.connector import Error
+#Gerenciamento de Tarefas e Threads
+import threading
+from queue import Queue
+#Manipulação de Arquivos e Sistema Operacional
+import os
+import json
+import io
+#Operações Matemáticas e Funções Utilitárias
+import math
+import random
+import functools
+#Cache e Armazenamento Temporário
+import diskcache as dc
+from cachetools import TTLCache
+#Integração com APIs Externas (Spotify)
+import spotipy
+from spotipy.oauth2 import SpotifyClientCredentials
+#Logs e Monitoramento
+import logging
+import newrelic.agent
+#Módulos Personalizados do Projeto
+from songs import *
+from credentials import *
 from cestas import *
 from album import *
 from pescar import *
 from evento import *
-from spotipy.oauth2 import SpotifyClientCredentials
-from PIL import Image, ImageFilter
-from apscheduler.schedulers.background import BackgroundScheduler
-from pytz import utc
 from phrases import *
-from bs4 import BeautifulSoup
 from callbacks2 import choose_subcategoria_callback
-import globals
 from trocas import *
 from bd import *
 from saves import *
@@ -56,42 +71,29 @@ from historico import *
 from tag import *
 from banco import *
 from diary import *
-from admin import obter_id_beta,remover_beta,verificar_ban,obter_id_cenouras,obter_id_iscas,remover_id_cenouras,remover_id_iscas,verificar_autorizacao
+from admin import obter_id_beta, remover_beta, verificar_ban, 
+                    obter_id_cenouras, obter_id_iscas, remover_id_cenouras, 
+                    remover_id_iscas, verificar_autorizacao
 from peixes import *
-from halloween import *
+from halloween import iniciar_labirinto, mover_labirinto, encerrar_ou_continuar, iniciar_termo, tentar_termo, jogador_fazer_jogada
 from vips import *
+from vip import adicionar_vip_logic, remover_vip_logic, listar_vips_logic
 from petalas import *
-import logging
-import flask
-import http.server
-import newrelic.agent
-from datetime import datetime, timedelta
-import socketserver
-from http.server import HTTPServer, BaseHTTPRequestHandler
-from socketserver import ThreadingMixIn
-from PIL import Image, UnidentifiedImageError, ImageOps
-import random
-import os
-import tempfile
-import requests
-from io import BytesIO
-processing_lock = threading.Lock()
-ids_proibidos = {164, 165, 163, 174, 192, 214, 215, 216}
-scheduler = BackgroundScheduler(timezone=utc)
-scheduler.start()
+# Configuração de Webhook
 WEBHOOK_URL_PATH = '/' + API_TOKEN + '/'
 WEBHOOK_LISTEN = "0.0.0.0"
-WEBHOOK_PORT = int(os.getenv('PORT', 5000))  #
-
+WEBHOOK_PORT = int(os.getenv('PORT', 5000))
+#Inicialização do Bot e Aplicações
 bot = telebot.TeleBot(API_TOKEN)
 app = flask.Flask(__name__)
 newrelic.agent.initialize('newrelic.ini')
+#Cache e Filas de Tarefas
 cache_musicas_editadas = dc.Cache('./cache_musicas_editadas')
-song_cooldown_cache = TTLCache(maxsize=1000, ttl=15)  # 3 horas de cooldown
-sp = spotipy.Spotify(auth_manager=SpotifyClientCredentials(client_id=SPOTIFY_CLIENT_ID, client_secret=SPOTIFY_CLIENT_SECRET))
-cache = dc.Cache('./cache')  
-conn, cursor = conectar_banco_dados()
+song_cooldown_cache = TTLCache(maxsize=1000, ttl=15)
+cache = dc.Cache('./cache')
 task_queue = Queue()
+#Conexão com Banco de Dados
+conn, cursor = conectar_banco_dados()
 
 
 @app.route("/")
@@ -110,26 +112,12 @@ def index():
     return 'Server is running.'
 
 @bot.message_handler(commands=['jogodavelha'])
-def iniciar_jogo(message):
-    try:
-        id_usuario = message.from_user.id
-        tabuleiro = inicializar_tabuleiro()
-        globals.jogos_da_velha[id_usuario] = tabuleiro
-        
-        bot.send_message(message.chat.id, f"Vamos jogar Jogo da Velha! Você é o '✔️' e eu sou o '❌'.\n\n{mostrar_tabuleiro(tabuleiro)}")
-        
-        markup = criar_botoes_tabuleiro(tabuleiro)
-        bot.send_message(message.chat.id, "Escolha sua jogada (1-9):", reply_markup=markup)
-    except Exception as e:
-        print(f"Erro ao processar o jogo da velha): {e}")
-        traceback.print_exc()
-
-@bot.message_handler(commands=['picnic'])
-@bot.message_handler(commands=['trocar'])
-@bot.message_handler(commands=['troca'])
+def handle_jogo_da_velha(message):
+    iniciar_jogo(bot, message) 
+    
+@bot.message_handler(commands=['picnic', 'trocar', 'troca'])
 def trade(message):
     try:
-        print("Comando troca acionado")
         chat_id = message.chat.id
         eu = message.from_user.id
         voce = message.reply_to_message.from_user.id
@@ -139,33 +127,39 @@ def trade(message):
         categoria = message.text.replace('/troca', '')
         minhacarta = message.text.split()[1]
         suacarta = message.text.split()[2]
-
-        print(f"Dados da troca: eu={eu}, voce={voce}, minhacarta={minhacarta}, suacarta={suacarta}")
-
+        
+        # Verificação de bloqueios entre os usuários
         if verificar_bloqueio(eu, voce):
             bot.send_message(chat_id, "A troca não pode ser realizada porque um dos usuários bloqueou o outro.")
             return
 
+        # Verificação se o destinatário é o bot
         if voce == bot_id:
             bot.send_message(chat_id, "Você não pode fazer trocas com a Mabi :(", reply_to_message_id=message.message_id)
             return
 
+        # Verificação de inventário para o usuário que iniciou a troca
         if verifica_inventario_troca(eu, minhacarta) == 0:
             bot.send_message(chat_id, f"🌦️ ་  {meunome}, você não possui o peixe {minhacarta} para trocar.", reply_to_message_id=message.message_id)
             return
 
+        # Verificação de inventário para o destinatário da troca
         if verifica_inventario_troca(voce, suacarta) == 0:
             bot.send_message(chat_id, f"🌦️ ་  Parece que {seunome} não possui o peixe {suacarta} para trocar.", reply_to_message_id=message.message_id)
             return
 
+        # Obter informações das cartas
         info_minhacarta = obter_informacoes_carta(minhacarta)
         info_suacarta = obter_informacoes_carta(suacarta)
         emojiminhacarta, idminhacarta, nomeminhacarta, subcategoriaminhacarta = info_minhacarta
         emojisuacarta, idsuacarta, nomesuacarta, subcategoriasuacarta = info_suacarta
+
         meu_username = bot.get_chat_member(chat_id, eu).user.username
         seu_username = bot.get_chat_member(chat_id, voce).user.username
 
         seu_nome_formatado = f"@{seu_username}" if seu_username else seunome
+
+        # Texto de descrição da troca
         texto = (
             f"🥪 | Hora do picnic!\n\n"
             f"{meunome} oferece de lanche:\n"
@@ -175,15 +169,15 @@ def trade(message):
             f"Podemos começar a comer, {seu_nome_formatado}?"
         )
 
+        # Criação dos botões de confirmação e rejeição
         keyboard = types.InlineKeyboardMarkup()
-
         primeiro = [
-            types.InlineKeyboardButton(text="✅",
-                                       callback_data=f'troca_sim_{eu}_{voce}_{minhacarta}_{suacarta}_{chat_id}'),
+            types.InlineKeyboardButton(text="✅", callback_data=f'troca_sim_{eu}_{voce}_{minhacarta}_{suacarta}_{chat_id}'),
             types.InlineKeyboardButton(text="❌", callback_data=f'troca_nao_{eu}_{voce}_{minhacarta}_{suacarta}_{chat_id}'),
         ]
         keyboard.add(*primeiro)
 
+        # Envio da imagem do picnic com a descrição da troca
         image_url = "https://telegra.ph/file/8672c8f91c8e77bcdad45.jpg"
         bot.send_photo(chat_id, image_url, caption=texto, reply_markup=keyboard, reply_to_message_id=message.reply_to_message.message_id)
 
@@ -192,59 +186,7 @@ def trade(message):
         erro = traceback.format_exc()
         mensagem = f"Erro durante a troca. dados: {voce},{eu},{minhacarta},{suacarta}\n{erro}"
         bot.send_message(grupodeerro, mensagem, parse_mode="HTML")
-        newrelic.agent.record_exception()
 
-
-
-@bot.callback_query_handler(func=lambda call: call.data.startswith('jogada_'))
-def jogador_fazer_jogada(call):
-    try: 
-        id_usuario = call.from_user.id
-        if id_usuario not in jogos_da_velha:
-            bot.send_message(call.message.chat.id, "Você não iniciou um jogo da velha. Use /jogodavelha para começar.")
-            return
-    
-        if call.data == "jogada_disabled":
-            bot.answer_callback_query(call.id, "Essa posição já está ocupada!")
-            return
-    
-        tabuleiro = jogos_da_velha[id_usuario]
-        _, i, j = call.data.split('_')
-        i, j = int(i), int(j)
-        
-        if tabuleiro[i][j] != '⬜':
-            bot.answer_callback_query(call.id, "Essa posição já está ocupada!")
-            return
-        
-        tabuleiro[i][j] = '✔️'
-        
-        if verificar_vitoria(tabuleiro, '✔️'):
-            bot.edit_message_text(f"🎉 Parabéns! Você venceu!\n\n{mostrar_tabuleiro(tabuleiro)}", call.message.chat.id, call.message.message_id)
-            del jogos_da_velha[id_usuario]
-            return
-        
-        if verificar_empate(tabuleiro):
-            bot.edit_message_text(f"😐 Empate!\n\n{mostrar_tabuleiro(tabuleiro)}", call.message.chat.id, call.message.message_id)
-            del jogos_da_velha[id_usuario]
-            return
-        
-        tabuleiro = bot_fazer_jogada(tabuleiro, '❌', '✔️')
-    
-        if verificar_vitoria(tabuleiro, '❌'):
-            bot.edit_message_text(f"😎 Eu venci! Melhor sorte da próxima vez.\n\n{mostrar_tabuleiro(tabuleiro)}", call.message.chat.id, call.message.message_id)
-            del jogos_da_velha[id_usuario]
-            return
-        
-        if verificar_empate(tabuleiro):
-            bot.edit_message_text(f"😐 Empate!\n\n{mostrar_tabuleiro(tabuleiro)}", call.message.chat.id, call.message.message_id)
-            del jogos_da_velha[id_usuario]
-            return
-        
-        markup = criar_botoes_tabuleiro(tabuleiro)
-        bot.edit_message_text(f"Seu turno!\n\n{mostrar_tabuleiro(tabuleiro)}", call.message.chat.id, call.message.message_id, reply_markup=markup)
-    except Exception as e:
-        print(f"Erro ao processar o jogo da velha): {e}")
-        traceback.print_exc()
 @app.route(WEBHOOK_URL_PATH, methods=['POST'])
 def webhook():
     if flask.request.headers.get('content-type') == 'application/json':
@@ -255,109 +197,12 @@ def webhook():
     else:
         flask.abort(403)
 
-import random
-from telebot import types
+from halloween import iniciar_termo, tentar_termo  # Importa as funções do arquivo halloween.py
 
-# Listas de palavras separadas por quantidade de letras
-palavras_4_letras = ['doce', 'osso', 'fada', 'medo', 'gato', 'mago', 'lobo', 'teia', 'bala']
-palavras_5_letras = ['doces', 'morte', 'ossos', 'fadas', 'bruxa', 'magia', 'poção', 'zumbi', 'lobos', 'mumia', 'uivar', 'susto', 'tumba']
-palavras_6_letras = ['mortes', 'morder', 'sangue', 'caixão', 'aranha', 'presas', 'crânio', 'lápide', 'pocoes', 'bombom']
-palavras_7_letras = ['abobora', 'vampiro', 'malvado', 'demonio', 'maldade', 'sangrar', 'varinha', 'caveira', 'monstro', 'morcego']
-palavras_8_letras = ['fantasia', 'fantasma', 'vassoura']
-
-# Função para escolher uma palavra aleatória com base no tamanho
-def escolher_palavra():
-    todas_palavras = palavras_4_letras + palavras_5_letras + palavras_6_letras + palavras_7_letras + palavras_8_letras
-    return random.choice(todas_palavras)
-
-# Função para fornecer o feedback ao jogador usando emojis coloridos
-def verificar_palpite(palavra_secreta, palpite):
-    resultado = ''
-    palavra_secreta_lista = list(palavra_secreta)
-    palpite_lista = list(palpite)
-    marcados = [False] * len(palavra_secreta)
-
-    # Primeiro, marcar as letras corretas na posição correta
-    for i in range(len(palavra_secreta)):
-        if palpite_lista[i] == palavra_secreta_lista[i]:
-            resultado += '🟩'  # Letra correta na posição correta
-            marcados[i] = True
-            palpite_lista[i] = None  # Remover a letra do palpite para não ser considerada novamente
-        else:
-            resultado += ' '  # Espaço reservado para ajustar depois
-
-    # Segundo, marcar as letras corretas na posição errada
-    for i in range(len(palavra_secreta)):
-        if resultado[i] == ' ':
-            if palpite_lista[i] and palpite_lista[i] in palavra_secreta_lista:
-                idx = palavra_secreta_lista.index(palpite_lista[i])
-                if not marcados[idx]:
-                    resultado = resultado[:i] + '🟨' + resultado[i+1:]  # Letra correta na posição errada
-                    marcados[idx] = True
-                    palpite_lista[i] = None  # Remover a letra do palpite
-                else:
-                    resultado = resultado[:i] + '⬛' + resultado[i+1:]  # Letra incorreta
-            else:
-                resultado = resultado[:i] + '⬛' + resultado[i+1:]  # Letra incorreta
-    return resultado
-
-# Dicionário para armazenar o jogo em andamento de cada usuário
-jogos_termo = {}
-
-# Comando para iniciar o jogo /termo
+# Registra o comando para iniciar o jogo Termo
 @bot.message_handler(commands=['termo'])
-def iniciar_termo(message):
-    id_usuario = message.from_user.id
-    palavra_secreta = escolher_palavra()
-
-    # Armazenar o jogo do usuário
-    jogos_termo[id_usuario] = {
-        "palavra_secreta": palavra_secreta,
-        "tentativas_restantes": 6,
-        "tamanho_palavra": len(palavra_secreta)
-    }
-
-    bot.send_message(message.chat.id, f"🎮 Bem-vindo ao Termo!\nA palavra tem {len(palavra_secreta)} letras.\nVocê tem 6 tentativas.\n\nEnvie sua primeira tentativa:")
-
-# Lidar com as tentativas do jogador
-@bot.message_handler(func=lambda message: message.from_user.id in jogos_termo)
-def tentar_termo(message):
-    id_usuario = message.from_user.id
-    jogo = jogos_termo[id_usuario]
-    palavra_secreta = jogo['palavra_secreta']
-    tentativas_restantes = jogo['tentativas_restantes']
-
-    palpite = message.text.lower().strip()
-
-    # Verificar se o palpite tem o mesmo número de letras
-    if len(palpite) != len(palavra_secreta):
-        bot.send_message(message.chat.id, f"O palpite deve ter {len(palavra_secreta)} letras!")
-        return
-
-    # Verificar se o jogador acertou a palavra
-    if palpite == palavra_secreta:
-        bot.send_message(message.chat.id, f"🎉 Parabéns! Você acertou a palavra '{palavra_secreta}'!")
-        del jogos_termo[id_usuario]  # Remover o jogo após vencer
-        return
-
-    # Fornecer feedback ao jogador
-    resultado = verificar_palpite(palavra_secreta, palpite)
-    tentativas_restantes -= 1
-    jogos_termo[id_usuario]['tentativas_restantes'] = tentativas_restantes
-
-    # Histórico de tentativas
-    if 'historico' not in jogos_termo[id_usuario]:
-        jogos_termo[id_usuario]['historico'] = []
-    jogos_termo[id_usuario]['historico'].append(f"{resultado} - {palpite}")
-
-    historico_texto = '\n'.join(jogos_termo[id_usuario]['historico'])
-
-    # Verificar se o jogador ainda tem tentativas
-    if tentativas_restantes > 0:
-        bot.send_message(message.chat.id, f"{historico_texto}\n\nTentativas restantes: {tentativas_restantes}")
-    else:
-        bot.send_message(message.chat.id, f"{historico_texto}\n\n💀 Suas tentativas acabaram! A palavra era '{palavra_secreta}'.")
-        del jogos_termo[id_usuario]  # Remover o jogo após terminar as tentativas
+def handle_termo(message):
+    iniciar_termo(message)  # Chama a função iniciar_termo do arquivo halloween.py
 
 
 @bot.message_handler(commands=['verificar'])
@@ -425,237 +270,17 @@ def verificar_ids(message):
         bot.reply_to(message, "Não foi possivel verificar essa mensagem, tente copiar e colar para verificar novamente.")
         
 @bot.message_handler(commands=['labirinto'])
-def iniciar_labirinto(message):
-    try:
-        id_usuario = message.from_user.id
-        tamanho = 10  # Tamanho do labirinto (10x10 para mais complexidade)
-        
-        labirinto = gerar_labirinto_com_caminho_e_validacao(tamanho)
-        posicao_inicial = (1, 1)  # O jogador começa em uma posição inicial fixa ou aleatória
-        movimentos_restantes = 35  # Limite de movimentos para encontrar a saída
-        
-        globals.jogadores_labirinto[id_usuario] = {
-            "labirinto": labirinto,
-            "posicao": posicao_inicial,
-            "movimentos": movimentos_restantes
-        }
-        
-        mapa = mostrar_labirinto(labirinto, posicao_inicial)
-        
-        # Criar os botões de navegação
-        markup = types.InlineKeyboardMarkup(row_width=4)
-        botao_cima = types.InlineKeyboardButton("⬆️", callback_data="norte")
-        botao_esquerda = types.InlineKeyboardButton("⬅️", callback_data="oeste")
-        botao_direita = types.InlineKeyboardButton("➡️", callback_data="leste")
-        botao_baixo = types.InlineKeyboardButton("⬇️", callback_data="sul")
-        markup.add(botao_cima, botao_esquerda, botao_direita, botao_baixo)
-        
-        bot.send_message(message.chat.id, f"🏰 Bem-vindo ao Labirinto! Você tem {movimentos_restantes} movimentos para escapar.\n\n{mapa}", reply_markup=markup)
-    except Exception as e:
-        print(f"Erro ao processar o jogo da velha): {e}")
-        traceback.print_exc()
+def handle_labirinto(message):
+    iniciar_labirinto(message)
+
 @bot.callback_query_handler(func=lambda call: call.data in ['norte', 'sul', 'leste', 'oeste'])
-def mover_labirinto(call):
-    try:
-        id_usuario = call.from_user.id
-        if id_usuario not in jogadores_labirinto:
-            bot.send_message(call.message.chat.id, "👻 Você precisa iniciar o labirinto primeiro com o comando /labirinto.")
-            return
-        
-        direcao = call.data  # Pega a direção do botão clicado
-        jogador = globals.jogadores_labirinto[id_usuario]
-        labirinto = jogador["labirinto"]
-        posicao_atual = jogador["posicao"]
-        movimentos_restantes = jogador["movimentos"]
-        
-        nova_posicao = mover_posicao(posicao_atual, direcao, len(labirinto), labirinto)
-        
-        if nova_posicao != posicao_atual:  # Se a nova posição for válida
-            jogadores_labirinto[id_usuario]["posicao"] = nova_posicao
-            jogadores_labirinto[id_usuario]["movimentos"] -= 1
-            movimentos_restantes -= 1
-            conteudo = labirinto[nova_posicao[0]][nova_posicao[1]]
-            
-            # Verificar se o jogador chegou na saída
-            if conteudo == '🚪':
-                bot.edit_message_text(f"🏆 Parabéns! Você encontrou a saída e escapou do labirinto!\n\n{revelar_labirinto(labirinto)}",
-                                      call.message.chat.id, call.message.message_id)
-                del jogadores_labirinto[id_usuario]  # Remover o jogador do labirinto
-            elif movimentos_restantes == 0:
-                bot.edit_message_text(f"😢 Seus movimentos acabaram! Você não conseguiu escapar da maldição...\n\n{revelar_labirinto(labirinto)}",
-                                      call.message.chat.id, call.message.message_id)
-                del jogadores_labirinto[id_usuario]  # Fim do jogo, remover jogador
-            else:
-                mapa = mostrar_labirinto(labirinto, nova_posicao)
-                # Revelar o conteúdo do bloco ao chegar nele
-                if conteudo == '👻' or conteudo == '🎃':
-                    # Remover o monstro ou abóbora do labirinto
-                    labirinto[nova_posicao[0]][nova_posicao[1]] = '⬜'
-                    
-                    markup_opcoes = types.InlineKeyboardMarkup(row_width=2)
-                    botao_encerrar = types.InlineKeyboardButton("Encerrar", callback_data="encerrar")
-                    botao_continuar = types.InlineKeyboardButton("Continuar", callback_data="continuar")
-                    markup_opcoes.add(botao_encerrar, botao_continuar)
-                    
-                    if conteudo == '👻':
-                        bot.edit_message_text(f"👻 Você encontrou um monstro e perdeu 20 cenouras! Você quer encerrar ou continuar?\n\n{mapa}",
-                                              call.message.chat.id, call.message.message_id, reply_markup=markup_opcoes)
-                        conn, cursor = conectar_banco_dados()
-                        cursor.execute("UPDATE usuarios SET cenouras = cenouras - 20 WHERE id_usuario = %s", (id_usuario,))
-                        conn.commit()
-                    elif conteudo == '🎃':
-                        bot.edit_message_text(f"🎃 Você encontrou uma recompensa de 50 cenouras! Você quer encerrar ou continuar?\n\n{mapa}",
-                                              call.message.chat.id, call.message.message_id, reply_markup=markup_opcoes)
-                        conn, cursor = conectar_banco_dados()
-                        cursor.execute("UPDATE usuarios SET cenouras = cenouras + 50 WHERE id_usuario = %s", (id_usuario,))
-                        conn.commit()
-                else:
-                    # Atualizar os botões de navegação
-                    markup = types.InlineKeyboardMarkup(row_width=4)
-                    botao_cima = types.InlineKeyboardButton("⬆️", callback_data="norte")
-                    botao_esquerda = types.InlineKeyboardButton("⬅️", callback_data="oeste")
-                    botao_direita = types.InlineKeyboardButton("➡️", callback_data="leste")
-                    botao_baixo = types.InlineKeyboardButton("⬇️", callback_data="sul")
-                    markup.add(botao_cima, botao_esquerda, botao_direita, botao_baixo)
-    
-                    bot.edit_message_text(f"🌕 Você avançou pelo labirinto. Movimentos restantes: {movimentos_restantes}\n\n{mapa}",
-                                          call.message.chat.id, call.message.message_id, reply_markup=markup)
-        else:
-            bot.answer_callback_query(call.id, "👻 Você não pode ir nessa direção!")
-    except Exception as e:
-        print(f"Erro ao processar o jogo da velha): {e}")
-        traceback.print_exc()
+def handle_mover_labirinto(call):
+    mover_labirinto(call)
+
 @bot.callback_query_handler(func=lambda call: call.data in ['encerrar', 'continuar'])
-def encerrar_ou_continuar(call):
-    try:
-        id_usuario = call.from_user.id
-        if call.data == 'encerrar':
-            bot.edit_message_text("💀 Você decidiu encerrar sua jornada no labirinto. Fim de jogo!", call.message.chat.id, call.message.message_id)
-            del jogadores_labirinto[id_usuario]  # Remover jogador
-        elif call.data == 'continuar':
-            jogador = jogadores_labirinto[id_usuario]
-            labirinto = jogador["labirinto"]
-            posicao = jogador["posicao"]
-            movimentos_restantes = jogador["movimentos"]
-    
-            # Atualizar a mensagem com o labirinto e botões de navegação
-            mapa = mostrar_labirinto(labirinto, posicao)
-            markup = types.InlineKeyboardMarkup(row_width=4)
-            botao_cima = types.InlineKeyboardButton("⬆️", callback_data="norte")
-            botao_esquerda = types.InlineKeyboardButton("⬅️", callback_data="oeste")
-            botao_direita = types.InlineKeyboardButton("➡️", callback_data="leste")
-            botao_baixo = types.InlineKeyboardButton("⬇️", callback_data="sul")
-            markup.add(botao_cima, botao_esquerda, botao_direita, botao_baixo)
-    
-            bot.edit_message_text(f"🏃 Você decidiu continuar sua jornada! Movimentos restantes: {movimentos_restantes}\n\n{mapa}",
-                                  call.message.chat.id, call.message.message_id, reply_markup=markup)
+def handle_encerrar_ou_continuar(call):
+    encerrar_ou_continuar(call)
 
-    except Exception as e:
-        print(f"Erro ao processar o jogo da velha): {e}")
-        traceback.print_exc()
-
-def process_tasks():
-    while True:
-        task = task_queue.get()
-        if task is None:
-            break
-        task()
-        task_queue.task_done()
-        
-task_thread = threading.Thread(target=process_tasks)
-task_thread.start()
-
-@bot.message_handler(commands=['tinder'])
-def tinder_cartas_command(message):
-    try:
-        carta = gerar_proxima_carta()
-    
-        id_carta, nome, subcategoria, emoji, categoria = carta
-    
-        # Montar a mensagem com as informações da carta
-        mensagem_carta = (f"ID:<code>{id_carta}</code>\n"
-                          f"Nome: {nome}\n"
-                          f"Subcategoria: {subcategoria}\n"
-                          f"Categoria:{emoji} - {categoria}")
-    
-        # Criar os botões de coração (gostar) e X (rejeitar)
-        markup = types.InlineKeyboardMarkup()
-        botao_coracao = types.InlineKeyboardButton("❤️", callback_data=f"gostar_{id_carta}")
-        botao_x = types.InlineKeyboardButton("❌", callback_data=f"rejeitar_{id_carta}")
-        markup.add(botao_coracao, botao_x)
-    
-        bot.send_message(message.chat.id, mensagem_carta, reply_markup=markup, parse_mode="HTML")
-    except Exception as e:
-        print(f"Erro ao processar o comando /tinder: {e}")
-        traceback.print_exc()
-
-@bot.callback_query_handler(func=lambda call: call.data.startswith('gostar_') or call.data.startswith('rejeitar_'))
-def callback_tinder_cartas(call):
-    try:
-        id_carta = call.data.split("_")[1]
-        id_usuario = call.from_user.id
-
-        if call.data.startswith("gostar_"):
-            if registrar_interacao(id_usuario, id_carta, gostou=True):
-                bot.answer_callback_query(call.id, "Você gostou dessa carta!")
-            else:
-                bot.answer_callback_query(call.id, "Você já interagiu com essa carta antes.")
-        elif call.data.startswith("rejeitar_"):
-            if registrar_interacao(id_usuario, id_carta, gostou=False):
-                bot.answer_callback_query(call.id, "Você rejeitou essa carta!")
-            else:
-                bot.answer_callback_query(call.id, "Você já interagiu com essa carta antes.")
-
-        # Substituir os botões por um botão de "próxima carta"
-        markup_nova_carta = types.InlineKeyboardMarkup()
-        botao_proxima = types.InlineKeyboardButton("➡️", callback_data="proxima_carta")
-        markup_nova_carta.add(botao_proxima)
-
-        bot.edit_message_reply_markup(call.message.chat.id, call.message.message_id, reply_markup=markup_nova_carta)
-    except Exception as e:
-        print(f"Erro ao processar o callback (gostar/rejeitar): {e}")
-        traceback.print_exc()
-
-@bot.callback_query_handler(func=lambda call: call.data == "proxima_carta")
-def callback_proxima_carta(call):
-    try:
-        # Gerar a próxima carta
-        carta = gerar_proxima_carta()
-        id_carta, nome, subcategoria, emoji, categoria = carta
-
-        # Montar a nova mensagem com as informações da nova carta
-        mensagem_carta = (f"ID: <code>{id_carta}</code>\n"
-                          f"Nome: {nome}\n"
-                          f"Subcategoria: {subcategoria}\n"
-                          f"Emoji: {emoji}\n"
-                          f"Categoria: {categoria}")
-
-        # Criar os botões de coração (gostar) e X (rejeitar)
-        markup = types.InlineKeyboardMarkup()
-        botao_coracao = types.InlineKeyboardButton("❤️", callback_data=f"gostar_{id_carta}")
-        botao_x = types.InlineKeyboardButton("❌", callback_data=f"rejeitar_{id_carta}")
-        markup.add(botao_coracao, botao_x)
-
-        # Editar a mensagem existente com as novas informações e botões
-        bot.edit_message_text(mensagem_carta, call.message.chat.id, call.message.message_id, reply_markup=markup, parse_mode="HTML")
-    except Exception as e:
-        print(f"Erro ao processar o callback de próxima carta: {e}")
-        traceback.print_exc()
-
-@bot.message_handler(commands=['popularidade'])
-def consultar_popularidade_command(message):
-    mais_amadas, mais_rejeitadas = consultar_popularidade()
-    
-    # Construir a resposta
-    resposta = "Cartas mais amadas:\n"
-    for carta in mais_amadas:
-        resposta += f"ID: <code>{carta[0]}</code> - ♡: {carta[1]} -  x: {carta[2]}\n"
-    
-    resposta += "\nCartas mais rejeitadas:\n"
-    for carta in mais_rejeitadas: 
-        resposta += f"ID: <code>{carta[0]}</code> - ♡: {carta[1]} - x: {carta[2]}\n"
-    
-    bot.send_message(message.chat.id, resposta, parse_mode="HTML")
 
 @bot.message_handler(commands=['sugestao'])
 def sugestao_command(message):
@@ -694,866 +319,82 @@ def sugestao_command(message):
         print(f"Erro ao processar o comando /sugestao: {e}")
         bot.reply_to(message, "Ocorreu um erro ao processar sua sugestão. Tente novamente.")
 
-@bot.message_handler(commands=['ranking_semanal'])
-def ranking_semanal(message):
-    try:
-        conn, cursor = conectar_banco_dados()
-
-
-        hoje = datetime.now()
-        inicio_semana = hoje - timedelta(days=hoje.weekday() + 7)
-        fim_semana = inicio_semana + timedelta(days=6, hours=23, minutes=59, seconds=59)
-
-        # Buscar o top 10 de doadores
-        cursor.execute("""
-            SELECT id_usuario, SUM(quantidade_cartas) AS total_doado
-            FROM historico_doacoes
-            WHERE data_hora BETWEEN %s AND %s
-            GROUP BY id_usuario
-            ORDER BY total_doado DESC
-            LIMIT 10
-        """, (inicio_semana, fim_semana))
-
-        top_doadores = cursor.fetchall()
-
-        # Buscar o top 10 de pescadores
-        cursor.execute("""
-            SELECT id_usuario, COUNT(id_carta) AS total_pescado
-            FROM historico_cartas_giradas
-            WHERE data_hora BETWEEN %s AND %s
-            GROUP BY id_usuario
-            ORDER BY total_pescado DESC
-            LIMIT 10
-        """, (inicio_semana, fim_semana))
-
-        top_pescadores = cursor.fetchall()
-
-        # Montar a resposta do ranking
-        resposta = "🏆 <b>Ranking Semanal de Doadores:</b>\n"
-        for i, doador in enumerate(top_doadores, 1):
-            resposta += f"{i}º lugar: ID {doador[0]} - {doador[1]} cartas doadas\n"
-
-        resposta += "\n🎣 <b>Ranking Semanal de Pescadores:</b>\n"
-        for i, pescador in enumerate(top_pescadores, 1):
-            resposta += f"{i}º lugar: ID {pescador[0]} - {pescador[1]} cartas pescadas\n"
-
-        bot.send_message(message.chat.id, resposta, parse_mode="HTML")
-
-    except Exception as e:
-        print(f"Erro ao processar comando /ranking_semanal: {e}")
-        bot.reply_to(message, "Ocorreu um erro ao gerar o ranking.")
-    finally:
-        fechar_conexao(cursor, conn)
-
+# Registro do comando para adicionar VIP
 @bot.message_handler(commands=['adicionar_vip'])
-def adicionar_vip(message):
-    # Verificar se o usuário é autorizado
-    if message.from_user.id not in [5532809878, 1805086442, 5799169750]:
-        bot.reply_to(message, "Você não tem permissão para usar este comando.")
-        return
+def handle_adicionar_vip(message):
+    adicionar_vip_logic(message)
 
-    msg = bot.reply_to(message, "Por favor, envie o ID do usuário.")
-    bot.register_next_step_handler(msg, processar_id_vip)
-
+# Registro do comando para remover VIP
 @bot.message_handler(commands=['remover_vip'])
-def remover_vip(message):
-    if message.from_user.id not in [5532809878, 1805086442, 5799169750]:
-        bot.reply_to(message, "Você não tem permissão para usar este comando.")
-        return
+def handle_remover_vip(message):
+    remover_vip_logic(message)
 
-    msg = bot.reply_to(message, "Por favor, envie o ID do usuário VIP a ser removido.")
-    bot.register_next_step_handler(msg, processar_remocao_vip)
-
+# Registro do comando para listar VIPs
 @bot.message_handler(commands=['vips'])
-def listar_vips(message):
-    try:
-        if message.from_user.id not in [5532809878, 1805086442, 5799169750]:
-            return
-        conn, cursor = conectar_banco_dados()
-        query = """
-            SELECT id, nome, Dia_renovar
-            FROM vips;
-        """
-        cursor.execute(query)
-        vips = cursor.fetchall()
+def handle_listar_vips(message):
+    listar_vips_logic(message)
 
-        if not vips:
-            bot.send_message(message.chat.id, "Nenhum VIP encontrado.")
-            return
+from vip import listar_pedidos_vips_logic, ver_ficha_vip_logic
 
-        mensagem = "🎩 Lista de VIPs, IDs e dias restantes para renovação:\n\n"
-
-        for vip in vips:
-            id_vip, nome, dia_renovar = vip
-
-            # Calcular a próxima data de renovação
-            hoje = datetime.now()
-            dia_atual = hoje.day
-            mes_atual = hoje.month
-            ano_atual = hoje.year
-
-            # Se o dia de renovação já passou neste mês, calcular para o próximo mês
-            if dia_renovar < dia_atual:
-                proxima_renovacao = datetime(ano_atual, mes_atual + 1, dia_renovar)
-            else:
-                proxima_renovacao = datetime(ano_atual, mes_atual, dia_renovar)
-
-            dias_restantes = (proxima_renovacao - hoje).days
-
-            mensagem += f"ID: {id_vip} | {nome}: {dias_restantes} dias restantes\n"
-
-        bot.send_message(message.chat.id, mensagem)
-
-    except Exception as e:
-        print(f"Erro ao listar VIPs: {e}")
-        bot.send_message(message.chat.id, "Erro ao listar VIPs.")
-    finally:
-        fechar_conexao(cursor, conn)
-
+# Registro do comando para listar pedidos dos VIPs
 @bot.message_handler(commands=['pedidos'])
-def listar_pedidos_vips(message):
-    try:
-        if message.from_user.id not in [5532809878, 1805086442]:
-            return
-        conn, cursor = conectar_banco_dados()
-        query = """
-            SELECT nome, pedidos_restantes 
-            FROM vips;
-        """
-        cursor.execute(query)
-        pedidos_vips = cursor.fetchall()
-        
-        if not pedidos_vips:
-            bot.send_message(message.chat.id, "Nenhum VIP encontrado.")
-            return
-        
-        mensagem = "📦 Pedidos restantes dos VIPs:\n\n"
-        for vip in pedidos_vips:
-            nome, pedidos_restantes = vip
-            mensagem += f"{nome}: {pedidos_restantes} pedidos restantes\n"
+def handle_listar_pedidos_vips(message):
+    listar_pedidos_vips_logic(message)
 
-        bot.send_message(message.chat.id, mensagem)
-        
-    except Exception as e:
-        print(f"Erro ao listar pedidos VIPs: {e}")
-        bot.send_message(message.chat.id, "Erro ao listar pedidos VIPs.")
-    finally:
-        fechar_conexao(cursor, conn)
-        
+# Registro do comando para ver a ficha de um VIP
 @bot.message_handler(commands=['ficha'])
-def ver_ficha_vip(message):
-    try:
-        # Verificar se o usuário tem permissão para usar o comando
-        if message.from_user.id not in [5532809878, 1805086442]:
-            return
+def handle_ver_ficha_vip(message):
+    ver_ficha_vip_logic(message
+                        
+from operacoes import toggle_config, toggle_casamento
 
-        args = message.text.split(maxsplit=1)
-        if len(args) < 2:
-            bot.reply_to(message, "Uso correto: /ficha <id_vip>")
-            return
-
-        id_vip = args[1].strip()
-
-        conn, cursor = conectar_banco_dados()
-        query = """
-            SELECT nome, data_pagamento, renovou, pedidos_restantes, Dia_renovar, imagem
-            FROM vips
-            WHERE id = %s;
-        """
-        cursor.execute(query, (id_vip,))
-        ficha_vip = cursor.fetchone()
-
-        if not ficha_vip:
-            bot.send_message(message.chat.id, f"Nenhum VIP encontrado com o ID '{id_vip}'.")
-            return
-
-        nome, data_pagamento, renovou, pedidos_restantes, dia_renovar, imagem_url = ficha_vip
-        status_renovou = "Sim" if renovou else "Não"
-
-        # Calcular dias restantes para a próxima renovação
-        hoje = datetime.now()
-        dia_atual = hoje.day
-        mes_atual = hoje.month
-        ano_atual = hoje.year
-
-        if dia_renovar < dia_atual:
-            proxima_renovacao = datetime(ano_atual, mes_atual + 1, dia_renovar)
-        else:
-            proxima_renovacao = datetime(ano_atual, mes_atual, dia_renovar)
-
-        dias_restantes = (proxima_renovacao - hoje).days
-
-        mensagem = f"🎟️ Ficha de {nome} (ID: {id_vip}):\n\n"
-        mensagem += f"📅 Data de pagamento: {data_pagamento}\n"
-        mensagem += f"🔄 Renovou: {status_renovou}\n"
-        mensagem += f"📦 Pedidos restantes: {pedidos_restantes}\n"
-        mensagem += f"📆 Próxima renovação: Daqui a {dias_restantes} dias, no dia {dia_renovar}\n"
-
-        if imagem_url:
-            bot.send_photo(message.chat.id, imagem_url, caption=mensagem)
-        else:
-            bot.send_message(message.chat.id, mensagem)
-
-    except Exception as e:
-        print(f"Erro ao exibir ficha do VIP: {e}")
-        bot.send_message(message.chat.id, "Erro ao exibir ficha do VIP.")
-    finally:
-        fechar_conexao(cursor, conn)
-
+# Callback para alternar configurações gerais
 @bot.callback_query_handler(func=lambda call: call.data.startswith('toggle_'))
-def toggle_config(call):
-    parte = call.data.split('_')[1]
-    conn, cursor = conectar_banco_dados()
+def handle_toggle_config(call):
+    toggle_config(call)
 
-    try:
-        # Alterna o valor da parte no banco de dados
-        cursor.execute(f"SELECT {parte} FROM usuarios WHERE id_usuario = %s", (call.from_user.id,))
-        valor_atual = cursor.fetchone()[0]
-        novo_valor = 0 if valor_atual else 1  # Troca entre 0 e 1
-        
-        cursor.execute(f"UPDATE usuarios SET {parte} = %s WHERE id_usuario = %s", (novo_valor, call.from_user.id))
-        conn.commit()
-
-        # Atualiza o menu de perfil
-        perfil_config(call)
-    finally:
-        fechar_conexao(cursor, conn)
-        
+# Callback para alternar o status de casamento
 @bot.callback_query_handler(func=lambda call: call.data == 'toggle_casamento')
-def toggle_casamento(call):
-    user_id = call.from_user.id
+def handle_toggle_casamento(call):
+    toggle_casamento(call)
 
-    conn, cursor = conectar_banco_dados()
-
-    # Buscar status atual do casamento
-    query_status_casamento = "SELECT casamento_ativo FROM usuarios WHERE id_usuario = %s"
-    cursor.execute(query_status_casamento, (user_id,))
-    casamento_ativo = cursor.fetchone()[0]
-
-    # Alternar o status do casamento
-    novo_status = not casamento_ativo
-    update_query = "UPDATE usuarios SET casamento_ativo = %s WHERE id_usuario = %s"
-    cursor.execute(update_query, (novo_status, user_id))
-    conn.commit()
-
-    # Atualizar a mensagem com o novo status
-    casamento_btn_text = "Casamento: ✔️" if novo_status else "Casamento: ❌"
-    casamento_btn = types.InlineKeyboardButton(casamento_btn_text, callback_data='toggle_casamento')
-
-    # Criar um novo menu com o botão atualizado
-    markup = call.message.reply_markup
-    for i, button in enumerate(markup.keyboard):
-        if "Casamento" in button[0].text:
-            markup.keyboard[i] = [casamento_btn]
-
-    bot.edit_message_reply_markup(chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=markup)
-
-    fechar_conexao(cursor, conn)
-        
-@bot.callback_query_handler(func=lambda call: call.data == 'perfil_config')
-def perfil_config(call):
-    try:
-        conn, cursor = conectar_banco_dados()
-        cursor.execute("SELECT bio, musica, pronome FROM usuarios WHERE id_usuario = %s", (call.from_user.id,))
-        config = cursor.fetchone()
-
-        bio_ativo = "✅" if config[0] else "❌"
-        musica_ativa = "✅" if config[1] else "❌"
-        pronome_ativo = "✅" if config[2] else "❌"
-
-        markup = types.InlineKeyboardMarkup()
-        btn_bio = types.InlineKeyboardButton(f'Bio: {bio_ativo}', callback_data='toggle_bio')
-        btn_musica = types.InlineKeyboardButton(f'Música: {musica_ativa}', callback_data='toggle_musica')
-        btn_pronome = types.InlineKeyboardButton(f'Pronome: {pronome_ativo}', callback_data='toggle_pronome')
-        btn_voltar = types.InlineKeyboardButton('🔙 Voltar', callback_data='voltar_config')
-
-        markup.add(btn_bio, btn_musica, btn_pronome)
-        markup.add(btn_voltar)
-        
-        bot.edit_message_text("Escolha o que deseja ativar/desativar no perfil:", chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=markup)
-    finally:
-        fechar_conexao(cursor, conn)
-@bot.message_handler(commands=['doar'])
-def doar(message):
-    try:
-        print("Comando doar acionado")
-        chat_id = message.chat.id
-        eu = message.from_user.id
-        args = message.text.split()
-
-        if len(args) < 2:
-            bot.send_message(chat_id, "Formato incorreto. Use /doar <quantidade> <ID_da_carta> ou /doar all <ID_da_carta>")
-            return
-
-        doar_todas = False
-        doar_uma = False
-
-        if args[1].lower() == 'all':
-            doar_todas = True
-            minhacarta = int(args[2])
-        elif len(args) == 2:
-            doar_uma = True
-            minhacarta = int(args[1])
-        else:
-            quantidade = int(args[1])
-            minhacarta = int(args[2])
-
-        conn, cursor = conectar_banco_dados()
-        qnt_carta = verifica_inventario_troca(eu, minhacarta)
-        if qnt_carta > 0:
-            if doar_todas:
-                quantidade = qnt_carta
-            elif doar_uma:
-                quantidade = 1
-            elif quantidade > qnt_carta:
-                bot.send_message(chat_id, f"Você não possui {quantidade} unidades dessa carta.")
-                return
-
-            destinatario_id = None
-            nome_destinatario = None
-
-            if message.reply_to_message and message.reply_to_message.from_user:
-                destinatario_id = message.reply_to_message.from_user.id
-                nome_destinatario = message.reply_to_message.from_user.first_name
-
-            # Verificar se o destinatário é o bot
-            if destinatario_id == int(API_TOKEN.split(':')[0]):
-                bot.send_message(chat_id, "Pr-Pra mim? 😳 Muito obrigada, mas não acho que seja de bom tom um bot aceitar doação tão generosa... 😢 Talvez você deva procurar um camponês de verdade...")
-                return
-
-            if not destinatario_id:
-                bot.send_message(chat_id, "Você precisa responder a uma mensagem para doar a carta.")
-                return
-
-            nome_carta = obter_nome(minhacarta)
-            qnt_str = f"uma unidade da carta" if quantidade == 1 else f"{quantidade} unidades da carta"
-            texto = f"Olá, {message.from_user.first_name}!\n\nVocê tem {qnt_carta} unidades da carta: {minhacarta} — {nome_carta}.\n\n"
-            texto += f"Deseja doar {qnt_str} para {nome_destinatario}?"
-
-            keyboard = telebot.types.InlineKeyboardMarkup()
-            keyboard.row(
-                telebot.types.InlineKeyboardButton(text="Sim", callback_data=f'cdoacao_{eu}_{minhacarta}_{destinatario_id}_{quantidade}'),
-                telebot.types.InlineKeyboardButton(text="Não", callback_data=f'ccancelar_{eu}')
-            )
-
-            bot.send_message(chat_id, texto, reply_markup=keyboard)
-        else:
-            bot.send_message(chat_id, "Você não pode doar uma carta que não possui.")
-
-    except Exception as e:
-        newrelic.agent.record_exception()    
-        print(f"Erro durante o comando de doação: {e}")
-def atualizar_petalas(id_usuario):
-    """Atualiza o número de pétalas do usuário de acordo com o tempo decorrido e se é VIP."""
-    print(f"DEBUG: Iniciando atualização de pétalas para o usuário {id_usuario}.")
-    conn, cursor = conectar_banco_dados()
-
-    # Verificar se o usuário é VIP
-    vip = is_vip(id_usuario)
-
-    # Definir o tempo de regeneração e o máximo de pétalas com base no status VIP
-    if vip:
-        TEMPO_REGENERACAO = 2  # 2 horas para VIP
-        MAX_PETALAS = 36  # VIP pode acumular até 3 dias de pétalas (36 pétalas)
-    else:
-        TEMPO_REGENERACAO = 3  # 3 horas para não VIP
-        MAX_PETALAS = 8   # Não VIP pode acumular até 1 dia de pétalas (8 pétalas)
     
-    print(f"DEBUG: Regeneração definida para {TEMPO_REGENERACAO} horas. Máximo de pétalas: {MAX_PETALAS}")
+from operacoes import doar
 
-    # Buscar o número atual de pétalas e a última regeneração
-    cursor.execute("SELECT petalas, ultima_regeneracao_petalas FROM usuarios WHERE id_usuario = %s", (id_usuario,))
-    resultado = cursor.fetchone()
+# Registro do comando de doação de cartas
+@bot.message_handler(commands=['doar'])
+def handle_doar(message):
+    doar(message)
 
-    if resultado:
-        petalas_atual, ultima_regeneracao = resultado
-        petalas_atual = petalas_atual if petalas_atual is not None else 0  # Inicializar com 0 se estiver NULL
-        print(f"DEBUG: Petalas atuais: {petalas_atual}. Última regeneração: {ultima_regeneracao}")
-        agora = datetime.now()
+from petala import roseira_command, callback_escolher_carta
 
-        # Verificar se a última regeneração é válida
-        if ultima_regeneracao is None:
-            ultima_regeneracao = agora
-            print(f"DEBUG: Última regeneração estava nula. Atualizando com o valor atual.")
-            cursor.execute("""
-                UPDATE usuarios SET ultima_regeneracao_petalas = %s WHERE id_usuario = %s
-            """, (ultima_regeneracao, id_usuario))
-            conn.commit()
-
-        # Calcular o tempo desde a última regeneração
-        horas_passadas = (agora - ultima_regeneracao).total_seconds() / 3600
-        print(f"DEBUG: Horas passadas desde a última regeneração: {horas_passadas}")
-
-        # Calcular quantas pétalas regenerar
-        petalas_regeneradas = int(horas_passadas // TEMPO_REGENERACAO)  # Divide as horas passadas pelo tempo de regeneração
-        novas_petalas = min(MAX_PETALAS, petalas_atual + petalas_regeneradas)
-        print(f"DEBUG: Petalas regeneradas: {petalas_regeneradas}. Novas pétalas: {novas_petalas}")
-
-        # Se houver novas pétalas a serem adicionadas, atualizar no banco
-        if novas_petalas > petalas_atual:
-            print(f"DEBUG: Atualizando pétalas no banco para {novas_petalas}.")
-            cursor.execute("""
-                UPDATE usuarios
-                SET petalas = %s, ultima_regeneracao_petalas = %s
-                WHERE id_usuario = %s
-            """, (novas_petalas, agora, id_usuario))
-            conn.commit()
-        else:
-            print(f"DEBUG: Nenhuma nova pétala para atualizar.")
-    else:
-        print(f"DEBUG: Nenhuma informação encontrada para o usuário {id_usuario}.")
-
-    fechar_conexao(cursor, conn)
-
-
-
+# Registro do comando /roseira
 @bot.message_handler(commands=['roseira'])
-def roseira_command(message):
-    try:
-        id_usuario = message.from_user.id
-        print(f"DEBUG: Comando /roseira acionado pelo usuário {id_usuario}")
-        # Verificar se o usuário é VIP
-        if not is_vip(id_usuario):
-            bot.reply_to(message, "Este comando está em teste e só pode ser usado por usuários VIP.")
-            return
-        # Atualizar as pétalas antes de usar o comando
-        atualizar_petalas(id_usuario)
+def handle_roseira_command(message):
+    roseira_command(message)
 
-        # Verificar o número de pétalas atual
-        conn, cursor = conectar_banco_dados()
-        cursor.execute("SELECT petalas FROM usuarios WHERE id_usuario = %s", (id_usuario,))
-        petalas_disponiveis = cursor.fetchone()[0]
-        print(f"DEBUG: Pétalas disponíveis para o usuário {id_usuario}: {petalas_disponiveis}")
-
-
-        if petalas_disponiveis > 0:
-            # Reduzir o número de pétalas em 1
-            cursor.execute("UPDATE usuarios SET petalas = petalas - 1 WHERE id_usuario = %s", (id_usuario,))
-            conn.commit()
-
-            # Executar o comando roseira normalmente
-            # Extrair a subcategoria
-            args = message.text.split(maxsplit=1)
-            if len(args) < 2:
-                bot.reply_to(message, "Por favor, forneça uma subcategoria válida.")
-                return
-
-            subcategoria = args[1].strip()
-
-            # Validar se a subcategoria existe no banco de dados
-            cursor.execute("SELECT id_personagem, nome, imagem FROM personagens WHERE subcategoria = %s", (subcategoria,))
-            resultado = cursor.fetchall()
-
-            if not resultado or len(resultado) < 3:
-                bot.reply_to(message, "Subcategoria não encontrada ou não há cartas suficientes.")
-                return
-
-            # Garantir que não haja cartas repetidas
-            cartas_aleatorias = random.sample(resultado, 3)  # Pega 3 cartas aleatórias sem repetição
-
-            # Tentar pegar as imagens correspondentes às cartas
-            imagens_cartas = []
-            for carta in cartas_aleatorias:
-                try:
-                    # Verificar se a imagem com borda já está no cache
-                    if carta[0] in cache_imagens_com_bordas:
-                        imagens_cartas.append(cache_imagens_com_bordas[carta[0]])
-                    else:
-                        # Tentar fazer o download e abrir a imagem da carta
-                        response = requests.get(carta[2])  # carta[2] contém a URL da imagem
-                        img = Image.open(BytesIO(response.content))  # Abrir a imagem em memória
-
-                        # Baixar e aplicar uma borda aleatória
-                        borda_response = requests.get(random.choice(bordas_urls))  # Pega uma borda aleatória
-                        borda_aleatoria = Image.open(BytesIO(borda_response.content))  # Abrir a borda
-                        img_com_borda = aplicar_borda(img, borda_aleatoria)
-
-                        # Adicionar ao cache
-                        cache_imagens_com_bordas[carta[0]] = img_com_borda
-                        imagens_cartas.append(img_com_borda)
-
-                except (UnidentifiedImageError, IOError):
-                    # Se a imagem for inválida, tentar outra carta
-                    continue
-
-
-            # Definir o tamanho das imagens e o espaço entre elas (3x4 com espaço)
-            largura_individual = 300  # largura padrão 3x4
-            altura_individual = 400   # altura padrão 3x4
-            espaco_entre = 10         # Espaço entre as imagens
-
-            # Calcular o tamanho total da imagem com 3 cartas lado a lado
-            largura_total = 3 * largura_individual + 2 * espaco_entre
-            altura_total = altura_individual
-
-            # Criar a imagem final com fundo transparente
-            imagem_final = Image.new("RGBA", (largura_total, altura_total), (255, 255, 255, 0))
-
-            # Colar as imagens lado a lado com espaço entre elas
-            x_offset = 0
-            for img in imagens_cartas:
-                img_resized = img.resize((largura_individual, altura_individual))
-                imagem_final.paste(img_resized, (x_offset, 0))
-                x_offset += largura_individual + espaco_entre
-
-            # Salvar a imagem gerada temporariamente
-            with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as temp_img_file:
-                imagem_final.save(temp_img_file.name)
-                caminho_imagem = temp_img_file.name
-
-            # Construir a mensagem personalizada
-            nomes_cartas = [f"1️⃣ {cartas_aleatorias[0][1]}", f"2⃣ {cartas_aleatorias[1][1]}", f"3⃣ {cartas_aleatorias[2][1]}"]
-            mensagem = (f"🌹 Você balança a roseira, fazendo ela derrubar algumas pétalas.\n"
-            f"Qual dessas você vai levar?\n\n" + "\n".join(nomes_cartas) +
-            f"\n\n🌺 Pétalas disponíveis: {petalas_disponiveis}")
-
-            # Enviar a imagem com os botões 1, 2, 3 e a mensagem personalizada
-            markup = types.InlineKeyboardMarkup()
-            botao1 = types.InlineKeyboardButton("1️⃣", callback_data=f"escolher_{cartas_aleatorias[0][0]}")
-            botao2 = types.InlineKeyboardButton("2⃣", callback_data=f"escolher_{cartas_aleatorias[1][0]}")
-            botao3 = types.InlineKeyboardButton("3⃣", callback_data=f"escolher_{cartas_aleatorias[2][0]}")
-            markup.add(botao1, botao2, botao3)
-
-            bot.send_photo(message.chat.id, open(caminho_imagem, 'rb'), caption=mensagem, reply_markup=markup, reply_to_message_id=message.message_id)
-
-        else:
-            tempo_restante = calcular_tempo_restante(id_usuario)
-            bot.reply_to(message, f"🥀 Ainda não tem pétalas disponíveis na sua roseira... Volte em: {tempo_restante}")
-
-
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
-    finally:
-        fechar_conexao(cursor, conn)
-        # Remover a imagem temporária
-        if os.path.exists(caminho_imagem):
-            os.remove(caminho_imagem)
-
-
+# Registro do callback para escolha de carta na roseira
 @bot.callback_query_handler(func=lambda call: call.data.startswith("escolher_"))
-def callback_escolher_carta(call):
-    try:
-        # Impedir múltiplos cliques (trava)
-        if hasattr(call.message, 'escolha_feita') and call.message.escolha_feita:
-            return
+def handle_callback_escolher_carta(call):
+    callback_escolher_carta(call)
+from vips import pedido_submenu_command, pedidovip_command
 
-        # Identificar a escolha do usuário
-        id_personagem_escolhido = int(call.data.split("_")[1])
-
-        # Trava: impedir múltiplas escolhas
-        call.message.escolha_feita = True
-
-        # Remover os botões após a escolha
-        bot.edit_message_reply_markup(call.message.chat.id, call.message.message_id, reply_markup=None)
-
-        # Buscar o nome do personagem no banco de dados
-        conn, cursor = conectar_banco_dados()
-        cursor.execute("SELECT nome FROM personagens WHERE id_personagem = %s", (id_personagem_escolhido,))
-        nome_personagem = cursor.fetchone()[0]
-        fechar_conexao(cursor, conn)
-
-        # Adicionar a carta ao inventário
-        add_to_inventory(call.from_user.id, id_personagem_escolhido)
-
-        # Editar a legenda da imagem com a mensagem personalizada
-        bot.edit_message_caption(
-            chat_id=call.message.chat.id,
-            message_id=call.message.message_id,
-            caption=f"💐 Você escolheu a pétala perfeita! {id_personagem_escolhido} - {nome_personagem} adicionada ao seu inventário. ✨"
-        )
-
-    except Exception as e:
-        print(f"Erro ao processar a escolha de carta: {e}")
-        bot.reply_to(call.message, "Ocorreu um erro ao processar sua escolha.")
-
+# Registro do comando /pedidosubmenu
 @bot.message_handler(commands=['pedidosubmenu'])
-def pedido_submenu_command(message):
-    user_id = message.from_user.id
-    user_name = message.from_user.first_name
+def handle_pedido_submenu_command(message):
+    pedido_submenu_command(message)
 
-    try:
-        conn, cursor = conectar_banco_dados()
-
-        # Verificar se o usuário é VIP
-        query_vip = """
-            SELECT pedidos_restantes 
-            FROM vips 
-            WHERE id_usuario = %s
-        """
-        cursor.execute(query_vip, (user_id,))
-        vip_info = cursor.fetchone()
-
-        if not vip_info:
-            bot.send_message(message.chat.id, "Desculpe, você não é um VIP ou não possui pedidos restantes.")
-            return
-
-        pedidos_restantes = vip_info[0]
-
-        # Verificar se o VIP ainda tem pedidos restantes
-        if pedidos_restantes <= 0:
-            bot.send_message(message.chat.id, "Você já usou todos os seus pedidos de submenu deste mês.")
-            return
-
-        # Instruções para enviar o submenu
-        mensagem_inicial = (
-            "Você pode fazer seu pedido de submenu!\n\n"
-            "Envie o submenu dessa forma:\n\n"
-            "- subcategoria: <b>Nome da Subcategoria</b>\n"
-            "- submenu: <b>Nome do Submenu</b>\n"
-            "personagem1nome, link da foto\n"
-            "personagem2nome, link da foto\n"
-            "..."
-        )
-        bot.send_message(message.chat.id, mensagem_inicial, parse_mode="HTML")
-
-        # Registrar o próximo passo para processar o submenu enviado
-        bot.register_next_step_handler(message, processar_pedido_submenu, pedidos_restantes, user_name)
-
-    except Exception as e:
-        bot.send_message(message.chat.id, "Ocorreu um erro ao verificar suas permissões de VIP.")
-        print(f"Erro ao verificar VIP: {e}")
-    finally:
-        fechar_conexao(cursor, conn)
-
-
+# Registro do comando /pedidovip
 @bot.message_handler(commands=['pedidovip'])
-def pedidovip_command(message):
-    # Verifica se o usuário é autorizado a usar o comando
-    if message.from_user.id not in [5532809878, 1805086442]:
-        bot.send_message(message.chat.id, "Você não tem permissão para usar este comando.")
-        return
+def handle_pedidovip_command(message):
+    pedidovip_command(message)
 
-    try:
-        # Divide o comando em partes
-        args = message.text.split()
-        if len(args) != 3:
-            bot.send_message(message.chat.id, "Uso incorreto. Formato correto: /pedidovip <iddovip> <número (+ ou -)>")
-            return
-
-        # Extrai os argumentos
-        id_vip = int(args[1])
-        ajuste = int(args[2])
-
-        # Conecta ao banco de dados
-        conn, cursor = conectar_banco_dados()
-
-        # Verifica se o VIP existe
-        cursor.execute("SELECT pedidos_restantes FROM vips WHERE id = %s", (id_vip,))
-        vip_info = cursor.fetchone()
-
-        if not vip_info:
-            bot.send_message(message.chat.id, f"Nenhum VIP encontrado com o ID '{id_vip}'.")
-            return
-
-        pedidos_atual = vip_info[0]
-        pedidos_novo = pedidos_atual + ajuste
-
-        # Atualiza o número de pedidos restantes
-        cursor.execute("UPDATE vips SET pedidos_restantes = %s WHERE id = %s", (pedidos_novo, id_vip))
-        conn.commit()
-
-        # Mensagem de confirmação
-        bot.send_message(message.chat.id, f"Pedidos do VIP com ID {id_vip} foram atualizados. Novo total de pedidos: {pedidos_novo}")
-
-    except Exception as e:
-        bot.send_message(message.chat.id, f"Erro ao atualizar os pedidos: {e}")
-        print(f"Erro ao processar o comando /pedidovip: {e}")
-    finally:
-        fechar_conexao(cursor, conn)
-allowed_user_ids = [5121550670, 5532809878, 531165369, 1805086442]
+# Registro do comando /criarvendinha
 @bot.message_handler(commands=['criarvendinha'])
-def criar_colagem(message):
-    if message.from_user.id not in allowed_user_ids:
-        bot.send_message(message.chat.id, "Você não tem permissão para usar este comando.")
-        return
+def handle_criar_colagem(message):
+    criar_colagem(message)
 
-    try:
-        cartas_aleatorias = obter_cartas_aleatorias()
-        data_atual_str = dt_module.date.today().strftime("%Y-%m-%d") 
-        if not cartas_aleatorias:
-            bot.send_message(message.chat.id, "Não foi possível obter cartas aleatórias.")
-            return
-
-        registrar_cartas_loja(cartas_aleatorias, data_atual_str)
-        imagens = []
-        for carta in cartas_aleatorias:
-            img_url = carta.get('imagem', '')
-            try:
-                if img_url:
-                    response = requests.get(img_url)
-                    if response.status_code == 200:
-                        img = Image.open(io.BytesIO(response.content))
-                        img = img.resize((300, 400), Image.LANCZOS)
-                    else:
-                        img = Image.new('RGB', (300, 400), color='black')
-                else:
-                    img = Image.new('RGB', (300, 400), color='black')
-            except Exception as e:
-                print(f"Erro ao abrir a imagem da carta {carta['id']}: {e}")
-                img = Image.new('RGB', (300, 400), color='black')
-            imagens.append(img)
-
-        altura_total = (len(imagens) // 3) * 400
-
-        colagem = Image.new('RGB', (900, altura_total))  
-        coluna_atual = 0
-        linha_atual = 0
-
-        for img in imagens:
-            colagem.paste(img, (coluna_atual, linha_atual))
-            coluna_atual += 300
-
-            if coluna_atual >= 900:
-                coluna_atual = 0
-                linha_atual += 400
-
-        colagem.save('colagem_cartas.png')
-        
-        mensagem_loja = "🐟 Peixes na vendinha hoje:\n\n"
-        for carta in cartas_aleatorias:
-            mensagem_loja += f"{carta['emoji']}| {carta['id']} • {carta['nome']} - {carta['subcategoria']}\n"
-        mensagem_loja += "\n🥕 Acesse usando o comando /vendinha"
-
-        with open('colagem_cartas.png', 'rb') as photo:
-            bot.send_photo(message.chat.id, photo, caption=mensagem_loja, reply_to_message_id=message.message_id)
-    except Exception as e:
-        print(f"Erro ao criar colagem: {e}")
-        bot.send_message(message.chat.id, "Erro ao criar colagem.")
-@bot.message_handler(commands=['song'])
-def jogar_song(message):
-    id_usuario = message.from_user.id
-    chat_id = message.chat.id
-
-    # Verificar se o usuário está no período de cooldown
-    if id_usuario in song_cooldown_cache:
-        bot.reply_to(message, "Você já jogou recentemente! Tente novamente em 3 horas.")
-        return
-
-    conn, cursor = conectar_banco_dados()
-
-    try:
-        # Escolher uma música aleatória da tabela
-        cursor.execute("SELECT id, url, nome, artista FROM musicas ORDER BY RAND() LIMIT 1")
-        musica = cursor.fetchone()
-
-        if not musica:
-            bot.reply_to(message, "Nenhuma música disponível no momento.")
-            return
-
-        id_musica, url, nome_musica, artista_musica = musica
-
-        # Verificar se a música já foi editada e está no cache
-        if id_musica in cache_musicas_editadas:
-            audio_file = cache_musicas_editadas[id_musica]
-            audio_file.seek(0)  # Reposiciona o cursor no início do arquivo novamente
-        else:
-            # Fazer download do arquivo de áudio a partir da URL
-            response = requests.get(url)
-            if response.status_code != 200:
-                bot.reply_to(message, "Erro ao baixar a música. Tente novamente mais tarde.")
-                return
-
-            audio_file = io.BytesIO(response.content)
-            audio_file.name = "adivinhe_a_musica.mp3"  # Definir o nome do arquivo no objeto BytesIO
-
-            # Armazenar a música no cache
-            cache_musicas_editadas[id_musica] = audio_file
-
-        # Enviar a música como arquivo de áudio
-        pergunta = random.choice(["Qual o nome da música?", "Qual o nome do artista?"])
-        bot_message = bot.send_audio(chat_id, audio=audio_file, caption=pergunta, title="Adivinhe a música")
-
-        # Armazenar a mensagem do bot para referência posterior
-        active_song_challenges[chat_id] = {
-            'message_id': bot_message.message_id,
-            'id_musica': id_musica,
-            'nome_musica': nome_musica.lower(),
-            'artista_musica': artista_musica.lower(),
-            'respondido': False,
-            'usuario_ativador': id_usuario
-        }
-
-        # Adicionar o usuário ao cooldown
-        song_cooldown_cache[id_usuario] = datetime.now()
-
-        # Timer para apagar a mensagem e avisar se o tempo esgotou
-        timer = threading.Timer(30.0, tempo_esgotado, [chat_id])
-        timer.start()
-
-    except Exception as e:
-        bot.reply_to(message, "Ocorreu um erro ao tentar iniciar o jogo.")
-        print(f"Erro ao iniciar o jogo: {e}")
-    finally:
-        fechar_conexao(cursor, conn)
-        
-
-@bot.message_handler(func=lambda message: message.reply_to_message and message.reply_to_message.message_id in [challenge['message_id'] for challenge in active_song_challenges.values()])
-def verificar_resposta(message):
-    chat_id = message.chat.id
-    id_usuario = message.from_user.id
-    resposta = message.text.strip().lower()
-
-    challenge = active_song_challenges.get(chat_id)
-
-    if challenge and not challenge['respondido'] and message.reply_to_message.message_id == challenge['message_id']:
-        if resposta == challenge['nome_musica'] or resposta == challenge['artista_musica']:
-            # Marca como respondido e remove o desafio ativo
-            challenge['respondido'] = True
-            del active_song_challenges[chat_id]
-
-            # Apaga a mensagem de pergunta original do bot
-            bot.delete_message(chat_id, challenge['message_id'])
-
-            # Adicionar cenouras ao usuário
-            cenouras = random.randint(50, 100)
-            conn, cursor = conectar_banco_dados()
-            cursor.execute("UPDATE usuarios SET cenouras = cenouras + %s WHERE id_usuario = %s", (cenouras, id_usuario))
-            conn.commit()
-
-            # Enviar mensagem de parabéns no privado
-            bot.send_message(id_usuario, f"🎉 Parabéns, você acertou! Como recompensa, vai ganhar:\n🥕 {cenouras} cenouras!")
-
-            # Enviar mensagem no grupo informando o acerto
-            nome_usuario = message.from_user.first_name
-            bot.send_message(chat_id, f"🎶 Parabéns! Música ou Artista adivinhados por {nome_usuario}.\n\n A música era: <b>{challenge['nome_musica'].capitalize()} de {challenge['artista_musica'].capitalize()}</b>.",parse_mode="HTML")
-
-            # Registrar a tentativa na tabela
-            cursor.execute("INSERT INTO song_tentativas (id_usuario, id_musica, data_hora, acertou) VALUES (%s, %s, %s, %s)", 
-                           (id_usuario, challenge['id_musica'], datetime.now(), True))
-            conn.commit()
-            fechar_conexao(cursor, conn)
-
-        else:
-            # Resposta incorreta - apagar mensagem original e enviar alerta no grupo
-            bot.delete_message(chat_id, challenge['message_id'])
-            bot.send_message(chat_id, f"❌ Poxa, parece que a resposta está incorreta. A música era: {challenge['nome_musica'].capitalize()} de {challenge['artista_musica'].capitalize()}.")
-@bot.message_handler(commands=['biblioteca'])
-def listar_biblioteca(message):
-    chat_id = message.chat.id
-
-    conn, cursor = conectar_banco_dados()
-
-    try:
-        # Buscar todas as músicas na tabela
-        cursor.execute("SELECT nome, artista FROM musicas ORDER BY nome ASC")
-        musicas = cursor.fetchall()
-
-        if not musicas:
-            bot.send_message(chat_id, "Nenhuma música disponível na biblioteca.")
-            return
-
-        # Construir a lista de músicas no formato "nome - artista"
-        biblioteca = "\n".join([f"{musica[0]} - {musica[1]}" for musica in musicas])
-
-        # Enviar a lista para o usuário
-        bot.send_message(chat_id, f"🎵 <b>Biblioteca de Músicas:</b>\n\n{biblioteca}", parse_mode="HTML")
-
-    except Exception as e:
-        bot.reply_to(message, "Ocorreu um erro ao tentar acessar a biblioteca de músicas.")
-        print(f"Erro ao listar a biblioteca: {e}")
-    finally:
-        fechar_conexao(cursor, conn)           
+# Callback para lidar com categorias de pesca
 @bot.callback_query_handler(func=lambda call: call.data.startswith('pescar_'))
 def categoria_callback(call):
     try:
@@ -1567,9 +408,10 @@ def categoria_callback(call):
         else:
             print("Invalid message or chat data in the callback query.")
     except Exception as e:
-        newrelic.agent.record_exception()
         print(f"Erro em categoria_callback: {e}")
-        
+
+
+# Callback para lidar com as páginas de peixes
 @bot.callback_query_handler(func=lambda call: call.data.startswith('peixes_'))
 def callback_peixes(call):
     try:
@@ -1579,9 +421,10 @@ def callback_peixes(call):
         
         pagina_peixes_callback(call, pagina, subcategoria)
     except Exception as e:
-        newrelic.agent.record_exception()    
         print(f"Erro ao processar callback de peixes: {e}")
-               
+
+
+# Callback para lidar com a escolha de subcategoria
 @bot.callback_query_handler(func=lambda call: call.data.startswith('choose_subcategoria_'))
 def callback_subcategoria_handler(call):
     try:
@@ -1595,15 +438,13 @@ def callback_subcategoria_handler(call):
         evento_fixo = obter_carta_evento_fixo(subcategoria=subcategoria)
         chance = random.randint(1, 100)
 
-        
-        # Se existe evento fixo e a chance de 30% se aplica, envia o evento fixo
+        # Se existe evento fixo e a chance de 5% se aplica, envia o evento fixo
         if evento_fixo and chance <= 5:
-            # Acessa os valores de 'evento_fixo' como tupla
             emoji, id_personagem_carta, nome, subcategoria, imagem = evento_fixo
             send_card_message(call.message, emoji, id_personagem_carta, nome, subcategoria, imagem)
         else:
             # Caso contrário, envia uma carta aleatória normal da subcategoria
-             subcategoria_handler(call.message, subcategoria, cursor, conn, None,chat_id,message_id)
+            subcategoria_handler(call.message, subcategoria, cursor, conn, None, chat_id, message_id)
     
     except Exception as e:
         traceback.print_exc()
@@ -1612,439 +453,52 @@ def callback_subcategoria_handler(call):
     finally:
         fechar_conexao(cursor, conn)
 
-# Lista de IDs permitidos
-
+# Registro do comando /vendinha
 @bot.message_handler(commands=['vendinha'])
-def loja(message):
-    try:
-        verificar_id_na_tabela(message.from_user.id, "ban", "iduser")
-        keyboard = telebot.types.InlineKeyboardMarkup()
+def handle_vendinha_command(message):
+    loja(message)
 
-        keyboard.row(telebot.types.InlineKeyboardButton(text="🎣 Peixes do dia", callback_data='loja_loja'))
-        keyboard.row(telebot.types.InlineKeyboardButton(text="🎴 Estou com sorte", callback_data='loja_geral'))
-        keyboard.row(telebot.types.InlineKeyboardButton(text="⛲ Fonte dos Desejos", callback_data='fazer_pedido'))
-        keyboard.row(telebot.types.InlineKeyboardButton(text="💼 Pacotes de Ações", callback_data='acoes_vendinha'))
-
-        image_url = "https://telegra.ph/file/ea116d98a5bd8d6179612.jpg"
-        bot.send_photo(message.chat.id, image_url,
-                       caption='Olá! Seja muito bem-vindo à vendinha da Mabi. Como posso te ajudar?',
-                       reply_markup=keyboard, reply_to_message_id=message.message_id)
-
-    except ValueError as e:
-        print(f"Erro: {e}")
-        mensagem_banido = "Você foi banido permanentemente do garden. Entre em contato com o suporte caso haja dúvidas."
-        bot.send_message(message.chat.id, mensagem_banido, reply_to_message_id=message.message_id)
-      
+# Registro do comando /peixes
 @bot.message_handler(commands=['peixes'])
-def verificar_comando_peixes(message):
-    try:
-        parametros = message.text.split(' ', 2)[1:]  
+def handle_peixes_command(message):
+    verificar_comando_peixes(message)
 
-        if not parametros:
-            bot.reply_to(message, "Por favor, forneça a subcategoria.")
-            return
-        
-        subcategoria = " ".join(parametros)  
-        
-        if len(parametros) > 1 and parametros[0] == 'img':
-            subcategoria = " ".join(parametros[1:])
-            enviar_imagem_peixe(message, subcategoria)
-        else:
-            mostrar_lista_peixes(message, subcategoria)
-        
-    except Exception as e:
-        print(f"Erro ao processar comando /peixes: {e}")
-        bot.reply_to(message, "Ocorreu um erro ao processar sua solicitação.")
-@bot.message_handler(commands=['ervadaninha'])
-def listar_bloqueios(message):
-    try:
-        if message.chat.type != 'private':
-            bot.send_message(message.chat.id, "Este comando só pode ser usado em uma conversa privada.")
-            return
-
-        id_bloqueador = message.from_user.id
-
-        conn, cursor = conectar_banco_dados()
-
-        cursor.execute("""
-            SELECT u.user 
-            FROM bloqueios b
-            JOIN usuarios u ON b.id_bloqueado = u.id_usuario
-            WHERE b.id_usuario = %s
-        """, (id_bloqueador,))
-
-        bloqueados = cursor.fetchall()
-
-        if not bloqueados:
-            bot.send_message(message.chat.id, "Você não bloqueou nenhum jardineiro.")
-            return
-
-        resposta = "Lista de jardineiros bloqueados:\n\n"
-        for bloqueado in bloqueados:
-            resposta += f"𓇣 {bloqueado[0]}\n"
-
-        bot.send_message(message.chat.id, resposta)
-    except mysql.connector.Error as err:
-        bot.send_message(message.chat.id, f"Erro ao listar bloqueios: {err}")
-    finally:
-        fechar_conexao(cursor, conn)
 # Adicionando o handler para o comando /delgif
 @bot.message_handler(commands=['delgif'])
 def handle_delgif(message):
     processar_comando_delgif(message)
-
-@bot.message_handler(commands=['blockjardineiro'])
-def bloquear_jardineiro(message):
-    try:
-        args = message.text.split()
-        if len(args) != 2:
-            bot.send_message(message.chat.id, "Uso correto: /blockjardineiro <username>")
-            return
-
-        username = args[1].replace("@", "")  # Remover o símbolo "@" se estiver presente
-        id_bloqueador = message.from_user.id
-
-        conn, cursor = conectar_banco_dados()
-
-        cursor.execute("SELECT id_usuario FROM usuarios WHERE user = %s", (username,))
-        resultado = cursor.fetchone()
-
-        if not resultado:
-            bot.send_message(message.chat.id, f"Usuário {username} não encontrado.")
-            return
-
-        id_bloqueado = resultado[0]
-
-        cursor.execute("SELECT * FROM bloqueios WHERE id_usuario = %s AND id_bloqueado = %s", (id_bloqueador, id_bloqueado))
-        if cursor.fetchone():
-            bot.send_message(message.chat.id, "Usuário já está bloqueado.")
-            return
-
-        cursor.execute("INSERT INTO bloqueios (id_usuario, id_bloqueado) VALUES (%s, %s)", (id_bloqueador, id_bloqueado))
-        conn.commit()
-
-        bot.send_message(message.chat.id, f"Usuário {username} bloqueado com sucesso.")
-
-    except mysql.connector.Error as err:
-        bot.send_message(message.chat.id, f"Erro ao bloquear jardineiro: {err}")
-        
             
 @bot.message_handler(commands=['raspadinha'])
 def handle_sorte(message):
     comando_sorte(message)
-    
-@bot.message_handler(commands=['addjardineiro'])
-def adicionar_jardineiro(message):
-    try:
-        args = message.text.split()
-        if len(args) != 2:
-            bot.send_message(message.chat.id, "Uso correto: /addjardineiro <username>")
-            return
 
-        username = args[1].replace("@", "")  # Remover o símbolo "@" se estiver presente
-        id_solicitante = message.from_user.id
+from evento import casar_command, confirmar_casamento, divorciar_command
 
-        conn, cursor = conectar_banco_dados()
-
-        cursor.execute("SELECT id_usuario FROM usuarios WHERE user = %s", (username,))
-        resultado = cursor.fetchone()
-
-        if not resultado:
-            bot.send_message(message.chat.id, f"Usuário {username} não encontrado.")
-            return
-
-        id_amigo = resultado[0]
-
-        cursor.execute("SELECT * FROM amizades WHERE id_solicitante = %s AND id_amigo = %s", (id_solicitante, id_amigo))
-        if cursor.fetchone():
-            bot.send_message(message.chat.id, "Solicitação de amizade já enviada.")
-            return
-
-        cursor.execute("INSERT INTO amizades (id_solicitante, id_amigo, status) VALUES (%s, %s, 'pendente')", (id_solicitante, id_amigo))
-        conn.commit()
-
-        markup = InlineKeyboardMarkup()
-        markup.add(InlineKeyboardButton("Aceitar", callback_data=f"aceitar_amizade_{id_solicitante}"),
-                   InlineKeyboardButton("Recusar", callback_data=f"recusar_amizade_{id_solicitante}"))
-
-        bot.send_message(id_amigo, f"Você recebeu uma solicitação de amizade de {message.from_user.first_name}.", reply_markup=markup)
-
-    except mysql.connector.Error as err:
-        bot.send_message(message.chat.id, f"Erro ao adicionar jardineiro: {err}")
-
-    
-@bot.callback_query_handler(func=lambda call: call.data.startswith('aceitar_amizade_') or call.data.startswith('recusar_amizade_'))
-def resposta_solicitacao_amizade(call):
-    try:
-        conn, cursor = conectar_banco_dados()
-        data_parts = call.data.split('_')
-        acao = data_parts[0] + '_' + data_parts[1]
-        id_solicitante = int(data_parts[2])
-        id_amigo = call.from_user.id
-
-        if acao == 'aceitar_amizade':
-            cursor.execute("UPDATE amizades SET status = 'aceito' WHERE id_solicitante = %s AND id_amigo = %s", (id_solicitante, id_amigo))
-            conn.commit()
-            bot.send_message(id_solicitante, f"{call.from_user.first_name} aceitou sua solicitação de amizade.")
-            bot.send_message(call.message.chat.id, "Você aceitou a solicitação de amizade.")
-        elif acao == 'recusar_amizade':
-            cursor.execute("DELETE FROM amizades WHERE id_solicitante = %s AND id_amigo = %s", (id_solicitante, id_amigo))
-            conn.commit()
-            bot.send_message(id_solicitante, f"{call.from_user.first_name} recusou sua solicitação de amizade.")
-            bot.send_message(call.message.chat.id, "Você recusou a solicitação de amizade.")
-    except mysql.connector.Error as err:
-        bot.send_message(call.message.chat.id, f"Erro ao processar solicitação de amizade: {err}")
-    finally:
-        fechar_conexao(cursor, conn)
-# Comando /casar
+# Registro do comando /casar
 @bot.message_handler(commands=['casar'])
-def casar_command(message):
-    try:
-        user_id = message.from_user.id
-        command_parts = message.text.split()
-        if len(command_parts) == 2:
-            id_personagem = command_parts[1]
-        else:
-            bot.send_message(message.chat.id, "Uso: /casar <id_personagem>")
-            print("Debug: Uso incorreto do comando /casar")
-            return
+def handle_casar_command(message):
+    casar_command(message)
 
-        conn, cursor = conectar_banco_dados()
-
-        # Verifica se o usuário já está casado
-        cursor.execute("SELECT COUNT(*) FROM controle_de_casamento WHERE usuario = %s AND casado = 'sim'", (user_id,))
-        ja_casado = cursor.fetchone()[0] > 0
-
-        if ja_casado:
-            bot.send_message(message.chat.id, "Não desrespeite seu parceiro! Você já está casado! 😡", parse_mode="HTML")
-            print("Debug: Usuário já está casado")
-            return
-
-        # Verifica se a carta existe na tabela evento e é do tipo "amor"
-        cursor.execute("SELECT COUNT(*), MAX(nome), MAX(evento) FROM evento WHERE id_personagem = %s AND evento = 'amor'", (id_personagem,))
-        result = cursor.fetchone()
-        carta_existe = result[0] > 0
-        nome_personagem = result[1]
-        evento_amor = result[2] == 'amor'
-
-        if not carta_existe or not evento_amor:
-            bot.send_message(message.chat.id, "Essa carta não existe ou não pertence ao evento amor.")
-            print(f"Debug: Carta não existe ou não é do evento amor - id_personagem: {id_personagem}")
-            return
-
-        # Verifica se o usuário possui a carta no inventário
-        cursor.execute("SELECT COUNT(*) FROM inventario WHERE id_usuario = %s AND id_personagem = %s", (user_id, id_personagem))
-        possui_carta = cursor.fetchone()[0] > 0
-
-        if not possui_carta:
-            bot.send_message(message.chat.id, "Parece que o cupido não colocou essa carta na sua cesta.")
-            print(f"Debug: Usuário não possui a carta - id_usuario: {user_id}, id_personagem: {id_personagem}")
-            return
-
-        # Pergunta se o usuário deseja mesmo casar com a carta
-        markup = types.InlineKeyboardMarkup()
-        markup.add(types.InlineKeyboardButton(text="Sim", callback_data=f"confirmar_casamento_{id_personagem}"))
-        markup.add(types.InlineKeyboardButton(text="Não", callback_data="cancelar_casamento"))
-        mensagem = f"<i>Você deseja ficar com o personagem <b>{nome_personagem}</b> na saúde e na pobreza até que a morte os separe? 💍🌹</i>"
-        bot.send_message(message.chat.id, mensagem, reply_markup=markup, parse_mode="HTML")
-
-        print(f"Debug: Pergunta de casamento enviada - id_usuario: {user_id}, id_personagem: {id_personagem}")
-
-        conn.commit()
-    except mysql.connector.Error as err:
-        print(f"Erro ao processar o comando /casar: {err}")
-    finally:
-        fechar_conexao(cursor, conn)
-
-# Callback para confirmar o casamento
-@bot.callback_query_handler(func=lambda call: call.data.startswith("confirmar_casamento_"))
-def confirmar_casamento(call):
-    user_id = call.from_user.id
-    id_personagem = call.data.split("_")[2]
-
-    conn, cursor = conectar_banco_dados()
-    try:
-        # Verifica se o casamento já foi negado
-        cursor.execute("SELECT COUNT(*) FROM negacoes_de_pedido WHERE id_usuario = %s AND id_personagem = %s", (user_id, id_personagem))
-        casamento_negado = cursor.fetchone()[0] > 0
-
-        if casamento_negado:
-            bot.send_message(call.message.chat.id, "<b>Você já tentou casar com essa pessoa e foi negado.</b> Não pode se humilhar por ex! 😑", parse_mode="HTML")
-            print(f"Debug: Pedido de casamento já foi negado anteriormente - id_usuario: {user_id}, id_personagem: {id_personagem}")
-            return
-
-        # Verifica se o usuário já está casado
-        cursor.execute("SELECT COUNT(*) FROM controle_de_casamento WHERE usuario = %s AND casado = 'sim'", (user_id,))
-        ja_casado = cursor.fetchone()[0] > 0
-
-        if ja_casado:
-            bot.send_message(call.message.chat.id, "<b>Não desrespeite seu parceiro!</b> Você já está casado! 😡", parse_mode="HTML")
-            print(f"Debug: Usuário já está casado - id_usuario: {user_id}")
-            return
-
-        # Realiza o sorteio de 70% de sucesso e 30% de falha
-        sucesso = random.random() < 0.7
-
-        if sucesso:
-            # Verifica se já existe um registro para o usuário e atualiza
-            cursor.execute("SELECT COUNT(*) FROM controle_de_casamento WHERE usuario = %s", (user_id,))
-            existe_registro = cursor.fetchone()[0] > 0
-
-            if existe_registro:
-                cursor.execute("UPDATE controle_de_casamento SET casado = 'sim', conjuge = %s, divorciado = 'nao' WHERE usuario = %s", (id_personagem, user_id))
-                print(f"Debug: Registro de casamento atualizado - id_usuario: {user_id}, id_personagem: {id_personagem}")
-            else:
-                cursor.execute("INSERT INTO controle_de_casamento (usuario, casado, conjuge, divorciado) VALUES (%s, 'sim', %s, 'nao')", (user_id, id_personagem))
-                print(f"Debug: Registro de casamento inserido - id_usuario: {user_id}, id_personagem: {id_personagem}")
-
-            bot.send_message(call.message.chat.id, f"<i>Parabéns! <b>Você se casou com o personagem {id_personagem}!</b></i> Que sejam felizes para sempre! 🥰💍", parse_mode="HTML")
-        else:
-            cursor.execute("INSERT INTO negacoes_de_pedido (id_usuario, id_personagem) VALUES (%s, %s)", (user_id, id_personagem))
-            bot.send_message(call.message.chat.id, f"<i>O personagem {id_personagem} gentilmente negou o seu pedido de casamento.</i> Parece que o amor não estava no ar dessa vez. 🥹", parse_mode="HTML")
-            print(f"Debug: Pedido de casamento negado - id_usuario: {user_id}, id_personagem: {id_personagem}")
-        conn.commit()
-    except mysql.connector.Error as err:
-        print(f"Erro ao confirmar casamento: {err}")
-    finally:
-        fechar_conexao(cursor, conn)
-
-# Comando /divorciar
+# Registro do comando /divorciar
 @bot.message_handler(commands=['divorciar'])
-def divorciar_command(message):
-    try:
-        user_id = message.from_user.id
-        conn, cursor = conectar_banco_dados()
+def handle_divorciar_command(message):
+    divorciar_command(message)
 
-        # Verifica se o usuário já se divorciou
-        cursor.execute("SELECT COUNT(*) FROM controle_de_casamento WHERE usuario = %s AND divorciado = 'sim'", (user_id,))
-        ja_divorciado = cursor.fetchone()[0] > 0
+# Callback para confirmar casamento
+@bot.callback_query_handler(func=lambda call: call.data.startswith("confirmar_casamento_"))
+def handle_confirmar_casamento(call):
+    confirmar_casamento(call)
 
-        if ja_divorciado:
-            bot.send_message(message.chat.id, "<i>Você já se divorciou anteriormente e não pode se divorciar novamente. 😔</i>", parse_mode="HTML")
-            print(f"Debug: Usuário já se divorciou anteriormente - id_usuario: {user_id}")
-            return
-
-        # Permite o divórcio
-        cursor.execute("UPDATE controle_de_casamento SET divorciado = 'sim', conjuge = NULL WHERE usuario = %s", (user_id,))
-        bot.send_message(message.chat.id, "<i>Infelizmente o amor não foi suficiente e vocês se divorciaram com sucesso.</i> Escolha melhor da próxima vez. 😥", parse_mode="HTML")
-        print(f"Debug: Divórcio realizado com sucesso - id_usuario: {user_id}")
-        conn.commit()
-    except mysql.connector.Error as err:
-        print(f"Erro ao processar o comando /divorciar: {err}")
-    finally:
-        fechar_conexao(cursor, conn)
-
+# Registro do comando /tag
 @bot.message_handler(commands=['tag'])
-def verificar_comando_tag(message):
-    try:
-        parametros = message.text.split(' ', 1)[1:] 
+def handle_tag_command(message):
+    verificar_comando_tag(message)
 
-        if not parametros:
-            conn, cursor = conectar_banco_dados()
-            id_usuario = message.from_user.id
-            cursor.execute("SELECT DISTINCT nometag FROM tags WHERE id_usuario = %s", (id_usuario,))
-            tags = cursor.fetchall()
-            if tags:
-                resposta = "🔖| Suas tags:\n\n"
-                for tag in tags:
-                    resposta += f"• {tag[0]}\n"
-                bot.reply_to(message, resposta)
-            else:
-                bot.reply_to(message, "Você não possui nenhuma tag.")
-            fechar_conexao(cursor, conn)
-            return
-
-        nometag = parametros[0] 
-        id_usuario = message.from_user.id
-        mostrar_primeira_pagina_tag(message, nometag, id_usuario)
-
-    except Exception as e:
-        print(f"Erro ao processar comando /tag: {e}")
-
+# Registro do comando /addtag
 @bot.message_handler(commands=['addtag'])
-def adicionar_tag(message):
-    try:
-        conn, cursor = conectar_banco_dados()
-        id_usuario = message.from_user.id
-        args = message.text.split(maxsplit=1)
-        
-        if len(args) == 2:
-            tag_info = args[1]
-            tag_parts = tag_info.split('|')
-            
-            if len(tag_parts) == 2:
-                ids_personagens_str = tag_parts[0].strip()
-                nometag = tag_parts[1].strip()
-                
-                if ids_personagens_str and nometag:
-                    ids_personagens = [id_personagem.strip() for id_personagem in ids_personagens_str.split(',')]
-                    
-                    for id_personagem in ids_personagens:
-                        cursor.execute(
-                            "INSERT INTO tags (id_usuario, id_personagem, nometag) VALUES (%s, %s, %s)", 
-                            (id_usuario, id_personagem, nometag)
-                        )
-                    
-                    conn.commit()
-                    bot.reply_to(message, f"Tag '{nometag}' adicionada com sucesso.")
-                else:
-                    bot.reply_to(message, "Formato incorreto. Use /addtag id1,id2,... | nometag")
-            else:
-                bot.reply_to(message, "Formato incorreto. Use /addtag id1,id2,... | nometag")
-        else:
-            bot.reply_to(message, "Formato incorreto. Use /addtag id1,id2,... | nometag")
+def handle_addtag_command(message):
+    adicionar_tag(message)
     
-    except mysql.connector.Error as err:
-        print(f"Erro de MySQL: {err}")
-        bot.reply_to(message, "Ocorreu um erro ao processar a operação no banco de dados.")
-    
-    except Exception as e:
-        print(f"Erro ao adicionar tag: {e}")
-        bot.reply_to(message, "Ocorreu um erro ao processar a operação.")
-    
-    finally:
-        fechar_conexao(cursor, conn)
-def enviar_pagina(chat_id, message_id, pagina, tipo, personagens, total_personagens, sub_nome, nome_usuario, imagem_subgrupo, id_usuario, is_first_page=False):
-    itens_por_pagina = 15  # Sempre paginar em 15 itens, independente do tipo
-    offset = (pagina - 1) * itens_por_pagina
-    ids_pagina = list(personagens.items())[offset:offset + itens_por_pagina]
-
-    if tipo == 'all':
-        mensagem = f"Peixes do subgrupo {sub_nome.capitalize()}:\n\n"
-    else:
-        mensagem = f"☀️ Peixes do subgrupo {sub_nome.capitalize()} na cesta de {nome_usuario}!\n\n"
-
-    # Adicionar a linha de páginas e quantidade para todos os tipos
-    if len(personagens) > itens_por_pagina:
-        mensagem += f"📑 | {pagina}/{(total_personagens // itens_por_pagina) + (1 if total_personagens % itens_por_pagina > 0 else 0)}\n"
-    
-    mensagem += f"🐟 | {len(personagens)}/{total_personagens}\n\n"
-
-    for id_personagem, (nome, subcategoria, emoji) in ids_pagina:  # Inclui o emoji na tupla
-        mensagem += f"{emoji} <code>{id_personagem}</code> • {nome} de {subcategoria}\n"  # Exibe o emoji
-
-    markup = types.InlineKeyboardMarkup()
-
-    # Adiciona botões de navegação apenas se houver mais de 15 itens
-    if len(personagens) > itens_por_pagina:
-        if pagina > 1:
-            markup.add(types.InlineKeyboardButton("⬅️", callback_data=f"{tipo}_pagina_{pagina-1}_{sub_nome}_{id_usuario}"))
-        if offset + itens_por_pagina < total_personagens:
-            markup.add(types.InlineKeyboardButton("➡️", callback_data=f"{tipo}_pagina_{pagina+1}_{sub_nome}_{id_usuario}"))
-
-    has_buttons = len(markup.to_dict().get('inline_keyboard', [])) > 0
-
-    if is_first_page:
-        if imagem_subgrupo:
-            bot.send_photo(chat_id, imagem_subgrupo, caption=mensagem, parse_mode="HTML", reply_markup=markup if has_buttons else None)
-        else:
-            bot.send_message(chat_id, mensagem, parse_mode="HTML", reply_markup=markup if has_buttons else None)
-    else:
-        if imagem_subgrupo:
-            bot.edit_message_media(media=types.InputMediaPhoto(imagem_subgrupo, caption=mensagem, parse_mode="HTML"), chat_id=chat_id, message_id=message_id, reply_markup=markup if has_buttons else None)
-        else:
-            bot.edit_message_text(mensagem, chat_id=chat_id, message_id=message_id, parse_mode="HTML", reply_markup=markup if has_buttons else None)
-
 @bot.message_handler(commands=['completos'])
 def handle_completos(message):
     try:
@@ -2089,632 +543,56 @@ def handle_completos(message):
     finally:
         fechar_conexao(cursor, conn)
 
-
-def mostrar_pagina_completos(message, pagina_atual, total_paginas, completos, categoria, nome_usuario, id_usuario, call=None):
-    try:
-        offset = (pagina_atual - 1) * 15
-        subcategorias_pagina = completos[offset:offset + 15]
-
-        resposta = f"🌟 Subcategorias completas de {categoria} por {nome_usuario}:\n\n"
-        for subcategoria, total_possui, total_necessario, _ in subcategorias_pagina:
-            resposta += f"✮ {subcategoria} — {total_possui}/{total_necessario}\n"
-        resposta += f"\nPágina {pagina_atual} de {total_paginas}"
-
-        markup = None
-        if total_paginas > 1:
-            markup = criar_markup_completos(pagina_atual, total_paginas, categoria, id_usuario, nome_usuario)
-
-        # Seleciona uma imagem aleatória da lista de subcategorias completas
-        imagens_validas = [img for _, _, _, img in subcategorias_pagina if img]
-        banner_imagem = random.choice(imagens_validas) if imagens_validas else None
-
-        if call:
-            if banner_imagem:
-                bot.edit_message_media(media=telebot.types.InputMediaPhoto(banner_imagem, caption=resposta, parse_mode="HTML"), chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=markup)
-            else:
-                bot.edit_message_text(resposta, chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=markup, parse_mode="HTML")
-        else:
-            if banner_imagem:
-                bot.send_photo(message.chat.id, banner_imagem, caption=resposta, reply_markup=markup, parse_mode="HTML")
-            else:
-                bot.send_message(message.chat.id, resposta, reply_markup=markup, parse_mode="HTML")
-
-    except Exception as e:
-        print(f"Erro ao mostrar página de subcategorias completas: {e}")
-    finally:
-        fechar_conexao(cursor, conn)
-
-
-def criar_markup_completos(pagina_atual, total_paginas, categoria, id_usuario, nome_usuario):
-    markup = telebot.types.InlineKeyboardMarkup()
-
-    if pagina_atual > 1:
-        markup.add(telebot.types.InlineKeyboardButton("⬅️", callback_data=f"completos_{pagina_atual - 1}_{categoria}_{id_usuario}_{nome_usuario}"))
-
-    if pagina_atual < total_paginas:
-        markup.add(telebot.types.InlineKeyboardButton("➡️", callback_data=f"completos_{pagina_atual + 1}_{categoria}_{id_usuario}_{nome_usuario}"))
-
-    return markup
-
-
-@bot.callback_query_handler(func=lambda call: call.data.startswith('completos_'))
-def callback_navegacao_completos(call):
-    try:
-        parts = call.data.split('_')
-        pagina_atual = int(parts[1])
-        categoria = parts[2]
-        id_usuario = int(parts[3])
-        nome_usuario = parts[4]  # Nome original do usuário
-
-        conn, cursor = conectar_banco_dados()
-
-        # Reexecuta a consulta para obter subcategorias completas
-        query = """
-        SELECT s.subcategoria COLLATE utf8mb4_unicode_ci AS subcategoria, 
-               SUM(CASE WHEN inv.id_personagem IS NOT NULL THEN 1 ELSE 0 END) AS total_possui, 
-               COUNT(p.id_personagem) AS total_necessario,
-               MAX(s.Imagem) AS Imagem
-        FROM subcategorias s
-        JOIN personagens p ON s.subcategoria COLLATE utf8mb4_unicode_ci = p.subcategoria COLLATE utf8mb4_unicode_ci
-        LEFT JOIN inventario inv ON p.id_personagem = inv.id_personagem AND inv.id_usuario = %s
-        WHERE p.categoria = %s COLLATE utf8mb4_unicode_ci
-        GROUP BY s.subcategoria
-        HAVING total_possui = total_necessario
-        ORDER BY s.subcategoria ASC
-        """
-        cursor.execute(query, (id_usuario, categoria))
-        completos = cursor.fetchall()
-
-        total_paginas = (len(completos) + 14) // 15  # Calcula total de páginas
-        mostrar_pagina_completos(call.message, pagina_atual, total_paginas, completos, categoria, nome_usuario, id_usuario, call=call)
-
-    except Exception as e:
-        print(f"Erro ao processar callback de navegação: {e}")
-        bot.answer_callback_query(call.id, "Erro ao processar a navegação.")
-    finally:
-        fechar_conexao(cursor, conn)
-
-
-        
-@bot.message_handler(commands=['jardim'])
-def ver_jardim(message):
-    try:
-        id_usuario = message.from_user.id
-        conn, cursor = conectar_banco_dados()
-        
-        cursor.execute("""
-            SELECT u.user 
-            FROM amizades a
-            JOIN usuarios u ON a.id_amigo = u.id_usuario
-            WHERE a.id_solicitante = %s AND a.status = 'aceito'
-        """, (id_usuario,))
-        
-        amigos = cursor.fetchall()
-
-        if not amigos:
-            bot.send_message(message.chat.id, "Você ainda não tem jardineiros amigos.")
-            return
-
-        resposta = "Lista de jardineiros amigos:\n\n"
-        for amigo in amigos:
-            resposta += f"❀ {amigo[0]}\n"
-
-        bot.send_message(message.chat.id, resposta)
-    except mysql.connector.Error as err:
-        bot.send_message(message.chat.id, f"Erro ao buscar lista de amigos: {err}")
-    finally:
-        fechar_conexao(cursor, conn)
-       
+# Registro do comando /completos
+@bot.message_handler(commands=['completos'])
+def handle_completos_command(message):
+    handle_completos(message)
+          
+# Callback para confirmar a doação
 @bot.callback_query_handler(func=lambda call: call.data.startswith('cdoacao_'))
-def confirmar_doacao(call):
-    try:
-        data = call.data.split('_')
-        if len(data) != 5:
-            bot.send_message(call.message.chat.id, "Dados de doação inválidos.")
-            return
+def handle_confirmar_doacao(call):
+    confirmar_doacao(call)
 
-        eu = int(data[1])
-        minhacarta = int(data[2])
-        destinatario_id = int(data[3])
-        quantidade = int(data[4])
-        message = call.message
-
-        conn, cursor = conectar_banco_dados()
-
-        # Verificar quantidade de cartas no inventário do doador
-        cursor.execute("SELECT quantidade FROM inventario WHERE id_usuario = %s AND id_personagem = %s", (eu, minhacarta))
-        quantidade_doador_anterior = cursor.fetchone()
-        if not quantidade_doador_anterior:
-            bot.send_message(call.message.chat.id, "Você não possui essa carta no inventário.")
-            return
-        quantidade_doador_anterior = quantidade_doador_anterior[0]
-
-        # Verificar quantidade de cenouras do doador
-        cursor.execute("SELECT cenouras FROM usuarios WHERE id_usuario = %s", (eu,))
-        cenouras_doador = cursor.fetchone()[0]
-
-        if quantidade_doador_anterior >= quantidade and cenouras_doador >= quantidade:
-            cursor.execute("SELECT quantidade FROM inventario WHERE id_usuario = %s AND id_personagem = %s", (destinatario_id, minhacarta))
-            quantidade_destinatario_anterior = cursor.fetchone()
-            if quantidade_destinatario_anterior:
-                quantidade_destinatario_anterior = quantidade_destinatario_anterior[0]
-            else:
-                quantidade_destinatario_anterior = 0
-
-            # Atualizar inventário do doador
-            cursor.execute("UPDATE inventario SET quantidade = quantidade - %s WHERE id_usuario = %s AND id_personagem = %s", (quantidade, eu, minhacarta))
-
-            # Atualizar inventário do destinatário
-            cursor.execute("SELECT quantidade FROM inventario WHERE id_usuario = %s AND id_personagem = %s", (destinatario_id, minhacarta))
-            quantidade_destinatario = cursor.fetchone()
-
-            if quantidade_destinatario:
-                cursor.execute("UPDATE inventario SET quantidade = quantidade + %s WHERE id_usuario = %s AND id_personagem = %s", (quantidade, destinatario_id, minhacarta))
-            else:
-                cursor.execute("INSERT INTO inventario (id_usuario, id_personagem, quantidade) VALUES (%s, %s, %s)", (destinatario_id, minhacarta, quantidade))
-
-            # Atualizar cenouras do doador
-            cursor.execute("UPDATE usuarios SET cenouras = cenouras - %s WHERE id_usuario = %s", (quantidade, eu))
-
-            # Obter quantidades atualizadas para confirmação
-            cursor.execute("SELECT quantidade FROM inventario WHERE id_usuario = %s AND id_personagem = %s", (eu, minhacarta))
-            quantidade_doador_atual = cursor.fetchone()[0]
-
-            cursor.execute("SELECT quantidade FROM inventario WHERE id_usuario = %s AND id_personagem = %s", (destinatario_id, minhacarta))
-            quantidade_destinatario_atual = cursor.fetchone()[0]
-
-            conn.commit()
-
-            # Registrar no histórico de doações
-            cursor.execute("""
-                INSERT INTO historico_doacoes (id_usuario_doacao, id_usuario_recebedor, id_personagem_carta, data_hora, quantidade, 
-                                               quantidade_anterior_doacao, quantidade_atual_doacao, 
-                                               quantidade_anterior_recebedor, quantidade_atual_recebedor)
-                VALUES (%s, %s, %s, NOW(), %s, %s, %s, %s, %s)
-            """, (eu, destinatario_id, minhacarta, quantidade, 
-                  quantidade_doador_anterior, quantidade_doador_atual, 
-                  quantidade_destinatario_anterior, quantidade_destinatario_atual))
-            conn.commit()
-
-            # Obter informações dos usuários para a mensagem de confirmação
-            user_info = bot.get_chat(destinatario_id)
-            seunome = user_info.first_name
-            user_info1 = bot.get_chat(eu)
-            meunome = user_info1.first_name
-            doacao_str = f"uma unidade da carta {minhacarta}" if quantidade == 1 else f"{quantidade} unidades da carta {minhacarta}"
-            texto_confirmacao = f"Doação de {doacao_str} realizada com sucesso!\n\n"
-            texto_confirmacao += f"🧺 De {meunome}: {quantidade_doador_anterior}↝{quantidade_doador_atual}\n\n"
-            texto_confirmacao += f"🧺 Para {seunome}: {quantidade_destinatario_anterior}↝{quantidade_destinatario_atual}\n"
-            bot.edit_message_text(texto_confirmacao, chat_id=call.message.chat.id, message_id=call.message.message_id)
-        else:
-            if quantidade_doador_anterior < quantidade:
-                bot.edit_message_text("Você não possui cartas suficientes para fazer a doação.", chat_id=call.message.chat.id, message_id=call.message.message_id)
-            elif cenouras_doador < quantidade:
-                bot.edit_message_text("Você não possui cenouras suficientes para fazer a doação.", chat_id=call.message.chat.id, message_id=call.message.message_id)
-    except Exception as e:
-        print(f"Erro ao confirmar a doação: {e}")
-        newrelic.agent.record_exception()    
-        bot.send_message(call.message.chat.id, "Erro ao confirmar a doação. Tente novamente!")
-    finally:
-        fechar_conexao(cursor, conn)
-
-
-
+# Callback para cancelar a doação
 @bot.callback_query_handler(func=lambda call: call.data.startswith('ccancelar_'))
-def cancelar_doacao(call):
-    try:
-        bot.edit_message_text("Doação cancelada.", chat_id=call.message.chat.id, message_id=call.message.message_id)
-    except Exception as e:
-        print(f"Erro ao cancelar a doação: {e}")
-        newrelic.agent.record_exception()    
-        bot.send_message(call.message.chat.id, "Erro ao cancelar a doação.")
+def handle_cancelar_doacao(call):
+    cancelar_doacao(call)
+
         
+# Callback para exibir pacotes de ações
 @bot.callback_query_handler(func=lambda call: call.data == 'acoes_vendinha')
-def exibir_acoes_vendinha(call):
-    try:
-        mensagem = "📦 Pacotes de Ações disponíveis:\n\n"
-        mensagem += "🥕 Pacote Básico: 10 cartas\n"
-        mensagem += "💸 Pacote Médio: 25 cartas\n"
-        mensagem += "💳 Pacote Premium: 80 cartas\n\n"
-        
-        keyboard = telebot.types.InlineKeyboardMarkup()
-        keyboard.row(
-            telebot.types.InlineKeyboardButton(text="🥕", callback_data='comprar_acao_vendinha_basico'),
-            telebot.types.InlineKeyboardButton(text="💸", callback_data='comprar_acao_vendinha_prata'),
-            telebot.types.InlineKeyboardButton(text="💳", callback_data='comprar_acao_vendinha_ouro')
-        )
-        
-        bot.edit_message_caption(caption=mensagem, chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=keyboard)
-    except Exception as e:
-        print(f"Erro ao exibir pacotes de ações: {e}")
-        newrelic.agent.record_exception()    
-        bot.send_message(call.message.chat.id, "Erro ao exibir pacotes de ações.")
+def handle_acoes_vendinha(call):
+    exibir_acoes_vendinha(call)
 
+# Callback para confirmar compra de pacotes de ações
 @bot.callback_query_handler(func=lambda call: call.data.startswith('comprar_acao_vendinha_'))
-def confirmar_compra_vendinha(call):
-    pacote = call.data.split('_')[3]
-    pacotes = {
-        'basico': ('Pacote Básico', 50),
-        'prata': ('Pacote Médio', 100),
-        'ouro': ('Pacote Premium', 200)
-    }
+def handle_confirmar_compra_vendinha(call):
+    confirmar_compra_vendinha(call)
+    
+from banco import processar_compra_vendinha_categoria
 
-    if pacote in pacotes:
-        nome_pacote, preco = pacotes[pacote]
-        mensagem = f"Selecione a categoria para o {nome_pacote}:\n\n"
-        mensagem += f"★ Geral -{preco} cenouras\n"
-        mensagem += f"★ Por categoria - {preco * 2} cenouras\n"
-
-        # Criação do teclado com categorias
-        keyboard = telebot.types.InlineKeyboardMarkup()
-        primeira_coluna = [
-            telebot.types.InlineKeyboardButton(text="☁ Música", callback_data=f'confirmar_categoria_{pacote}_musica'),
-            telebot.types.InlineKeyboardButton(text="🌷 Anime", callback_data=f'confirmar_categoria_{pacote}_animanga'),
-            telebot.types.InlineKeyboardButton(text="🧶 Jogos", callback_data=f'confirmar_categoria_{pacote}_jogos')
-        ]
-        segunda_coluna = [
-            telebot.types.InlineKeyboardButton(text="🍰 Filmes", callback_data=f'confirmar_categoria_{pacote}_filmes'),
-            telebot.types.InlineKeyboardButton(text="🍄 Séries", callback_data=f'confirmar_categoria_{pacote}_series'),
-            telebot.types.InlineKeyboardButton(text="🍂 Misc", callback_data=f'confirmar_categoria_{pacote}_miscelanea')
-        ]
-        geral = telebot.types.InlineKeyboardButton(text="🫧 Geral", callback_data=f'confirmar_categoria_{pacote}_geral')
-        cancel =  telebot.types.InlineKeyboardButton(text="Cancelar Compra", callback_data=f'cancelar_compra_vendinha')
-        keyboard.add(*primeira_coluna)
-        keyboard.add(*segunda_coluna)
-        keyboard.row(geral)
-        keyboard.row(cancel)
-        bot.edit_message_caption(caption=mensagem, chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=keyboard)
-
-
+# Callback para processar a compra de pacotes de cartas por categoria
 @bot.callback_query_handler(func=lambda call: call.data.startswith('confirmar_categoria_'))
-def processar_compra_vendinha_categoria(call):
-    try:
-        partes = call.data.split('_')
-        pacote = partes[2]
-        categoria = partes[3]
-
-        print(f"DEBUG: Pacote: {pacote}, Categoria: {categoria}")
-
-        pacotes = {
-            'basico': (10, 50),  # 10 cartas, 50 cenouras
-            'prata': (25, 100),  # 25 cartas, 100 cenouras
-            'ouro': (80, 200)    # 80 cartas, 200 cenouras
-        }
-
-        if pacote in pacotes:
-            quantidade, preco = pacotes[pacote]
-            id_usuario = call.from_user.id
-            print(f"DEBUG: Quantidade: {quantidade}, Preço: {preco}, ID Usuário: {id_usuario}")
-
-            # Ajuste de preço para categorias específicas
-            if categoria != 'geral':
-                preco *= 2
-            print(f"DEBUG: Preço atualizado (se aplicável): {preco}")
-
-            conn, cursor = conectar_banco_dados()
-            cursor.execute("SELECT cenouras FROM usuarios WHERE id_usuario = %s", (id_usuario,))
-            cenouras = cursor.fetchone()[0]
-            print(f"DEBUG: Cenouras do usuário: {cenouras}")
-
-            if cenouras >= preco:
-                # Obter cartas com base na categoria
-                if categoria == 'geral':
-                    cartas = obter_cartas_do_inventario(quantidade)
-                else:
-                    cartas = obter_cartas_categoria_do_inventario(quantidade, categoria)
-
-                print(f"DEBUG: Cartas retornadas: {cartas}")
-
-                if isinstance(cartas, list):
-                    atualizar_inventario(id_usuario, cartas)
-                    cursor.execute("UPDATE usuarios SET cenouras = cenouras - %s WHERE id_usuario = %s", (preco, id_usuario))
-                    conn.commit()
-
-                    globals.cartas_compradas_dict[id_usuario] = cartas
-
-                    bot.edit_message_caption(caption=f"Compra realizada com sucesso! Você comprou {quantidade} cartas de {categoria.capitalize()}.", chat_id=call.message.chat.id, message_id=call.message.message_id)
-                    mostrar_cartas_compradas(call.message.chat.id, cartas, id_usuario, 1, call.message.message_id)
-                else:
-                    bot.edit_message_caption(caption="Erro ao buscar cartas. Tente novamente mais tarde.", chat_id=call.message.chat.id, message_id=call.message.message_id)
-            else:
-                bot.edit_message_caption(caption="Cenouras insuficientes para realizar a compra.", chat_id=call.message.chat.id, message_id=call.message.message_id)
-        else:
-            bot.edit_message_caption(caption="Pacote inválido.", chat_id=call.message.chat.id, message_id=call.message.message_id)
-
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
-    finally:
-        fechar_conexao(cursor, conn)
-
-def obter_cartas_do_inventario(quantidade):
-    conn, cursor = conectar_banco_dados()
-    
-    # Obter cartas do banco de inventário
-    query_inventario = """
-    SELECT bi.id_personagem, p.nome, p.subcategoria, p.imagem, p.emoji
-    FROM banco_inventario bi
-    JOIN personagens p ON bi.id_personagem = p.id_personagem
-    WHERE bi.quantidade > 0
-    ORDER BY RAND() LIMIT %s
-    """
-    cursor.execute(query_inventario, (quantidade,))
-    cartas_inventario = cursor.fetchall()
-
-    # Obter cartas de eventos
-    query_evento = """
-    SELECT e.id_personagem, e.nome, e.subcategoria, e.imagem, e.emoji
-    FROM evento e
-    ORDER BY RAND() LIMIT %s
-    """
-    # Selecionar uma fração de cartas do evento
-    quantidade_evento = max(1, quantidade // 10)  # Por exemplo, 25% das cartas podem ser de eventos
-    cursor.execute(query_evento, (quantidade_evento,))
-    cartas_evento = cursor.fetchall()
-
-    # Combinar cartas do inventário e do evento
-    todas_cartas = cartas_inventario + cartas_evento
-    random.shuffle(todas_cartas)  # Embaralha a lista de cartas
-
-    fechar_conexao(cursor, conn)
-    return todas_cartas
-
-
-def obter_cartas_categoria_do_inventario(quantidade, categoria):
-    conn, cursor = conectar_banco_dados()
-    
-    # Obter cartas da categoria especificada no banco de inventário
-    query_inventario = """
-    SELECT bi.id_personagem, p.nome, p.subcategoria, p.imagem, p.emoji
-    FROM banco_inventario bi
-    JOIN personagens p ON bi.id_personagem = p.id_personagem
-    WHERE bi.quantidade > 0 AND p.categoria = %s
-    ORDER BY RAND() LIMIT %s
-    """
-    cursor.execute(query_inventario, (categoria, quantidade))
-    cartas_inventario = cursor.fetchall()
-
-    # Obter cartas de eventos
-    query_evento = """
-    SELECT e.id_personagem, e.nome, e.subcategoria, e.imagem, e.emoji
-    FROM evento e
-    ORDER BY RAND() LIMIT %s
-    """
-    # Selecionar uma fração de cartas do evento
-    quantidade_evento = max(1, quantidade // 10)  # Por exemplo, 25% das cartas podem ser de eventos
-    cursor.execute(query_evento, (quantidade_evento,))
-    cartas_evento = cursor.fetchall()
-
-    # Combinar cartas do inventário e do evento
-    todas_cartas = cartas_inventario + cartas_evento
-    random.shuffle(todas_cartas)  # Embaralha a lista de cartas
-
-    fechar_conexao(cursor, conn)
-    return todas_cartas
-
+def handle_processar_compra_vendinha_categoria(call):
+    processar_compra_vendinha_categoria(call)
 
 @bot.callback_query_handler(func=lambda call: call.data == 'cancelar_compra_vendinha')
 def cancelar_compra_vendinha(call):
     bot.edit_message_caption(caption="Poxa, Até logo!", chat_id=call.message.chat.id, message_id=call.message.message_id)
-    
-    
+     
+# Callback para processar a compra de pacotes de cartas
 @bot.callback_query_handler(func=lambda call: call.data.startswith('confirmar_compra_vendinha_'))
-def processar_compra_vendinha(call):
-    pacote = call.data.split('_')[3]
-    pacotes = {
-        'basico': (10, 50),
-        'prata': (25, 100),
-        'ouro': (80, 200)
-    }
+def handle_processar_compra_vendinha(call):
+    processar_compra_vendinha(call)
 
-    if pacote in pacotes:
-        quantidade, preco = pacotes[pacote]
-        id_usuario = call.from_user.id
-
-        conn, cursor = conectar_banco_dados()
-        cursor.execute("SELECT cenouras FROM usuarios WHERE id_usuario = %s", (id_usuario,))
-        cenouras = cursor.fetchone()[0]
-
-        if cenouras >= preco:
-            cartas = obter_cartas_do_banco(quantidade)
-            atualizar_inventario(id_usuario, cartas)
-            cursor.execute("UPDATE usuarios SET cenouras = cenouras - %s WHERE id_usuario = %s", (preco, id_usuario))
-            conn.commit()
-
-            globals.cartas_compradas_dict[id_usuario] = cartas
-
-            bot.edit_message_caption(caption="Compra realizada com sucesso! Verifique seu inventário.", chat_id=call.message.chat.id, message_id=call.message.message_id)
-            mostrar_cartas_compradas(call.message.chat.id, cartas, id_usuario, 1, call.message.message_id)
-        else:
-            bot.edit_message_caption(caption="Cenouras insuficientes para realizar a compra.", chat_id=call.message.chat.id, message_id=call.message.message_id)
-    else:
-        bot.edit_message_caption(caption="Pacote inválido.", chat_id=call.message.chat.id, message_id=call.message.message_id)
-
-
-def registrar_grupo(chat_id, chat_title):
-    conn, cursor = conectar_banco_dados()
-    timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    cursor.execute('''
-    INSERT OR IGNORE INTO grupos_registrados (chat_id, title, timestamp)
-    VALUES (?, ?, ?)
-    ''', (chat_id, chat_title, timestamp))
-    conn.commit()
-    conn.close()
-
-def mostrar_cartas_compradas(chat_id, cartas, id_usuario, pagina_atual=1, message_id=None):
-    try:
-        # Debug: Verificar a lista de cartas recebidas
-        print(f"DEBUG: Lista de cartas recebidas: {cartas}")
-
-        # Verificar se todas as cartas têm uma estrutura correta
-        cartas_ordenadas = sorted(cartas, key=lambda x: int(x[0]) if isinstance(x[0], str) and x[0].isdigit() else x[0])
-        
-        total_cartas = len(cartas_ordenadas)
-        total_paginas = (total_cartas // 20) + (1 if total_cartas % 20 > 0 else 0)
-
-        print(f"DEBUG: Total de cartas compradas: {total_cartas}, Total de páginas: {total_paginas}, Página atual: {pagina_atual}")
-
-        offset = (pagina_atual - 1) * 20
-        cartas_pagina = cartas_ordenadas[offset:offset + 20]
-
-        mensagem = "📦 Cartas recebidas:\n\n"
-        for carta in cartas_pagina:
-            print(f"DEBUG: Carta processada: {carta}")  # Verificar a estrutura da carta
-            id_personagem, nome, subcategoria, url_imagem, emoji = carta
-
-            # Obter quantidade atual no inventário
-            quantidade_atual = obter_quantidade_atual(id_usuario, id_personagem)
-            if quantidade_atual is not None:
-                mensagem += f"{emoji}| {id_personagem} — {nome} de {subcategoria} - seu inventário: {quantidade_atual} (+1)\n"
-            else:
-                mensagem += f"{emoji}| {id_personagem} — {nome} de {subcategoria} - seu inventário: 1 (+1)\n"
-
-        mensagem += f"\nPágina {pagina_atual}/{total_paginas}"
-
-        markup = botoes_paginacao_cartas_compradas(pagina_atual, total_paginas)
-
-        if message_id:
-            try:
-                bot.edit_message_text(mensagem, chat_id=chat_id, message_id=message_id, reply_markup=markup)
-            except Exception as e:
-                print(f"DEBUG: Erro ao editar a mensagem: {e}")
-                bot.send_message(chat_id, mensagem, reply_markup=markup)
-        else:
-            bot.send_message(chat_id, mensagem, reply_markup=markup)
-
-    except Exception as e:
-        print(f"DEBUG: Erro em mostrar_cartas_compradas: {e}")
-
-
-
+# Comando para pescar
 @bot.message_handler(commands=['pesca', 'pescar'])
-def pescar(message):
-    try:
-        print("Comando pescar acionado")
-        nome = message.from_user.first_name
-        user_id = message.from_user.id
-
-        verificar_id_na_tabela(user_id, "ban", "iduser")
-        if message.chat.type != 'private':
-            bot.send_message(message.chat.id, "Este comando só pode ser usado em uma conversa privada.")
-            return
-
-        qtd_iscas = verificar_giros(user_id)
-        if qtd_iscas == 0:
-            bot.send_message(message.chat.id, "Você está sem iscas.", reply_to_message_id=message.message_id)
-        else:
-            if not verificar_tempo_passado(message.chat.id):
-                return
-            else:
-                ultima_interacao[message.chat.id] = datetime.now()
-
-            if verificar_id_na_tabelabeta(user_id):
-                diminuir_giros(user_id, 1)
-                keyboard = telebot.types.InlineKeyboardMarkup()
-
-                primeira_coluna = [
-                    telebot.types.InlineKeyboardButton(text="☁  Música", callback_data='pescar_musica'),
-                    telebot.types.InlineKeyboardButton(text="🌷 Anime", callback_data='pescar_animanga'),
-                    telebot.types.InlineKeyboardButton(text="🧶  Jogos", callback_data='pescar_jogos')
-                ]
-                segunda_coluna = [
-                    telebot.types.InlineKeyboardButton(text="🍰  Filmes", callback_data='pescar_filmes'),
-                    telebot.types.InlineKeyboardButton(text="🍄  Séries", callback_data='pescar_series'),
-                    telebot.types.InlineKeyboardButton(text="🍂  Misc", callback_data='pescar_miscelanea')
-                ]
-
-                keyboard.add(*primeira_coluna)
-                keyboard.add(*segunda_coluna)
-                keyboard.row(telebot.types.InlineKeyboardButton(text="🫧  Geral", callback_data='pescar_geral'))
-
-                photo = "https://telegra.ph/file/b3e6d2a41b68c2ceec8e5.jpg"
-                bot.send_photo(message.chat.id, photo=photo, caption=f'<i>Olá! {nome}, \nVocê tem disponível: {qtd_iscas} iscas. \nBoa pesca!\n\nSelecione uma categoria:</i>', reply_markup=keyboard, reply_to_message_id=message.message_id, parse_mode="HTML")
-            else:
-                bot.send_message(message.chat.id, "Ei visitante, você não foi convidado! 😡", reply_to_message_id=message.message_id)
-
-    except ValueError as e:
-        print(f"Erro: {e}")
-        newrelic.agent.record_exception()    
-        bot.send_message(message.chat.id, "Você foi banido permanentemente do garden. Entre em contato com o suporte caso haja dúvidas.", reply_to_message_id=message.message_id)
-
+def handle_pescar(message):
+    pescar(message)
+    
 @bot.message_handler(commands=['spicnic'])
-def spicnic_command(message):
-    try:
-        chat_id = message.chat.id
-        eu = message.from_user.id
-        meunome = message.from_user.first_name
-        bot_id = 7088149058
-        
-        # Verificar se o comando está sendo usado em resposta a uma mensagem
-        if not message.reply_to_message:
-            bot.send_message(chat_id, "Responda a uma mensagem contendo /gid para iniciar a troca simplificada.")
-            return
-        
-        voce = message.reply_to_message.from_user.id
-        seunome = message.reply_to_message.from_user.first_name
-        
-        # Extrair o GID da mensagem de resposta
-        mensagem_resposta = message.reply_to_message.text
-        if not mensagem_resposta.startswith("/gid"):
-            bot.send_message(chat_id, "Responda a uma mensagem com o comando /gid para realizar a troca.")
-            return
-
-        suacarta = mensagem_resposta.split()[1]
-        
-        # Verificar se o usuário incluiu a carta que deseja oferecer
-        if len(message.text.split()) < 2:
-            bot.send_message(chat_id, "Use o comando /spicnic seguido do ID da sua carta. Exemplo: /spicnic 19200.")
-            return
-
-        minhacarta = message.text.split()[1]
-
-        # Verificar se os usuários possuem as cartas indicadas
-        if verifica_inventario_troca(eu, minhacarta) == 0:
-            bot.send_message(chat_id, f"🌦️ ་  {meunome}, você não possui o peixe {minhacarta} para trocar.", reply_to_message_id=message.message_id)
-            return
-
-        if verifica_inventario_troca(voce, suacarta) == 0:
-            bot.send_message(chat_id, f"🌦️ ་  Parece que {seunome} não possui o peixe {suacarta} para trocar.", reply_to_message_id=message.message_id)
-            return
-
-        # Obter informações das cartas
-        info_minhacarta = obter_informacoes_carta(minhacarta)
-        info_suacarta = obter_informacoes_carta(suacarta)
-        emojiminhacarta, idminhacarta, nomeminhacarta, subcategoriaminhacarta = info_minhacarta
-        emojisuacarta, idsuacarta, nomesuacarta, subcategoriasuacarta = info_suacarta
-        meu_username = bot.get_chat_member(chat_id, eu).user.username
-        seu_username = bot.get_chat_member(chat_id, voce).user.username
-
-        seu_nome_formatado = f"@{seu_username}" if seu_username else seunome
-        texto = (
-            f"🥪 | Hora do picnic!\n\n"
-            f"{meunome} oferece de lanche:\n"
-            f" {idminhacarta} {emojiminhacarta}  —  {nomeminhacarta} de {subcategoriaminhacarta}\n\n"
-            f"E {seunome} oferece de lanche:\n"
-            f" {idsuacarta} {emojisuacarta}  —  {nomesuacarta} de {subcategoriasuacarta}\n\n"
-            f"Podemos começar a comer, {seu_nome_formatado}?"
-        )
-
-        # Criar os botões de aceitar ou recusar a troca
-        keyboard = types.InlineKeyboardMarkup()
-        primeiro = [
-            types.InlineKeyboardButton(text="✅", callback_data=f'troca_sim_{eu}_{voce}_{minhacarta}_{suacarta}_{chat_id}'),
-            types.InlineKeyboardButton(text="❌", callback_data=f'troca_nao_{eu}_{voce}_{minhacarta}_{suacarta}_{chat_id}'),
-        ]
-        keyboard.add(*primeiro)
-
-        # Enviar a mensagem de troca com imagem
-        image_url = "https://telegra.ph/file/8672c8f91c8e77bcdad45.jpg"
-        bot.send_photo(chat_id, image_url, caption=texto, reply_markup=keyboard, reply_to_message_id=message.reply_to_message.message_id)
-
-    except Exception as e:
-        traceback.print_exc()
-        erro = traceback.format_exc()
-        mensagem = f"Erro durante a troca. dados: {voce},{eu},{minhacarta},{suacarta}\n{erro}"
-        bot.send_message(grupodeerro, mensagem, parse_mode="HTML")
-
-
-
+def handle_spicnic(message):
+    spicnic_command(message)
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("change_page_"))
 def handle_page_change(call):
@@ -2746,413 +624,67 @@ def handle_page_change(call):
         bot.answer_callback_query(call.id, "Índice de página inválido.")
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith('submenu_'))
-def callback_submenu(call):
-    _, subcategoria, submenu_selecionado = call.data.split('_')
-    conn, cursor = conectar_banco_dados()
-    try:
-        cartas_disponiveis = obter_cartas_por_subcategoria_e_submenu(subcategoria, submenu_selecionado, cursor)
-        if cartas_disponiveis:
-            carta_aleatoria = random.choice(cartas_disponiveis)
-            if carta_aleatoria:
-                id_personagem_carta, emoji, nome, imagem = carta_aleatoria
-                send_card_message(call.message, emoji, id_personagem_carta, nome, subcategoria, imagem)
-                qnt_carta(call.message.chat.id)
-            else:
-                bot.send_message(call.message.chat.id, "Nenhuma carta disponível para esta combinação de subcategoria e submenu.")
-        else:
-            bot.send_message(call.message.chat.id, "Nenhuma carta disponível para esta combinação de subcategoria e submenu.")
-    finally:
-        cursor.close()
-        conn.close()       
+def handle_submenu(call):
+    callback_submenu(call)
 
 @bot.callback_query_handler(func=lambda call: call.data == "add_note")
-def handle_add_note_callback(call):
-    markup = telebot.types.InlineKeyboardMarkup()
-    bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text="Por favor, envie sua anotação para o diário.", reply_markup=markup)
-    bot.register_next_step_handler(call.message, receive_note)
+def add_note_callback(call):
+    handle_add_note_callback(call)
 
 @bot.callback_query_handler(func=lambda call: call.data == "cancel_note")
-def handle_cancel_note_callback(call):
-    bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text="Tudo bem, até amanhã!")
-@bot.callback_query_handler(func=lambda call: call.data.startswith('help_'))
-def callback_help(call):
-    if call.data == 'help_cartas':
-        help_text = (
-            "<b>Aqui estão os comandos relacionados a Cartas:</b>\n\n"
-            "<b>/armazem, /armazém, /amz </b> - Olhe os peixes (cartas) que você possui.\n"
-            "<b>" 
-        )
-    elif call.data == 'help_trocas':
-        help_text = "Aqui estão os comandos relacionados a Trocas:\n\n"
-
-        help_text += "/troca - Comando de troca (detalhes do comando de troca).\n"
-    elif call.data == 'help_eventos':
-        help_text = "Aqui estão os comandos relacionados a Eventos:\n\n"
-
-        help_text += "<b>/evento (f ou s para faltantes ou possuidos) </b>- Comando ver os peixes de eventos. ex: /evento s amor. \n"
-
-    elif call.data == 'help_bugs':
-        help_text = "Aqui estão os comandos relacionados a Usuários:\n\n"
-
-        help_text += ("/setuser - Comando para definir seu usuário. ex: /setuser maria\n"
-                      "/setfav - Comando para definir seu peixe favorito, que aparece no seu armazem e perfil. ex: /setfav 10150"
-                      "/removefav - Comando para remover seu peixe favorito. ex: /removefav 10150"
-                      )
-    elif call.data == 'help_tudo':
-        help_text = (
-            "Aqui estão todos os comandos disponíveis:\n\n"
-            "/armazem, /armazém, /amz - Olhe os peixes (cartas) que você possui.\n"
-            "/evento evento <subcategoria> - Comando para interagir com eventos. Use /evento s para subcategoria e /evento f para favoritos.\n"
-            "/troca - Comando de troca (detalhes do comando de troca).\n"
-            "/reportar_bug - Comando para reportar bugs.\n"
-        )
-    
-    bot.edit_message_text(help_text, chat_id=call.message.chat.id, message_id=call.message.message_id, parse_mode="HTML")
-
-
-    
+def cancel_note_callback(call):
+    handle_cancel_note_callback(call)
+  
 @bot.message_handler(commands=['delcards'])
-def delcards_command(message):
-    try:
-        if message.from_user.id != 5532809878 and message.from_user.id != 1805086442:
-            bot.reply_to(message, "Você não é a Hashi ou a Skar para usar esse comando.")
-            return
-        args = message.text.split()
-        if len(args) != 4:
-            bot.reply_to(message, "Uso correto: /delcards {id} {quantidade} {id_usuario}")
-            return
-
-        id_carta = int(args[1])
-        quantidade = int(args[2])
-        id_usuario = int(args[3])
-
-        conn, cursor = conectar_banco_dados()
-        cursor.execute("SELECT quantidade FROM inventario WHERE id_usuario = %s AND id_personagem = %s", (id_usuario, id_carta))
-        resultado = cursor.fetchone()
-
-        if resultado:
-            quantidade_atual = resultado[0]
-            if quantidade_atual >= quantidade:
-                nova_quantidade = quantidade_atual - quantidade
-
-                if nova_quantidade == 0:
-                    cursor.execute("DELETE FROM inventario WHERE id_usuario = %s AND id_personagem = %s", (id_usuario, id_carta))
-                else:
-                    cursor.execute("UPDATE inventario SET quantidade = %s WHERE id_usuario = %s AND id_personagem = %s", (nova_quantidade, id_usuario, id_carta))
-
-                conn.commit()
-                bot.reply_to(message, f"{quantidade} unidades da carta {id_carta} foram removidas do inventário do usuário {id_usuario}.")
-            else:
-                bot.reply_to(message, f"O usuário {id_usuario} não possui {quantidade} unidades da carta {id_carta}.")
-        else:
-            bot.reply_to(message, f"A carta {id_carta} não foi encontrada no inventário do usuário {id_usuario}.")
-
-    except Exception as e:
-        print(f"Erro ao deletar cartas do inventário: {e}")
-        bot.reply_to(message, "Ocorreu um erro ao deletar as cartas do inventário.")
-
+def delcards_handler(message):
+    delcards_command(message)
+    
 @bot.message_handler(commands=['versubs'])
-def versubs_command(message):
-    try:
-        conn, cursor = conectar_banco_dados()
-
-        # Consulta para obter todos os nomes únicos de subs
-        query = "SELECT DISTINCT sub_nome FROM sub ORDER BY sub_nome ASC"
-        cursor.execute(query)
-        subs = [row[0] for row in cursor.fetchall()]
-
-        if not subs:
-            bot.send_message(message.chat.id, "Não há subs registrados no momento.")
-            return
-
-        # Paginação
-        total_subs = len(subs)
-        itens_por_pagina = 15
-        total_paginas = (total_subs // itens_por_pagina) + (1 if total_subs % itens_por_pagina > 0 else 0)
-
-        # Exibe a primeira página
-        enviar_pagina_subs(message.chat.id, 1, subs, total_paginas)
-
-    except Exception as e:
-        print(f"Erro ao processar comando /versubs: {e}")
-        bot.send_message(message.chat.id, "Ocorreu um erro ao processar sua solicitação.")
-
-    finally:
-        fechar_conexao(cursor, conn)
+def versubs_handler(message):
+    versubs_command(message)
 
 
-def enviar_pagina_subs(chat_id, pagina_atual, subs, total_paginas, call=None):
-    itens_por_pagina = 15
-    offset = (pagina_atual - 1) * itens_por_pagina
-    subs_pagina = subs[offset:offset + itens_por_pagina]
-
-    resposta = "<b>🌻| Lista de Subgrupos Disponíveis:</b>\n\n"
-    for sub in subs_pagina:
-        resposta += f"• <i>{sub}</i>\n"
-
-    resposta += f"\n📄 Página {pagina_atual}/{total_paginas}"
-
-    # Criar a navegação
-    markup = telebot.types.InlineKeyboardMarkup()
-    if pagina_atual > 1:
-        markup.add(telebot.types.InlineKeyboardButton("⬅️", callback_data=f"versubs_{pagina_atual-1}"))
-    if pagina_atual < total_paginas:
-        markup.add(telebot.types.InlineKeyboardButton("➡️", callback_data=f"versubs_{pagina_atual+1}"))
-
-    if call:
-        bot.edit_message_text(resposta, chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=markup, parse_mode="HTML")
-    else:
-        bot.send_message(chat_id, resposta, reply_markup=markup, parse_mode="HTML")
-
-
+# Handler para lidar com a navegação de páginas das subs
 @bot.callback_query_handler(func=lambda call: call.data.startswith('versubs_'))
-def callback_pagina_versubs(call):
-    try:
-        pagina = int(call.data.split('_')[1])
+def handle_versubs_callback(call):
+    callback_pagina_versubs(call)
 
-        # Recarregar a lista de subs para paginar corretamente
-        conn, cursor = conectar_banco_dados()
-        query = "SELECT DISTINCT sub_nome FROM sub ORDER BY sub_nome ASC"
-        cursor.execute(query)
-        subs = [row[0] for row in cursor.fetchall()]
-        total_subs = len(subs)
-        itens_por_pagina = 15
-        total_paginas = (total_subs // itens_por_pagina) + (1 if total_subs % itens_por_pagina > 0 else 0)
-
-        # Enviar a página solicitada
-        enviar_pagina_subs(call.message.chat.id, pagina, subs, total_paginas, call=call)
-
-    except Exception as e:
-        print(f"Erro ao processar callback de paginação: {e}")
-        bot.send_message(call.message.chat.id, "Ocorreu um erro ao processar a navegação.")
-    finally:
-        fechar_conexao(cursor, conn)
 
 @bot.message_handler(commands=['rep'])
-def ver_repetidos_evento(message):
-    try:
-        print("Comando rep acionado")    
-        id_usuario = message.from_user.id
-        user = message.from_user
-        nome_usuario = user.first_name
-        comando_parts = message.text.split()
-        if len(comando_parts) != 2:
-            bot.send_message(message.chat.id, "Por favor, use o formato: /rep <nomedoevento>")
-            return
-        evento = comando_parts[1].lower()
-        
-        eventos_validos = ['inverno', 'amor', 'aniversario', 'fixo']
-        if evento not in eventos_validos:
-            bot.send_message(message.chat.id, f"O evento '{evento}' não existe. Por favor, use um dos seguintes: {', '.join(eventos_validos)}")
-            return
-        
-        conn, cursor = conectar_banco_dados()
-        cursor.execute("""
-            SELECT inv.id_personagem, ev.nome, ev.subcategoria, inv.quantidade 
-            FROM inventario inv
-            JOIN evento ev ON inv.id_personagem = ev.id_personagem
-            WHERE inv.id_usuario = %s AND ev.evento = %s AND inv.quantidade > 1
-        """, (id_usuario, evento))
-        
-        cartas_repetidas = cursor.fetchall()
-
-        if not cartas_repetidas:
-            bot.send_message(message.chat.id, f"Você não possui cartas repetidas do evento '{evento}'.")
-            return
-
-        globals.user_event_data[message.message_id] = {
-            'id_usuario': id_usuario,
-            'nome_usuario': nome_usuario,
-            'evento': evento,
-            'cartas_repetidas': cartas_repetidas
-        }
-
-        total_paginas = (len(cartas_repetidas) // 20) + (1 if len(cartas_repetidas) % 20 > 0 else 0)
-        resposta_inicial = "Gerando relatório de cartas repetidas, por favor aguarde..."
-        mensagem = bot.send_message(message.chat.id, resposta_inicial)
-        mostrar_repetidas_evento(mensagem.chat.id, nome_usuario, evento, cartas_repetidas, 1, total_paginas, mensagem.message_id, message.message_id)
-
-    except mysql.connector.Error as err:
-        newrelic.agent.record_exception()    
-    finally:
-        fechar_conexao(cursor, conn)
+def ver_repetidos_evento_handler(message):
+    ver_repetidos_evento(message)
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith('rep_'))
-def callback_repetidas_evento(call):
-    try:
-        data_parts = call.data.split('_')
-        action = data_parts[1]
-        original_message_id = int(data_parts[2])
-        pagina_atual = int(data_parts[3])
-
-        if original_message_id not in globals.user_event_data:
-            bot.send_message(call.message.chat.id, "Dados do evento não encontrados.")
-            return
-
-        dados_evento = globals.user_event_data[original_message_id]
-        id_usuario = dados_evento['id_usuario']
-        nome_usuario = dados_evento['nome_usuario']
-        evento = dados_evento['evento']
-        cartas_repetidas = dados_evento['cartas_repetidas']
-
-        total_paginas = (len(cartas_repetidas) // 20) + (1 if len(cartas_repetidas) % 20 > 0 else 0)
-        
-        if action == "prev":
-            pagina_atual -= 1
-        elif action == "next":
-            pagina_atual += 1
-
-        mostrar_repetidas_evento(call.message.chat.id, nome_usuario, evento, cartas_repetidas, pagina_atual, total_paginas, call.message.message_id, original_message_id)
-    
-    except mysql.connector.Error as err:
-        newrelic.agent.record_exception()
-    finally:
-        fechar_conexao(cursor, conn)
+def callback_repetidas_evento_handler(call):
+    callback_repetidas_evento(call)
 
 @bot.message_handler(commands=['progresso'])
-def progresso_evento(message):
-    try:
-        print("Comando progresso acionado")    
-        id_usuario = message.from_user.id
-        user = message.from_user
-        nome_usuario = user.first_name
+def progresso_evento_handler(message):
+    progresso_evento(message)
 
-        comando_parts = message.text.split()
-        if len(comando_parts) != 2:
-            bot.send_message(message.chat.id, "Por favor, use o formato: /progresso <nomedoevento>")
-            return
-
-        evento = comando_parts[1].lower()
-        
-        eventos_validos = ['inverno', 'amor', 'aniversario', 'fixo']
-        if evento not in eventos_validos:
-            bot.send_message(message.chat.id, f"O evento '{evento}' não existe. Por favor, use um dos seguintes: {', '.join(eventos_validos)}")
-            return
-        
-        conn, cursor = conectar_banco_dados()
-
-        progresso_mensagem = calcular_progresso_evento(cursor, id_usuario, evento)
-        
-        resposta = f"Progresso de {nome_usuario} no evento {evento.capitalize()}:\n\n" + progresso_mensagem
-        bot.send_message(message.chat.id, resposta)
-
-    except mysql.connector.Error as err:
-        newrelic.agent.record_exception()
-    finally:
-        fechar_conexao(cursor, conn)
 
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("submenus_"))
-def callback_submenus(call):
-    try:
-        parts = call.data.split('_')
-        pagina = int(parts[1])
-        subcategoria = parts[2]
+def callback_submenus_handler(call):
+    callback_submenus(call)
 
-        conn, cursor = conectar_banco_dados()
-        query_total = "SELECT COUNT(DISTINCT submenu) FROM personagens WHERE subcategoria = %s"
-        cursor.execute(query_total, (subcategoria,))
-        total_registros = cursor.fetchone()[0]
-        total_paginas = (total_registros // 15) + (1 if total_registros % 15 > 0 else 0)
-
-        editar_mensagem_submenus(call, subcategoria, pagina, total_paginas)
-
-    except Exception as e:
-        print(f"Erro ao processar callback de página para submenus: {e}")
-        newrelic.agent.record_exception()
         
 @bot.callback_query_handler(func=lambda call: call.data.startswith("especies_"))
-def callback_especies(call):
-    try:
-        parts = call.data.split('_')
-        pagina = int(parts[1])
-        categoria = parts[2]
+def callback_especies_handler(call):
+    callback_especies(call)
 
-        conn, cursor = conectar_banco_dados()
-        query_total = "SELECT COUNT(DISTINCT subcategoria) FROM personagens WHERE categoria = %s"
-        cursor.execute(query_total, (categoria,))
-        total_registros = cursor.fetchone()[0]
-        total_paginas = (total_registros // 15) + (1 if total_registros % 15 > 0 else 0)
-
-        editar_mensagem_especies(call, categoria, pagina, total_paginas)
-
-    except Exception as e:
-        print(f"Erro ao processar callback de página para espécies: {e}")
-        newrelic.agent.record_exception()    
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith('poço_dos_desejos'))
-def handle_poco_dos_desejos(call):
-    usuario = call.from_user.first_name
-    image_url = "https://telegra.ph/file/94c9c66af4ca4d6f0a3e5.jpg"
-    caption = (f"<i>Enquanto os demais camponeses estavam distraídos com suas pescas, {usuario} caminhava para um lugar mais distante, até que encontrou uma floresta mágica.\n\n</i>"
-               "<i>Já havia escutado seus colegas falando da mesma mas sempre duvidou que era real.</i>\n\n"
-               "⛲: <i><b>Oh! Olá camponês, imagino que a dona do jardim tenha te mandado pra cá, certo?</b></i>\n\n"
-               "<i>Apesar da confusão com a voz repentina, perguntou a fonte o que aquilo significava.\n\n</i>"
-               "⛲: <i><b>Sou uma fonte dos desejos! você tem direito a fazer um pedido, em troca eu peço apenas algumas cenouras. Se os peixes que você deseja estiverem disponíveis e a sorte ao seu favor eles irão aparecer no seu armazém. Se não, volte mais tarde com outras cenouras.</b></i>")
-    media = InputMediaPhoto(image_url, caption=caption, parse_mode="HTML")
-    bot.edit_message_media(media, chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=create_wish_buttons())
+def handle_poco_dos_desejos_handler(call):
+    handle_poco_dos_desejos(call)
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith('fazer_pedido'))
-def handle_fazer_pedido(call):
-    user_id = call.from_user.id  # Adicionando a identificação do usuário
+def handle_fazer_pedido_handler(call):
+    handle_fazer_pedido(call)
 
-    can_make_wish, time_remaining = check_wish_time(user_id)
-    if not can_make_wish:
-        hours, remainder = divmod(time_remaining.total_seconds(), 3600)
-        minutes, _ = divmod(remainder, 60)
-        image_url = "https://telegra.ph/file/94c9c66af4ca4d6f0a3e5.jpg"
-        caption = (f"<b>Você já fez um pedido recentemente.</b> Por favor, aguarde {int(hours)} horas e {int(minutes)} minutos "
-                   "para fazer um novo pedido.")
-        media = InputMediaPhoto(image_url, caption=caption, parse_mode="HTML")
-        bot.send_photo(chat_id=call.message.chat.id, photo=image_url, caption=caption, parse_mode="HTML")
-        return
-    else:
-        image_url = "https://telegra.ph/file/94c9c66af4ca4d6f0a3e5.jpg"
-        caption = ("<b>⛲: Para pedir os seus peixes é simples!</b> \n\nMe envie até <b>5 IDs</b> dos peixes e a quantidade de cenouras que você quer doar "
-                   "\n(eu aceito qualquer quantidade entre 10 e 20 cenouras...) \n\n<i>exemplo: ID1 ID2 ID3 ID4 ID5 cenouras</i>")
-        media = InputMediaPhoto(image_url, caption=caption, parse_mode="HTML")
-        bot.edit_message_media(media, chat_id=call.message.chat.id, message_id=call.message.message_id)
-        
-        bot.register_next_step_handler(call.message, process_wish)
 @bot.message_handler(commands=['saldo'])
 def saldo_command(message):
-    try:
-        id_usuario = message.from_user.id
-        
-        conn, cursor = conectar_banco_dados()
-
-        # Obter saldo total de cenouras do banco
-        cursor.execute("SELECT SUM(quantidade_cenouras) FROM banco_cidade")
-        total_cenouras_banco = cursor.fetchone()[0] or 0
-
-        # Obter saldo total de cartas no banco de inventário
-        cursor.execute("SELECT SUM(quantidade) FROM banco_inventario")
-        total_cartas_banco = cursor.fetchone()[0] or 0
-
-        # Obter saldo de cenouras do usuário
-        cursor.execute("SELECT cenouras, iscas FROM usuarios WHERE id_usuario = %s", (id_usuario,))
-        resultado = cursor.fetchone()
-        if resultado:
-            saldo_cenouras_usuario, saldo_iscas_usuario = resultado
-        else:
-            saldo_cenouras_usuario, saldo_iscas_usuario = 0, 0
-
-        # Montar a mensagem de saldo
-        resposta = f"💰 <b>Saldo da Cidade:</b>\n"
-        resposta += f"🥕 Total de cenouras: {total_cenouras_banco}\n"
-        resposta += f"📦 Total de cartas: {total_cartas_banco}\n\n"
-        resposta += f"💼 <b>Saldo do Camponês:</b>\n"
-        resposta += f"🥕 Suas cenouras: {saldo_cenouras_usuario}\n"
-        resposta += f"🪝 Suas iscas: {saldo_iscas_usuario}\n"
-
-        # Enviar a mensagem
-        bot.send_message(message.chat.id, resposta, parse_mode="HTML")
-        
-    except Exception as e:
-        print(f"Erro ao processar comando /saldo: {e}")
-        bot.reply_to(message, "Ocorreu um erro ao verificar seu saldo.")
-    finally:
-        fechar_conexao(cursor, conn)
+    processar_saldo_usuario(message)
 
 
 @bot.message_handler(commands=['trintadas', 'abelhadas', 'abelhas'])
@@ -3169,375 +701,48 @@ def callback_trintadas(call):
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith('fazer_pedido'))
 def handle_fazer_pedido(call):
-    image_url = "https://telegra.ph/file/94c9c66af4ca4d6f0a3e5.jpg"
-    caption = "<b>⛲: Para pedir os seus peixes é simples!</b> \n\nMe envie até <b>5 IDs</b> dos peixes e a quantidade de cenouras que você quer doar \n(eu aceito qualquer quantidade entre 10 e 20 cenouras...) \n\n<i>exemplo: ID1 ID2 ID3 ID4 ID5 cenouras</i>"
-    media = InputMediaPhoto(image_url, caption=caption, parse_mode="HTML")
-    bot.edit_message_media(media, chat_id=call.message.chat.id, message_id=call.message.message_id)
-    bot.register_next_step_handler(call.message, process_wish)
+    processar_pedido_peixes(call)
+    
 @bot.callback_query_handler(func=lambda call: call.data.startswith('notificar_'))
 def callback_handler(call):
-    try:
-        id_personagem = int(call.data.split('_')[1])
-        conn, cursor = conectar_banco_dados()
-        cursor.execute("SELECT rodados FROM cartas WHERE id_personagem = %s", (id_personagem,))
-        quantidade_personagem = cursor.fetchone()
+    processar_notificacao_personagem(call)
 
-        if quantidade_personagem is not None and quantidade_personagem[0] >= 0:
-            bot.answer_callback_query(call.id, f"Esta carta foi rodada {quantidade_personagem[0]} vezes!")
-        else:
-            bot.answer_callback_query(call.id, f"Esta carta não foi rodada ainda :(!")
-            bot.answer_callback_query(call.id, "Erro ao obter a quantidade da carta.")
-    except Exception as e:
-        print(f"Erro ao lidar com o callback: {e}")
-        newrelic.agent.record_exception()    
-    finally:
-        fechar_conexao(cursor, conn)
 @bot.callback_query_handler(func=lambda call: call.data.startswith(('next_button', 'prev_button')))
 def navigate_messages(call):
-    try:
-        chat_id = call.message.chat.id
-        data_parts = call.data.split('_')
-
-        if len(data_parts) == 4 and data_parts[0] in ('next', 'prev'):
-            direction, current_index, total_count = data_parts[0], int(data_parts[2]), int(data_parts[3])
-        else:
-            raise ValueError("Callback_data com número incorreto de partes ou formato inválido.")
-
-        user_id = call.from_user.id
-        mensagens, _ = load_user_state(user_id, 'gnomes')
-        if direction == 'next':
-            current_index += 1
-        elif direction == 'prev':
-            current_index -= 1
-        media_url, mensagem = mensagens[current_index]
-        markup = create_navigation_markup(current_index, len(mensagens))
-
-        if media_url:
-            if media_url.lower().endswith(".gif"):
-                bot.edit_message_media(chat_id=chat_id, message_id=call.message.message_id, media=telebot.types.InputMediaAnimation(media=media_url, caption=mensagem, parse_mode="HTML"), reply_markup=markup)
-            elif media_url.lower().endswith(".mp4"):
-                bot.edit_message_media(chat_id=chat_id, message_id=call.message.message_id, media=telebot.types.InputMediaVideo(media=media_url, caption=mensagem, parse_mode="HTML"), reply_markup=markup)
-            elif media_url.lower().endswith((".jpeg", ".jpg", ".png")):
-                bot.edit_message_media(chat_id=chat_id, message_id=call.message.message_id, media=telebot.types.InputMediaPhoto(media=media_url, caption=mensagem, parse_mode="HTML"), reply_markup=markup)
-            else:
-                bot.edit_message_text(chat_id=chat_id, message_id=call.message.message_id, text=mensagem, reply_markup=markup, parse_mode="HTML")
-        else:
-            bot.edit_message_text(chat_id=chat_id, message_id=call.message.message_id, text=mensagem, reply_markup=markup, parse_mode="HTML")
-
-    except Exception as e:
-        newrelic.agent.record_exception()    
-        print("Erro ao processar callback dos botões de navegação:", str(e))
+    handle_navigate_messages(call)
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith(('prox_button', 'ant_button')))
 def navigate_gnome_results(call):
-    try:
-        chat_id = call.message.chat.id
-        data_parts = call.data.split('_')
+    handle_navigate_gnome_results(call)
 
-        if len(data_parts) == 4 and data_parts[0] in ('prox', 'ant'):
-            direction, current_page, total_pages = data_parts[0], int(data_parts[2]), int(data_parts[3])
-        else:
-            raise ValueError("Callback_data com número incorreto de partes ou formato inválido.")
-
-        user_id = call.from_user.id
-        resultados, _, message_id = globals.load_state(user_id, 'gnomes')
-        if direction == 'prox':
-            current_page = min(current_page + 1, total_pages)
-        elif direction == 'ant':
-            current_page = max(current_page - 1, 1)
-            
-        resultados_pagina_atual = resultados[(current_page - 1) * 15 : current_page * 15]
-        lista_resultados = [f"{emoji} - {id_personagem} - {nome} de {subcategoria}" for emoji, id_personagem, nome, subcategoria in resultados_pagina_atual]
-        mensagem_final = f"🐠 Peixes de nome', página {current_page}/{total_pages}:\n\n" + "\n".join(lista_resultados)
-        markup = create_navegacao_markup(current_page, total_pages)
-
-        bot.edit_message_text(chat_id=chat_id, message_id=message_id, text=mensagem_final, reply_markup=markup)
-
-    except Exception as e:
-        print("Erro ao processar callback dos botões de navegação:", str(e))
-        newrelic.agent.record_exception()
-# Callback para tratar cestas
 @bot.callback_query_handler(func=lambda call: call.data.startswith("cesta_"))
 def callback_query_cesta(call):
-    global processing_lock
-  
-    if not processing_lock.acquire(blocking=False):
-        return
-    try:
-        parts = call.data.split('_')
-        tipo = parts[1]
-        pagina = int(parts[2])
-        categoria = parts[3]
-        id_usuario_original = int(parts[4])
-        nome_usuario = bot.get_chat(id_usuario_original).first_name
-
-        if tipo == 's':
-            ids_personagens = obter_ids_personagens_inventario_sem_evento(id_usuario_original, categoria)
-            total_personagens_subcategoria = obter_total_personagens_subcategoria(categoria)
-            total_registros = len(ids_personagens)
-  
-            if total_registros > 0:
-                total_paginas = (total_registros // 15) + (1 if total_registros % 15 > 0 else 0)
-                mostrar_pagina_cesta_s(call.message, categoria, id_usuario_original, pagina, total_paginas, ids_personagens, total_personagens_subcategoria, nome_usuario, call=call)
-            else:
-                bot.reply_to(call.message, f"Nenhum personagem encontrado na cesta '{categoria}'.")
-
-        elif tipo == 'f':
-            ids_personagens_faltantes = obter_ids_personagens_faltantes_sem_evento(id_usuario_original, categoria)
-            total_personagens_subcategoria = obter_total_personagens_subcategoria(categoria)
-            total_registros = len(ids_personagens_faltantes)
-  
-            if total_registros > 0:
-                total_paginas = (total_registros // 15) + (1 if total_registros % 15 > 0 else 0)
-                mostrar_pagina_cesta_f(call.message, categoria, id_usuario_original, pagina, total_paginas, ids_personagens_faltantes, total_personagens_subcategoria, nome_usuario, call=call)
-            else:
-                bot.reply_to(call.message, f"Todos os personagens na subcategoria '{categoria}' estão no seu inventário.")
-
-        elif tipo == 'se':
-            ids_personagens = obter_ids_personagens_inventario_com_evento(id_usuario_original, categoria)
-            total_personagens_com_evento = obter_total_personagens_subcategoria(categoria)
-            total_registros = len(ids_personagens)
-
-            if total_registros > 0:
-                total_paginas = (total_registros // 15) + (1 if total_registros % 15 > 0 else 0)
-                mostrar_pagina_cesta_s(call.message, categoria, id_usuario_original, pagina, total_paginas, ids_personagens, total_personagens_com_evento, nome_usuario, call=call)
-            else:
-                bot.reply_to(call.message, f"Nenhum personagem encontrado na cesta '{categoria}'.")
-
-        elif tipo == 'fe':
-            ids_personagens_faltantes = obter_ids_personagens_faltantes_com_evento(id_usuario_original, categoria)
-            total_personagens_subcategoria = obter_total_personagens_subcategoria(categoria)
-            total_registros = len(ids_personagens_faltantes)
-
-            if total_registros > 0:
-                total_paginas = (total_registros // 15) + (1 if total_registros % 15 > 0 else 0)
-                mostrar_pagina_cesta_f(call.message, categoria, id_usuario_original, pagina, total_paginas, ids_personagens_faltantes, total_personagens_subcategoria, nome_usuario, call=call)
-            else:
-                bot.reply_to(call.message, f"Todos os personagens na subcategoria '{categoria}' estão no seu inventário.")
-
-        elif tipo == 'c':
-            ids_personagens = obter_ids_personagens_categoria(id_usuario_original, categoria)
-            total_personagens_categoria = obter_total_personagens_categoria(categoria)
-            total_registros = len(ids_personagens)
-
-            if total_registros > 0:
-                total_paginas = (total_registros // 15) + (1 if total_registros % 15 > 0 else 0)
-                mostrar_pagina_cesta_c(call.message, categoria, id_usuario_original, pagina, total_paginas, ids_personagens, total_personagens_categoria, nome_usuario, call=call)
-            else:
-                bot.reply_to(call.message, f"Nenhum personagem encontrado na categoria '{categoria}'.")
-
-        elif tipo == 'cf':
-            ids_personagens_faltantes = obter_ids_personagens_faltantes_categoria(id_usuario_original, categoria)
-            total_personagens_categoria = obter_total_personagens_categoria(categoria)
-            total_registros = len(ids_personagens_faltantes)
-
-            if total_registros > 0:
-                total_paginas = (total_registros // 15) + (1 if total_registros % 15 > 0 else 0)
-                mostrar_pagina_cesta_cf(call.message, categoria, id_usuario_original, pagina, total_paginas, ids_personagens_faltantes, total_personagens_categoria, nome_usuario, call=call)
-            else:
-                bot.reply_to(call.message, f"Você possui todos os personagens na categoria '{categoria}'.")
-
-    except Exception as e:
-        print(f"Erro ao processar callback da cesta: {e}")
-    finally:
-        processing_lock.release()
+    from cestas import handle_callback_query_cesta
+    handle_callback_query_cesta(call)
         
 @bot.callback_query_handler(func=lambda call: call.data.startswith('total_'))
 def callback_total_personagem(call):
-    try:
-        conn, cursor = conectar_banco_dados()
-        chat_id = call.message.chat.id
-        id_pesquisa = call.data.split('_')[1]
-
-        sql_total = "SELECT total FROM personagens WHERE id_personagem = %s"
-        cursor.execute(sql_total, (id_pesquisa,))
-        total_pescados = cursor.fetchone()
-
-        if total_pescados is not None and total_pescados[0] is not None:
-            if total_pescados[0] > 1:
-                response_text = f"O personagem foi pescado {total_pescados[0]} vezes!"
-            elif total_pescados[0] == 1:
-                response_text = f"O personagem foi pescado {total_pescados[0]} vez!"
-            else:
-                response_text = "Esse personagem ainda não foi pescado :("
-        else:
-            response_text = "Esse personagem ainda não foi pescado :("
-
-        try:
-            bot.answer_callback_query(call.id, text=response_text, show_alert=True)
-        except Exception as e:
-            traceback.print_exc()
-            erro = traceback.format_exc()
-            mensagem = f"Alerta de erro carta pescadas. Erro: {e}\n{erro}"
-            bot.send_message(grupodeerro, mensagem, parse_mode="HTML")
-            newrelic.agent.record_exception()
-    except Exception as e:
-        traceback.print_exc()
-        erro = traceback.format_exc()
-        mensagem = f"Alerta de erro carta pescadas. Erro: {e}\n{erro}"
-        bot.send_message(grupodeerro, mensagem, parse_mode="HTML")
-
-        newrelic.agent.record_exception()
-    finally:
-        cursor.close()
-        conn.close()
-
+    from peixes import handle_callback_total_personagem
+    handle_callback_total_personagem(call)
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith(('armazem_anterior_', 'armazem_proxima_','armazem_ultima_','armazem_primeira_')))
 def callback_paginacao_armazem(call):
-    try:
-        conn, cursor = conectar_banco_dados()
-        chat_id = call.message.chat.id
-        _, direcao, pagina_str, id_usuario = call.data.split('_')
-        pagina = int(pagina_str)
-        info_armazem = globals.armazem_info.get(int(id_usuario), {})
-        id_usuario = info_armazem.get('id_usuario', '')
-        usuario = info_armazem.get('usuario', '')
-        resultados_por_pagina = 15
-        offset = (pagina - 1) * resultados_por_pagina
-
-        quantidade_total_cartas = obter_quantidade_total_cartas(id_usuario)
-        total_paginas = (quantidade_total_cartas + resultados_por_pagina - 1) // resultados_por_pagina
-
-        if pagina == 1 and call.data.startswith("armazem_anterior_"):
-            pagina = total_paginas
-            offset = (pagina - 1) * resultados_por_pagina
-
-        elif pagina == total_paginas and call.data.startswith("armazem_proxima_"):
-            pagina = 1
-            offset = 0
-
-        else:
-            if call.data.startswith("armazem_anterior_"):
-                pagina -= 1
-            elif call.data.startswith("armazem_ultima_"):
-                pagina += 5 
-            elif call.data.startswith("armazem_primeira_"):
-                pagina -= 5
-            elif call.data.startswith("armazem_proxima_"):
-                pagina += 1
-            offset = (pagina - 1) * resultados_por_pagina
-
-        sql = f"""
-            SELECT id_personagem, 
-                   emoji COLLATE utf8mb4_general_ci AS emoji, 
-                   nome_personagem COLLATE utf8mb4_general_ci AS nome_personagem, 
-                   subcategoria COLLATE utf8mb4_general_ci AS subcategoria, 
-                   quantidade, 
-                   categoria COLLATE utf8mb4_general_ci AS categoria, 
-                   evento COLLATE utf8mb4_general_ci AS evento
-            FROM (
-                SELECT i.id_personagem, p.emoji COLLATE utf8mb4_general_ci AS emoji, p.nome COLLATE utf8mb4_general_ci AS nome_personagem, p.subcategoria COLLATE utf8mb4_general_ci AS subcategoria, i.quantidade, p.categoria COLLATE utf8mb4_general_ci AS categoria, '' COLLATE utf8mb4_general_ci AS evento
-                FROM inventario i
-                JOIN personagens p ON i.id_personagem = p.id_personagem
-                WHERE i.id_usuario = {id_usuario} AND i.quantidade > 0
-
-                UNION ALL
-
-                SELECT e.id_personagem, e.emoji COLLATE utf8mb4_general_ci AS emoji, e.nome COLLATE utf8mb4_general_ci AS nome_personagem, e.subcategoria COLLATE utf8mb4_general_ci AS subcategoria, 0 AS quantidade, e.categoria COLLATE utf8mb4_general_ci AS categoria, e.evento COLLATE utf8mb4_general_ci AS evento
-                FROM evento e
-                WHERE e.id_personagem IN (
-                    SELECT id_personagem
-                    FROM inventario
-                    WHERE id_usuario = {id_usuario} AND quantidade > 0
-                )
-            ) AS combined
-            ORDER BY 
-                CASE WHEN categoria = 'evento' THEN 0 ELSE 1 END, 
-                categoria, 
-                CAST(id_personagem AS UNSIGNED) ASC
-            LIMIT {resultados_por_pagina} OFFSET {offset}
-        """
-        cursor.execute(sql)
-        resultados = cursor.fetchall()
-        if resultados:
-            markup = telebot.types.InlineKeyboardMarkup()
-            if quantidade_total_cartas > 10:
-                buttons_row = [
-                    telebot.types.InlineKeyboardButton("⏪️", callback_data=f"armazem_primeira_{pagina}_{id_usuario}"),
-                    telebot.types.InlineKeyboardButton("◀️", callback_data=f"armazem_anterior_{pagina}_{id_usuario}"),
-                    telebot.types.InlineKeyboardButton("▶️", callback_data=f"armazem_proxima_{pagina}_{id_usuario}"),
-                    telebot.types.InlineKeyboardButton("⏩️", callback_data=f"armazem_ultima_{pagina}_{id_usuario}")
-                ]
-                markup.row(*buttons_row)
-
-            id_fav_usuario, emoji_fav, nome_fav, subcategoria_fav, imagem_fav = obter_favorito(id_usuario)
-
-            resposta = f"💌 | Cartas no armazém de {usuario}:\n\n🩷 ∙ {id_fav_usuario} — {nome_fav} de {subcategoria_fav}\n\n" if id_fav_usuario is not None else f"💌 | Cartas no armazém de {usuario}:\n\n"
-
-            for carta in resultados:
-                id_carta, emoji_carta, nome_carta, subcategoria_carta, quantidade_carta, categoria_carta, evento_carta = carta
-
-                quantidade_carta = int(quantidade_carta) if quantidade_carta is not None else 0
-
-                if categoria_carta == 'evento' and (int(id_carta) < 10000 and int(id_carta) != 102):
-                    emoji_carta = obter_emoji_evento(evento_carta)
-                    repetida = "" if quantidade_carta > 1 else ""
-                    letra_quantidade = ""
-                else:
-                    letra_quantidade = (
-                        "🌾" if 2 <= quantidade_carta <= 4 else
-                        "🌼" if 5 <= quantidade_carta <= 9 else
-                        "☀️" if 10 <= quantidade_carta <= 19 else
-                        "🍯️" if 20 <= quantidade_carta <= 29 else
-                        "🐝" if 30 <= quantidade_carta <= 39 else
-                        "🌻" if 40 <= quantidade_carta <= 49 else
-                        "👑" if 50 <= quantidade_carta <= 101 else
-                        "" 
-                    )
-                    repetida = "" if quantidade_carta > 1 else ""
-
-                resposta += f" {emoji_carta} <code>{id_carta}</code> • {nome_carta} - {subcategoria_carta} {letra_quantidade}{repetida}\n"
-
-            resposta += f"\n{pagina}/{total_paginas}"
-            bot.edit_message_caption(chat_id=chat_id, message_id=call.message.message_id, caption=resposta, reply_markup=markup, parse_mode="HTML")
-
-        else:
-            bot.answer_callback_query(callback_query_id=call.id, text="Nenhuma carta encontrada.")
-    except mysql.connector.Error as err:
-        print(f"Erro de SQL: {err}")
-        newrelic.agent.record_exception()    
-    finally:
-        fechar_conexao(cursor, conn)
-
+    handle_callback_paginacao_armazem(call)
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith('subcategory_'))
-def callback_subcategory(call):
-    try:
-        subcategory_data = call.data.split("_")
-        subcategory = subcategory_data[1]
-        card = get_random_card_valentine(subcategory)
-        if card:
-            evento_aleatorio = card
-            send_card_message(call.message, evento_aleatorio)
-        else:
-            bot.answer_callback_query(call.id, "Ocorreu um erro ao processar sua solicitação. Tente novamente mais tarde.")
-    except Exception as e:
-        newrelic.agent.record_exception()    
-        print(f"Erro ao processar callback de subcategoria: {e}")
+def handle_callback_subcategory(call):
+    from evento import callback_subcategory
+    callback_subcategory(call)
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith('cenourar_sim_'))
-def callback_cenourar(call):
-    try:
-        data_parts = call.data.split("_")
-        acao = data_parts[1]
-        id_usuario = int(data_parts[2])
-        id_personagem = data_parts[3] if len(data_parts) >= 3 else ""
-        print(data_parts)
-        if acao == "sim":
-            cenourar_carta(call, id_usuario, id_personagem)
-        elif acao == "nao":
-            bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text="Operação de cenoura cancelada.")
-    except Exception as e:
-        print(f"Erro ao processar callback de cenoura: {e}")
-        bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text="Erro ao processar a cenoura.")
+def handle_callback_cenourar(call):
+    callback_cenourar(call)
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith('loja_geral'))
 def callback_loja_geral(call):
     try:
         loja_geral_callback(call)
     except Exception as e:
-        newrelic.agent.record_exception()    
         print(f"Erro ao processar callback de loja geral: {e}")
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith('img_'))

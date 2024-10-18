@@ -75,3 +75,23 @@ def criar_markup_submenus(pagina_atual, total_paginas, subcategoria):
         markup.add(btn_proxima)
 
     return markup
+
+def callback_submenu(call):
+    _, subcategoria, submenu_selecionado = call.data.split('_')
+    conn, cursor = conectar_banco_dados()
+    try:
+        cartas_disponiveis = obter_cartas_por_subcategoria_e_submenu(subcategoria, submenu_selecionado, cursor)
+        if cartas_disponiveis:
+            carta_aleatoria = random.choice(cartas_disponiveis)
+            if carta_aleatoria:
+                id_personagem_carta, emoji, nome, imagem = carta_aleatoria
+                send_card_message(call.message, emoji, id_personagem_carta, nome, subcategoria, imagem)
+                qnt_carta(call.message.chat.id)
+            else:
+                bot.send_message(call.message.chat.id, "Nenhuma carta disponível para esta combinação de subcategoria e submenu.")
+        else:
+            bot.send_message(call.message.chat.id, "Nenhuma carta disponível para esta combinação de subcategoria e submenu.")
+    finally:
+        cursor.close()
+        conn.close()
+

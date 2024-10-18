@@ -595,8 +595,8 @@ def handle_gnome(message):
         # Salvar os resultados no dicionário global para navegação posterior
         globals.resultados_gnome[user_id] = resultados_personagens
 
-        # Exibir a primeira carta
-        enviar_carta_individual(chat_id, user_id, resultados_personagens, 0, message.message_id)
+        # Exibir a primeira carta - ENVIA ao invés de editar
+        enviar_primeira_carta(chat_id, user_id, resultados_personagens, 0)
 
     except Exception as e:
         print(f"Erro: {e}")
@@ -604,7 +604,7 @@ def handle_gnome(message):
         fechar_conexao(cursor, conn)
 
 
-def enviar_carta_individual(chat_id, user_id, resultados_personagens, index, message_id):
+def enviar_primeira_carta(chat_id, user_id, resultados_personagens, index):
     id_personagem, nome, subcategoria, categoria, quantidade_usuario, imagem_url = resultados_personagens[index]
 
     # Criação da mensagem para a carta
@@ -626,7 +626,44 @@ def enviar_carta_individual(chat_id, user_id, resultados_personagens, index, mes
     if gif_url:
         imagem_url = gif_url
 
-    # Enviar como mídia, editando a mensagem original
+    # Enviar a primeira mensagem
+    try:
+        if imagem_url.lower().endswith(".gif"):
+            bot.send_animation(chat_id, imagem_url, caption=mensagem, parse_mode="HTML", reply_markup=keyboard)
+        elif imagem_url.lower().endswith(".mp4"):
+            bot.send_video(chat_id, imagem_url, caption=mensagem, parse_mode="HTML", reply_markup=keyboard)
+        elif imagem_url.lower().endswith((".jpeg", ".jpg", ".png")):
+            bot.send_photo(chat_id, imagem_url, caption=mensagem, parse_mode="HTML", reply_markup=keyboard)
+        else:
+            bot.send_message(chat_id, mensagem, reply_markup=keyboard, parse_mode="HTML")
+    except Exception as e:
+        print(f"Erro ao enviar a mídia: {e}")
+        bot.send_message(chat_id, mensagem, reply_markup=keyboard, parse_mode="HTML")
+
+
+def editar_carta(chat_id, user_id, resultados_personagens, index, message_id):
+    id_personagem, nome, subcategoria, categoria, quantidade_usuario, imagem_url = resultados_personagens[index]
+
+    # Criação da mensagem para a carta
+    mensagem = f"💌 | Personagem:\n\n<code>{id_personagem}</code> • {nome}\nde {subcategoria}\n"
+    if quantidade_usuario > 0:
+        mensagem += f"☀ | {quantidade_usuario}⤫"
+    else:
+        mensagem += f"🌧 | Tempo fechado..."
+
+    # Botões de navegação
+    keyboard = types.InlineKeyboardMarkup()
+    if index > 0:
+        keyboard.add(types.InlineKeyboardButton("⬅️ Anterior", callback_data=f"gnome_prev_{index-1}_{user_id}"))
+    if index < len(resultados_personagens) - 1:
+        keyboard.add(types.InlineKeyboardButton("Próxima ➡️", callback_data=f"gnome_next_{index+1}_{user_id}"))
+
+    # Verificar se existe uma imagem GIF ou URL para a carta
+    gif_url = obter_gif_url(id_personagem, user_id)
+    if gif_url:
+        imagem_url = gif_url
+
+    # Editar a mensagem existente com a nova carta
     try:
         if imagem_url.lower().endswith(".gif"):
             bot.edit_message_media(media=types.InputMediaAnimation(media=imagem_url, caption=mensagem, parse_mode="HTML"),
@@ -657,7 +694,7 @@ def callback_gnome_navigation(call):
     if resultados_personagens:
         # Editar a mensagem existente com a nova carta
         try:
-            enviar_carta_individual(call.message.chat.id, user_id, resultados_personagens, index, call.message.message_id)
+            editar_carta(call.message.chat.id, user_id, resultados_personagens, index, call.message.message_id)
         except Exception as e:
             bot.answer_callback_query(call.id, "Erro ao processar a navegação.")
             print(f"Erro ao processar callback de navegação: {e}")

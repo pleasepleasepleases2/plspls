@@ -821,50 +821,40 @@ def callback_confirmar_compra(call):
 def callback_query_evento(call):
     handle_callback_query_evento(call)
 
-def obter_informacoes_loja(ids_do_dia):
-    try:
-        conn, cursor = conectar_banco_dados()
-        placeholders = ', '.join(['%s' for _ in ids_do_dia])
-        cursor.execute(
-            f"SELECT id_personagem, emoji, nome, subcategoria FROM personagens WHERE id_personagem IN ({placeholders})",
-            tuple(ids_do_dia))
-        cartas_loja = cursor.fetchall()
-        return cartas_loja
-
-    except mysql.connector.Error as err:
-        print(f"Erro ao obter informações da loja: {err}")
-    finally:
-        cursor.close()
-        conn.close()
-
 @bot.message_handler(commands=['start'])
 def start_comando(message):
     user_id = message.from_user.id
     nome_usuario = message.from_user.first_name  
     username = message.chat.username
+    grupo_id = -4209628464  # ID do grupo para enviar a notificação do /start
     print(f"Comando /start recebido. ID do usuário: {user_id} - {nome_usuario}")
 
     try:
         verificar_id_na_tabela(user_id, "ban", "iduser")
-        print("novo /start ",{user_id},"-",{nome_usuario},"-",{username})
+        print("Novo /start ", {user_id}, "-", {nome_usuario}, "-", {username})
 
-        if verificar_id_na_tabelabeta(message.from_user.id):
+        if verificar_id_na_tabelabeta(user_id):
             registrar_usuario(user_id, nome_usuario, username)
             registrar_valor("nome_usuario", nome_usuario, user_id)
+            
+            # Enviar notificação do start para o grupo
+            bot.send_message(grupo_id, f"Novo usuário iniciou o bot: {nome_usuario} (@{username}) - ID: {user_id}")
+            
             keyboard = telebot.types.InlineKeyboardMarkup()
-            image_path = "jungk.jpg"
-            with open(image_path, 'rb') as photo:
-                bot.send_photo(message.chat.id, photo,
-                               caption='Seja muito bem-vindo ao MabiGarden! Entre, busque uma sombra e aproveite a estadia.',
-                               reply_markup=keyboard, reply_to_message_id=message.message_id)
+            image_url = "https://pub-6f23ef52e8614212a14d24b0cf55ae4a.r2.dev/AgACAgEAAxkBAAIZf2cSyI4kuw-GHGMBuPUdp-Gefo_ZAAKprTEbhPYRRedTrmeod49GAQADAgADeAADNgQ.jpg"
+            bot.send_photo(message.chat.id, image_url,
+                           caption='Seja muito bem-vindo ao MabiGarden! Entre, busque uma sombra e aproveite a estadia.',
+                           reply_markup=keyboard, reply_to_message_id=message.message_id)
         else:
-            bot.send_message(message.chat.id, "Ei visitante, você não foi convidado! 😡", reply_to_message_id=message.message_id)
+            video_url = "https://pub-6f23ef52e8614212a14d24b0cf55ae4a.r2.dev/BAACAgEAAxkBAAIZfGcSx9DRGzg211Ym_G47xld4U-sdAAJHBQACuXZhRGUFAAGmQXGCtTYE.mp4"
+            caption = "🧐 QUEM É VO-CÊ? Estranho detectado! Lembrando que você precisa se identificar antes de usar. Chame a gente no suporte se houver dúvidas!"
+            bot.send_video(message.chat.id, video=video_url, caption=caption, reply_to_message_id=message.message_id)
 
     except ValueError as e:
         print(f"Erro: {e}")
         mensagem_banido = "Você foi banido permanentemente do garden. Entre em contato com o suporte caso haja dúvidas."
         bot.send_message(message.chat.id, mensagem_banido, reply_to_message_id=message.message_id)
-    
+
            
 @bot.message_handler(commands=['setfav'])
 def set_fav_command(message):

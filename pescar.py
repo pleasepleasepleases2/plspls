@@ -488,9 +488,6 @@ def register_card_history(message,id_usuario, id_carta):
         print(f"Erro ao registrar o histórico da carta: {err}")
     finally:
         fechar_conexao(cursor, conn)
-import telebot
-from datetime import datetime
-from bd import verificar_id_na_tabela, verificar_tempo_passado, diminuir_giros, verificar_giros, verificar_id_na_tabelabeta
 
 ultima_interacao = {}
 

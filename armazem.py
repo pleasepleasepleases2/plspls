@@ -4,7 +4,7 @@ from bd import *
 from loja import *
 from gnome import *
 from operacoes import *
-
+import globals
 import mysql.connector
 import traceback
 import telebot

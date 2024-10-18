@@ -322,3 +322,189 @@ def listar_vips_logic(message):
     finally:
         # Fechar a conexão com o banco de dados
         fechar_conexao(cursor, conn)
+
+from datetime import datetime
+from telebot import types
+from bd import conectar_banco_dados, fechar_conexao
+
+# Lógica para listar os pedidos dos VIPs
+def listar_pedidos_vips_logic(message):
+    try:
+        if message.from_user.id not in [5532809878, 1805086442]:
+            return
+        conn, cursor = conectar_banco_dados()
+        query = """
+            SELECT nome, pedidos_restantes 
+            FROM vips;
+        """
+        cursor.execute(query)
+        pedidos_vips = cursor.fetchall()
+        
+        if not pedidos_vips:
+            bot.send_message(message.chat.id, "Nenhum VIP encontrado.")
+            return
+        
+        mensagem = "📦 Pedidos restantes dos VIPs:\n\n"
+        for vip in pedidos_vips:
+            nome, pedidos_restantes = vip
+            mensagem += f"{nome}: {pedidos_restantes} pedidos restantes\n"
+
+        bot.send_message(message.chat.id, mensagem)
+        
+    except Exception as e:
+        print(f"Erro ao listar pedidos VIPs: {e}")
+        bot.send_message(message.chat.id, "Erro ao listar pedidos VIPs.")
+    finally:
+        fechar_conexao(cursor, conn)
+
+# Lógica para ver a ficha de um VIP
+def ver_ficha_vip_logic(message):
+    try:
+        # Verificar se o usuário tem permissão para usar o comando
+        if message.from_user.id not in [5532809878, 1805086442]:
+            return
+
+        args = message.text.split(maxsplit=1)
+        if len(args) < 2:
+            bot.reply_to(message, "Uso correto: /ficha <id_vip>")
+            return
+
+        id_vip = args[1].strip()
+
+        conn, cursor = conectar_banco_dados()
+        query = """
+            SELECT nome, data_pagamento, renovou, pedidos_restantes, Dia_renovar, imagem
+            FROM vips
+            WHERE id = %s;
+        """
+        cursor.execute(query, (id_vip,))
+        ficha_vip = cursor.fetchone()
+
+        if not ficha_vip:
+            bot.send_message(message.chat.id, f"Nenhum VIP encontrado com o ID '{id_vip}'.")
+            return
+
+        nome, data_pagamento, renovou, pedidos_restantes, dia_renovar, imagem_url = ficha_vip
+        status_renovou = "Sim" if renovou else "Não"
+
+        # Calcular dias restantes para a próxima renovação
+        hoje = datetime.now()
+        dia_atual = hoje.day
+        mes_atual = hoje.month
+        ano_atual = hoje.year
+
+        if dia_renovar < dia_atual:
+            proxima_renovacao = datetime(ano_atual, mes_atual + 1, dia_renovar)
+        else:
+            proxima_renovacao = datetime(ano_atual, mes_atual, dia_renovar)
+
+        dias_restantes = (proxima_renovacao - hoje).days
+
+        mensagem = f"🎟️ Ficha de {nome} (ID: {id_vip}):\n\n"
+        mensagem += f"📅 Data de pagamento: {data_pagamento}\n"
+        mensagem += f"🔄 Renovou: {status_renovou}\n"
+        mensagem += f"📦 Pedidos restantes: {pedidos_restantes}\n"
+        mensagem += f"📆 Próxima renovação: Daqui a {dias_restantes} dias, no dia {dia_renovar}\n"
+
+        if imagem_url:
+            bot.send_photo(message.chat.id, imagem_url, caption=mensagem)
+        else:
+            bot.send_message(message.chat.id, mensagem)
+
+    except Exception as e:
+        print(f"Erro ao exibir ficha do VIP: {e}")
+        bot.send_message(message.chat.id, "Erro ao exibir ficha do VIP.")
+    finally:
+        fechar_conexao(cursor, conn)
+from bd import conectar_banco_dados, fechar_conexao
+
+# Função para processar o comando /pedidosubmenu
+def pedido_submenu_command(message):
+    user_id = message.from_user.id
+    user_name = message.from_user.first_name
+
+    try:
+        conn, cursor = conectar_banco_dados()
+
+        # Verificar se o usuário é VIP
+        query_vip = """
+            SELECT pedidos_restantes 
+            FROM vips 
+            WHERE id_usuario = %s
+        """
+        cursor.execute(query_vip, (user_id,))
+        vip_info = cursor.fetchone()
+
+        if not vip_info:
+            bot.send_message(message.chat.id, "Desculpe, você não é um VIP ou não possui pedidos restantes.")
+            return
+
+        pedidos_restantes = vip_info[0]
+
+        # Verificar se o VIP ainda tem pedidos restantes
+        if pedidos_restantes <= 0:
+            bot.send_message(message.chat.id, "Você já usou todos os seus pedidos de submenu deste mês.")
+            return
+
+        # Instruções para enviar o submenu
+        mensagem_inicial = (
+            "Você pode fazer seu pedido de submenu!\n\n"
+            "Envie o submenu dessa forma:\n\n"
+            "- subcategoria: <b>Nome da Subcategoria</b>\n"
+            "- submenu: <b>Nome do Submenu</b>\n"
+            "personagem1nome, link da foto\n"
+            "personagem2nome, link da foto\n"
+            "..."
+        )
+        bot.send_message(message.chat.id, mensagem_inicial, parse_mode="HTML")
+
+        # Registrar o próximo passo para processar o submenu enviado
+        bot.register_next_step_handler(message, processar_pedido_submenu, pedidos_restantes, user_name)
+
+    except Exception as e:
+        bot.send_message(message.chat.id, "Ocorreu um erro ao verificar suas permissões de VIP.")
+        print(f"Erro ao verificar VIP: {e}")
+    finally:
+        fechar_conexao(cursor, conn)
+
+# Função para processar o comando /pedidovip
+def pedidovip_command(message):
+    if message.from_user.id not in [5532809878, 1805086442]:
+        bot.send_message(message.chat.id, "Você não tem permissão para usar este comando.")
+        return
+
+    try:
+        args = message.text.split()
+        if len(args) != 3:
+            bot.send_message(message.chat.id, "Uso incorreto. Formato correto: /pedidovip <iddovip> <número (+ ou -)>")
+            return
+
+        id_vip = int(args[1])
+        ajuste = int(args[2])
+
+        conn, cursor = conectar_banco_dados()
+
+        # Verifica se o VIP existe
+        cursor.execute("SELECT pedidos_restantes FROM vips WHERE id = %s", (id_vip,))
+        vip_info = cursor.fetchone()
+
+        if not vip_info:
+            bot.send_message(message.chat.id, f"Nenhum VIP encontrado com o ID '{id_vip}'.")
+            return
+
+        pedidos_atual = vip_info[0]
+        pedidos_novo = pedidos_atual + ajuste
+
+        # Atualiza o número de pedidos restantes
+        cursor.execute("UPDATE vips SET pedidos_restantes = %s WHERE id = %s", (pedidos_novo, id_vip))
+        conn.commit()
+
+        # Mensagem de confirmação
+        bot.send_message(message.chat.id, f"Pedidos do VIP com ID {id_vip} foram atualizados. Novo total de pedidos: {pedidos_novo}")
+
+    except Exception as e:
+        bot.send_message(message.chat.id, f"Erro ao atualizar os pedidos: {e}")
+        print(f"Erro ao processar o comando /pedidovip: {e}")
+    finally:
+        fechar_conexao(cursor, conn)
+

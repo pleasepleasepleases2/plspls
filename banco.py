@@ -227,3 +227,165 @@ def botoes_paginacao_cartas_compradas(pagina_atual, total_paginas):
         markup.row(*botoes)
     return markup
 
+import random
+import mysql.connector
+from bd import conectar_banco_dados, fechar_conexao
+
+# Função para processar a compra de pacotes de cartas por categoria
+def processar_compra_vendinha_categoria(call):
+    try:
+        partes = call.data.split('_')
+        pacote = partes[2]
+        categoria = partes[3]
+
+        pacotes = {
+            'basico': (10, 50),  # 10 cartas, 50 cenouras
+            'prata': (25, 100),  # 25 cartas, 100 cenouras
+            'ouro': (80, 200)    # 80 cartas, 200 cenouras
+        }
+
+        if pacote in pacotes:
+            quantidade, preco = pacotes[pacote]
+            id_usuario = call.from_user.id
+
+            # Ajuste de preço para categorias específicas
+            if categoria != 'geral':
+                preco *= 2
+
+            conn, cursor = conectar_banco_dados()
+            cursor.execute("SELECT cenouras FROM usuarios WHERE id_usuario = %s", (id_usuario,))
+            cenouras = cursor.fetchone()[0]
+
+            if cenouras >= preco:
+                # Obter cartas com base na categoria
+                if categoria == 'geral':
+                    cartas = obter_cartas_do_inventario(quantidade)
+                else:
+                    cartas = obter_cartas_categoria_do_inventario(quantidade, categoria)
+
+                if isinstance(cartas, list):
+                    atualizar_inventario(id_usuario, cartas)
+                    cursor.execute("UPDATE usuarios SET cenouras = cenouras - %s WHERE id_usuario = %s", (preco, id_usuario))
+                    conn.commit()
+
+                    globals.cartas_compradas_dict[id_usuario] = cartas
+
+                    bot.edit_message_caption(caption=f"Compra realizada com sucesso! Você comprou {quantidade} cartas de {categoria.capitalize()}.", chat_id=call.message.chat.id, message_id=call.message.message_id)
+                    mostrar_cartas_compradas(call.message.chat.id, cartas, id_usuario, 1, call.message.message_id)
+                else:
+                    bot.edit_message_caption(caption="Erro ao buscar cartas. Tente novamente mais tarde.", chat_id=call.message.chat.id, message_id=call.message.message_id)
+            else:
+                bot.edit_message_caption(caption="Cenouras insuficientes para realizar a compra.", chat_id=call.message.chat.id, message_id=call.message.message_id)
+        else:
+            bot.edit_message_caption(caption="Pacote inválido.", chat_id=call.message.chat.id, message_id=call.message.message_id)
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+    finally:
+        fechar_conexao(cursor, conn)
+
+# Função para obter cartas aleatórias do inventário
+def obter_cartas_do_inventario(quantidade):
+    conn, cursor = conectar_banco_dados()
+    
+    # Obter cartas do banco de inventário
+    query_inventario = """
+    SELECT bi.id_personagem, p.nome, p.subcategoria, p.imagem, p.emoji
+    FROM banco_inventario bi
+    JOIN personagens p ON bi.id_personagem = p.id_personagem
+    WHERE bi.quantidade > 0
+    ORDER BY RAND() LIMIT %s
+    """
+    cursor.execute(query_inventario, (quantidade,))
+    cartas_inventario = cursor.fetchall()
+
+    # Obter cartas de eventos
+    query_evento = """
+    SELECT e.id_personagem, e.nome, e.subcategoria, e.imagem, e.emoji
+    FROM evento e
+    ORDER BY RAND() LIMIT %s
+    """
+    # Selecionar uma fração de cartas do evento
+    quantidade_evento = max(1, quantidade // 10)  # Por exemplo, 25% das cartas podem ser de eventos
+    cursor.execute(query_evento, (quantidade_evento,))
+    cartas_evento = cursor.fetchall()
+
+    # Combinar cartas do inventário e do evento
+    todas_cartas = cartas_inventario + cartas_evento
+    random.shuffle(todas_cartas)  # Embaralha a lista de cartas
+
+    fechar_conexao(cursor, conn)
+    return todas_cartas
+
+# Função para obter cartas de uma categoria específica
+def obter_cartas_categoria_do_inventario(quantidade, categoria):
+    conn, cursor = conectar_banco_dados()
+    
+    # Obter cartas da categoria especificada no banco de inventário
+    query_inventario = """
+    SELECT bi.id_personagem, p.nome, p.subcategoria, p.imagem, p.emoji
+    FROM banco_inventario bi
+    JOIN personagens p ON bi.id_personagem = p.id_personagem
+    WHERE bi.quantidade > 0 AND p.categoria = %s
+    ORDER BY RAND() LIMIT %s
+    """
+    cursor.execute(query_inventario, (categoria, quantidade))
+    cartas_inventario = cursor.fetchall()
+
+    # Obter cartas de eventos
+    query_evento = """
+    SELECT e.id_personagem, e.nome, e.subcategoria, e.imagem, e.emoji
+    FROM evento e
+    ORDER BY RAND() LIMIT %s
+    """
+    # Selecionar uma fração de cartas do evento
+    quantidade_evento = max(1, quantidade // 10)  # Por exemplo, 25% das cartas podem ser de eventos
+    cursor.execute(query_evento, (quantidade_evento,))
+    cartas_evento = cursor.fetchall()
+
+    # Combinar cartas do inventário e do evento
+    todas_cartas = cartas_inventario + cartas_evento
+    random.shuffle(todas_cartas)  # Embaralha a lista de cartas
+
+    fechar_conexao(cursor, conn)
+    return todas_cartas
+
+def processar_saldo_usuario(message):
+    try:
+        id_usuario = message.from_user.id
+        
+        conn, cursor = conectar_banco_dados()
+
+        # Obter saldo total de cenouras do banco
+        cursor.execute("SELECT SUM(quantidade_cenouras) FROM banco_cidade")
+        total_cenouras_banco = cursor.fetchone()[0] or 0
+
+        # Obter saldo total de cartas no banco de inventário
+        cursor.execute("SELECT SUM(quantidade) FROM banco_inventario")
+        total_cartas_banco = cursor.fetchone()[0] or 0
+
+        # Obter saldo de cenouras do usuário
+        cursor.execute("SELECT cenouras, iscas FROM usuarios WHERE id_usuario = %s", (id_usuario,))
+        resultado = cursor.fetchone()
+        if resultado:
+            saldo_cenouras_usuario, saldo_iscas_usuario = resultado
+        else:
+            saldo_cenouras_usuario, saldo_iscas_usuario = 0, 0
+
+        # Montar a mensagem de saldo
+        resposta = f"💰 <b>Saldo da Cidade:</b>\n"
+        resposta += f"🥕 Total de cenouras: {total_cenouras_banco}\n"
+        resposta += f"📦 Total de cartas: {total_cartas_banco}\n\n"
+        resposta += f"💼 <b>Saldo do Camponês:</b>\n"
+        resposta += f"🥕 Suas cenouras: {saldo_cenouras_usuario}\n"
+        resposta += f"🪝 Suas iscas: {saldo_iscas_usuario}\n"
+
+        # Enviar a mensagem
+        bot.send_message(message.chat.id, resposta, parse_mode="HTML")
+        
+    except Exception as e:
+        print(f"Erro ao processar comando /saldo: {e}")
+        bot.reply_to(message, "Ocorreu um erro ao verificar seu saldo.")
+    finally:
+        fechar_conexao(cursor, conn)

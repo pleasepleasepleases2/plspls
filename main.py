@@ -92,9 +92,7 @@ cache_musicas_editadas = dc.Cache('./cache_musicas_editadas')
 song_cooldown_cache = TTLCache(maxsize=1000, ttl=15)
 cache = dc.Cache('./cache')
 task_queue = Queue()
-#Conexão com Banco de Dados
 conn, cursor = conectar_banco_dados()
-
 
 @app.route("/")
 def set_webhook():
@@ -396,90 +394,146 @@ def sugestao_command(message):
         categoria = dados[2].strip()
         imagem = dados[3].strip()
 
-        # Obter o nome e user da pessoa que sugeriu
         nome_usuario = message.from_user.first_name
         user_usuario = message.from_user.username
 
-        # Montar a mensagem da sugestão
         sugestao_texto = (f"Sugestão recebida:\n"
                           f"Nome: {nome}\nSubcategoria: {subcategoria}\nCategoria: {categoria}\n"
                           f"Imagem: {imagem}\n"
                           f"Usuário: {nome_usuario} (@{user_usuario})")
 
-        # Encaminhar para o grupo de sugestões
         bot.send_message(GRUPO_SUGESTOES, sugestao_texto)
 
     except Exception as e:
         print(f"Erro ao processar o comando /sugestao: {e}")
         bot.reply_to(message, "Ocorreu um erro ao processar sua sugestão. Tente novamente.")
 
-# Registro do comando para adicionar VIP
 @bot.message_handler(commands=['adicionar_vip'])
 def handle_adicionar_vip(message):
     adicionar_vip_logic(message)
 
-# Registro do comando para remover VIP
 @bot.message_handler(commands=['remover_vip'])
 def handle_remover_vip(message):
     remover_vip_logic(message)
 
-# Registro do comando para listar VIPs
 @bot.message_handler(commands=['vips'])
 def handle_listar_vips(message):
     listar_vips_logic(message)
 
-# Registro do comando para listar pedidos dos VIPs
 @bot.message_handler(commands=['pedidos'])
 def handle_listar_pedidos_vips(message):
     listar_pedidos_vips_logic(message)
 
-# Registro do comando para ver a ficha de um VIP
 @bot.message_handler(commands=['ficha'])
 def handle_ver_ficha_vip(message):
     ver_ficha_vip_logic(message)
 
-# Callback para alternar configurações gerais
-@bot.callback_query_handler(func=lambda call: call.data.startswith('toggle_'))
-def handle_toggle_config(call):
-    toggle_config(call)
-
-# Callback para alternar o status de casamento
-@bot.callback_query_handler(func=lambda call: call.data == 'toggle_casamento')
-def handle_toggle_casamento(call):
-    toggle_casamento(call)
-
-# Registro do comando de doação de cartas
 @bot.message_handler(commands=['doar'])
 def handle_doar(message):
     doar(message)
 
-# Registro do comando /roseira
 @bot.message_handler(commands=['roseira'])
 def handle_roseira_command(message):
     roseira_command(message)
 
-# Registro do callback para escolha de carta na roseira
-@bot.callback_query_handler(func=lambda call: call.data.startswith("escolher_"))
-def handle_callback_escolher_carta(call):
-    callback_escolher_carta(call)
-
-
-# Registro do comando /pedidosubmenu
 @bot.message_handler(commands=['pedidosubmenu'])
 def handle_pedido_submenu_command(message):
     pedido_submenu_command(message)
 
-# Registro do comando /pedidovip
 @bot.message_handler(commands=['pedidovip'])
 def handle_pedidovip_command(message):
     pedidovip_command(message)
 
-# Registro do comando /criarvendinha
 @bot.message_handler(commands=['criarvendinha'])
 def handle_criar_colagem(message):
     criar_colagem(message)
 
-# Callback para lidar com categorias de pesca
+@bot.message_handler(commands=['vendinha'])
+def handle_vendinha_command(message):
+    loja(message)
+
+@bot.message_handler(commands=['peixes'])
+def handle_peixes_command(message):
+    verificar_comando_peixes(message)
+
+@bot.message_handler(commands=['delgif'])
+def handle_delgif(message):
+    processar_comando_delgif(message)
+            
+@bot.message_handler(commands=['raspadinha'])
+def handle_sorte(message):
+    comando_sorte(message)
+
+@bot.message_handler(commands=['casar'])
+def handle_casar_command(message):
+    casar_command(message)
+
+@bot.message_handler(commands=['divorciar'])
+def handle_divorciar_command(message):
+    divorciar_command(message)
+
+@bot.message_handler(commands=['tag'])
+def handle_tag_command(message):
+    verificar_comando_tag(message)
+
+@bot.message_handler(commands=['addtag'])
+def handle_addtag_command(message):
+    adicionar_tag(message)
+
+@bot.message_handler(commands=['completos'])
+def handle_completos_command(message):
+    handle_completos(message)
+
+@bot.message_handler(commands=['pesca', 'pescar'])
+def handle_pescar(message):
+    pescar(message)
+    
+@bot.message_handler(commands=['spicnic'])
+def handle_spicnic(message):
+    spicnic_command(message)
+@bot.message_handler(commands=['delcards'])
+def delcards_handler(message):
+    delcards_command(message)
+    
+@bot.message_handler(commands=['versubs'])
+def versubs_handler(message):
+    versubs_command(message)
+
+@bot.message_handler(commands=['rep'])
+def ver_repetidos_evento_handler(message):
+    ver_repetidos_evento(message)
+
+@bot.message_handler(commands=['progresso'])
+def progresso_evento_handler(message):
+    progresso_evento(message)
+    
+@bot.message_handler(commands=['saldo'])
+def saldo_command(message):
+    processar_saldo_usuario(message)
+
+@bot.message_handler(commands=['trintadas', 'abelhadas', 'abelhas'])
+def handle_trintadas(message):
+    enviar_mensagem_trintadas(message, pagina_atual=1)
+    
+@bot.message_handler(commands=['setmusica', 'setmusic'])
+def set_musica_command(message):
+    handle_set_musica(message)
+
+@bot.message_handler(commands=['evento'])
+def evento_command(message):
+    handle_evento_command(message)
+@bot.callback_query_handler(func=lambda call: call.data.startswith('toggle_'))
+def handle_toggle_config(call):
+    toggle_config(call)
+
+@bot.callback_query_handler(func=lambda call: call.data == 'toggle_casamento')
+def handle_toggle_casamento(call):
+    toggle_casamento(call)
+    
+@bot.callback_query_handler(func=lambda call: call.data.startswith("escolher_"))
+def handle_callback_escolher_carta(call):
+    callback_escolher_carta(call)
+    
 @bot.callback_query_handler(func=lambda call: call.data.startswith('pescar_'))
 def categoria_callback(call):
     try:
@@ -495,8 +549,6 @@ def categoria_callback(call):
     except Exception as e:
         print(f"Erro em categoria_callback: {e}")
 
-
-# Callback para lidar com as páginas de peixes
 @bot.callback_query_handler(func=lambda call: call.data.startswith('peixes_'))
 def callback_peixes(call):
     try:
@@ -508,8 +560,6 @@ def callback_peixes(call):
     except Exception as e:
         print(f"Erro ao processar callback de peixes: {e}")
 
-
-# Callback para lidar com a escolha de subcategoria
 @bot.callback_query_handler(func=lambda call: call.data.startswith('choose_subcategoria_'))
 def callback_subcategoria_handler(call):
     try:
@@ -538,79 +588,26 @@ def callback_subcategoria_handler(call):
     finally:
         fechar_conexao(cursor, conn)
 
-# Registro do comando /vendinha
-@bot.message_handler(commands=['vendinha'])
-def handle_vendinha_command(message):
-    loja(message)
-
-# Registro do comando /peixes
-@bot.message_handler(commands=['peixes'])
-def handle_peixes_command(message):
-    verificar_comando_peixes(message)
-
-# Adicionando o handler para o comando /delgif
-@bot.message_handler(commands=['delgif'])
-def handle_delgif(message):
-    processar_comando_delgif(message)
-            
-@bot.message_handler(commands=['raspadinha'])
-def handle_sorte(message):
-    comando_sorte(message)
-
-# Registro do comando /casar
-@bot.message_handler(commands=['casar'])
-def handle_casar_command(message):
-    casar_command(message)
-
-# Registro do comando /divorciar
-@bot.message_handler(commands=['divorciar'])
-def handle_divorciar_command(message):
-    divorciar_command(message)
-
-# Callback para confirmar casamento
 @bot.callback_query_handler(func=lambda call: call.data.startswith("confirmar_casamento_"))
 def handle_confirmar_casamento(call):
     confirmar_casamento(call)
 
-# Registro do comando /tag
-@bot.message_handler(commands=['tag'])
-def handle_tag_command(message):
-    verificar_comando_tag(message)
-
-# Registro do comando /addtag
-@bot.message_handler(commands=['addtag'])
-def handle_addtag_command(message):
-    adicionar_tag(message)
-
-
-# Registro do comando /completos
-@bot.message_handler(commands=['completos'])
-def handle_completos_command(message):
-    handle_completos(message)
-          
-# Callback para confirmar a doação
 @bot.callback_query_handler(func=lambda call: call.data.startswith('cdoacao_'))
 def handle_confirmar_doacao(call):
     confirmar_doacao(call)
 
-# Callback para cancelar a doação
 @bot.callback_query_handler(func=lambda call: call.data.startswith('ccancelar_'))
 def handle_cancelar_doacao(call):
     cancelar_doacao(call)
 
-        
-# Callback para exibir pacotes de ações
 @bot.callback_query_handler(func=lambda call: call.data == 'acoes_vendinha')
 def handle_acoes_vendinha(call):
     exibir_acoes_vendinha(call)
 
-# Callback para confirmar compra de pacotes de ações
 @bot.callback_query_handler(func=lambda call: call.data.startswith('comprar_acao_vendinha_'))
 def handle_confirmar_compra_vendinha(call):
     confirmar_compra_vendinha(call)
 
-
-# Callback para processar a compra de pacotes de cartas por categoria
 @bot.callback_query_handler(func=lambda call: call.data.startswith('confirmar_categoria_'))
 def handle_processar_compra_vendinha_categoria(call):
     processar_compra_vendinha_categoria(call)
@@ -618,20 +615,10 @@ def handle_processar_compra_vendinha_categoria(call):
 @bot.callback_query_handler(func=lambda call: call.data == 'cancelar_compra_vendinha')
 def cancelar_compra_vendinha(call):
     bot.edit_message_caption(caption="Poxa, Até logo!", chat_id=call.message.chat.id, message_id=call.message.message_id)
-     
-# Callback para processar a compra de pacotes de cartas
+
 @bot.callback_query_handler(func=lambda call: call.data.startswith('confirmar_compra_vendinha_'))
 def handle_processar_compra_vendinha(call):
     processar_compra_vendinha(call)
-
-# Comando para pescar
-@bot.message_handler(commands=['pesca', 'pescar'])
-def handle_pescar(message):
-    pescar(message)
-    
-@bot.message_handler(commands=['spicnic'])
-def handle_spicnic(message):
-    spicnic_command(message)
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("change_page_"))
 def handle_page_change(call):
@@ -674,39 +661,18 @@ def add_note_callback(call):
 def cancel_note_callback(call):
     handle_cancel_note_callback(call)
   
-@bot.message_handler(commands=['delcards'])
-def delcards_handler(message):
-    delcards_command(message)
-    
-@bot.message_handler(commands=['versubs'])
-def versubs_handler(message):
-    versubs_command(message)
-
-
-# Handler para lidar com a navegação de páginas das subs
 @bot.callback_query_handler(func=lambda call: call.data.startswith('versubs_'))
 def handle_versubs_callback(call):
     callback_pagina_versubs(call)
 
-
-@bot.message_handler(commands=['rep'])
-def ver_repetidos_evento_handler(message):
-    ver_repetidos_evento(message)
-
 @bot.callback_query_handler(func=lambda call: call.data.startswith('rep_'))
 def callback_repetidas_evento_handler(call):
     callback_repetidas_evento(call)
-
-@bot.message_handler(commands=['progresso'])
-def progresso_evento_handler(message):
-    progresso_evento(message)
-
-# Callback para confirmar a doação
+    
 @bot.callback_query_handler(func=lambda call: call.data.startswith('cdoacao_'))
 def handle_confirmar_doacao(call):
     confirmar_doacao(call)
 
-# Callback para cancelar a doação
 @bot.callback_query_handler(func=lambda call: call.data.startswith('ccancelar_'))
 def handle_cancelar_doacao(call):
     cancelar_doacao(call)
@@ -714,12 +680,10 @@ def handle_cancelar_doacao(call):
 @bot.callback_query_handler(func=lambda call: call.data.startswith("submenus_"))
 def callback_submenus_handler(call):
     callback_submenus(call)
-
         
 @bot.callback_query_handler(func=lambda call: call.data.startswith("especies_"))
 def callback_especies_handler(call):
     callback_especies(call)
-
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith('poço_dos_desejos'))
 def handle_poco_dos_desejos_handler(call):
@@ -728,15 +692,6 @@ def handle_poco_dos_desejos_handler(call):
 @bot.callback_query_handler(func=lambda call: call.data.startswith('fazer_pedido'))
 def handle_fazer_pedido_handler(call):
     handle_fazer_pedido(call)
-
-@bot.message_handler(commands=['saldo'])
-def saldo_command(message):
-    processar_saldo_usuario(message)
-
-
-@bot.message_handler(commands=['trintadas', 'abelhadas', 'abelhas'])
-def handle_trintadas(message):
-    enviar_mensagem_trintadas(message, pagina_atual=1)
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith('trintadas_'))
 def callback_trintadas(call):
@@ -861,107 +816,10 @@ def callback_compra(call):
 def callback_confirmar_compra(call):
     from loja import handle_callback_confirmar_compra
     handle_callback_confirmar_compra(call)
-
         
-@bot.message_handler(commands=['setmusica', 'setmusic'])
-def set_musica_command(message):
-    handle_set_musica(message)
-
-@bot.message_handler(commands=['evento'])
-def evento_command(message):
-    try:
-        verificar_id_na_tabela(message.from_user.id, "ban", "iduser")
-        conn, cursor = conectar_banco_dados()
-        qnt_carta(message.from_user.id)
-        id_usuario = message.from_user.id
-        user = message.from_user
-        usuario = user.first_name
-        
-        comando_parts = message.text.split('/evento ', 1)[1].strip().lower().split(' ')
-        if len(comando_parts) >= 2:
-            evento = comando_parts[1]
-            subcategoria = ' '.join(comando_parts[1:])
-        else:
-            resposta = "Comando inválido. Use /evento <evento> <subcategoria>."
-            bot.send_message(message.chat.id, resposta)
-            return
-
-        sql_evento_existente = f"SELECT DISTINCT evento FROM evento WHERE evento = '{evento}'"
-        cursor.execute(sql_evento_existente)
-        evento_existente = cursor.fetchone()
-        if not evento_existente:
-            resposta = f"Evento '{evento}' não encontrado na tabela de eventos."
-            bot.send_message(message.chat.id, resposta)
-            return
-
-        if message.text.startswith('/evento s'):
-            resposta_completa = comando_evento_s(id_usuario, evento, subcategoria, cursor, usuario)
-        elif message.text.startswith('/evento f'):
-            resposta_completa = comando_evento_f(id_usuario, evento, subcategoria, cursor, usuario)
-        else:
-            resposta = "Comando inválido. Use /evento s <evento> <subcategoria> ou /evento f <evento> <subcategoria>."
-            bot.send_message(message.chat.id, resposta)
-            return
-
-        if isinstance(resposta_completa, tuple):
-            subcategoria_pesquisada, lista, total_pages = resposta_completa
-            resposta = f"{lista}\n\nPágina 1 de {total_pages}"
-
-            markup = InlineKeyboardMarkup()
-            if total_pages > 1:
-                markup.add(InlineKeyboardButton("Próxima", callback_data=f"evt_next_{id_usuario}_{evento[:10]}_{subcategoria_pesquisada[:10]}_2"))
-
-            bot.send_message(message.chat.id, resposta, reply_markup=markup)
-        else:
-            bot.send_message(message.chat.id, resposta_completa)
-    except ValueError as e:
-        print(f"Erro: {e}")
-        newrelic.agent.record_exception()    
-        mensagem_banido = "Você foi banido permanentemente do garden. Entre em contato com o suporte caso haja dúvidas."
-        bot.send_message(message.chat.id, mensagem_banido)
-    finally:
-        fechar_conexao(cursor, conn)
-
 @bot.callback_query_handler(func=lambda call: call.data.startswith("evt_"))
 def callback_query_evento(call):
-    data_parts = call.data.split('_')
-    action = data_parts[1]
-    id_usuario_inicial = int(data_parts[2])
-    evento = data_parts[3]
-    subcategoria = data_parts[4]
-    page = int(data_parts[5])
-    
-    try:
-        conn, cursor = conectar_banco_dados()
-
-        if action == "prev":
-            page -= 1
-        elif action == "next":
-            page += 1
-
-        if call.message.text.startswith('🌾'):
-            resposta_completa = comando_evento_s(id_usuario_inicial, evento, subcategoria, cursor, call.from_user.first_name, page)
-        else:
-            resposta_completa = comando_evento_f(id_usuario_inicial, evento, subcategoria, cursor, call.from_user.first_name, page)
-
-        if isinstance(resposta_completa, tuple):
-            subcategoria_pesquisada, lista, total_pages = resposta_completa
-            resposta = f"{lista}\n\nPágina {page} de {total_pages}"
-
-            markup = InlineKeyboardMarkup()
-            if page > 1:
-                markup.add(InlineKeyboardButton("Anterior", callback_data=f"evt_prev_{id_usuario_inicial}_{evento}_{subcategoria}_{page}"))
-            if page < total_pages:
-                markup.add(InlineKeyboardButton("Próxima", callback_data=f"evt_next_{id_usuario_inicial}_{evento}_{subcategoria}_{page}"))
-
-            bot.edit_message_text(resposta, chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=markup)
-        else:
-            bot.edit_message_text(resposta_completa, chat_id=call.message.chat.id, message_id=call.message.message_id)
-    except mysql.connector.Error as err:
-        bot.send_message(call.message.chat.id, f"Erro ao buscar perfil: {err}")
-        newrelic.agent.record_exception()     
-    finally:
-        fechar_conexao(cursor, conn)
+    handle_callback_query_evento(call)
 
 def obter_informacoes_loja(ids_do_dia):
     try:

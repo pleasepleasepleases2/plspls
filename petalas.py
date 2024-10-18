@@ -16,7 +16,7 @@ import diskcache as dc
 import spotipy
 import math
 import logging
-from vips import *
+from vips import is_vip
 from mutagen.mp3 import MP3
 from mutagen.id3 import ID3
 from queue import Queue

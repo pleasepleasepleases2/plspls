@@ -78,6 +78,7 @@ from peixes import *
 from halloween import *
 from vips import *
 from petalas import *
+from armazem import *
 # Configuração de Webhook
 WEBHOOK_URL_PATH = '/' + API_TOKEN + '/'
 WEBHOOK_LISTEN = "0.0.0.0"
@@ -862,26 +863,9 @@ def callback_confirmar_compra(call):
     handle_callback_confirmar_compra(call)
 
         
-@bot.message_handler(commands=['setmusica','setmusic'])
+@bot.message_handler(commands=['setmusica', 'setmusic'])
 def set_musica_command(message):
-    command_parts = message.text.split(maxsplit=1)
-    if len(command_parts) == 2:
-        link_spotify = command_parts[1].strip()
-        id_usuario = message.from_user.id
-
-        try:
-            track_id = link_spotify.split("/")[-1].split("?")[0]
-            track_info = sp.track(track_id)
-            nome_musica = track_info['name']
-            artista = track_info['artists'][0]['name']
-            nova_musica = f"{nome_musica} - {artista}"
-
-            atualizar_coluna_usuario(id_usuario, 'musica', nova_musica)
-            bot.send_message(message.chat.id, f"Música atualizada para: {nova_musica}")
-        except Exception as e:
-            bot.send_message(message.chat.id, f"Erro ao processar o link do Spotify: {e}")
-    else:
-        bot.send_message(message.chat.id, "Formato incorreto. Use /setmusica seguido do link do Spotify, por exemplo: /setmusica https://open.spotify.com/track/xxxx.")
+    handle_set_musica(message)
 
 @bot.message_handler(commands=['evento'])
 def evento_command(message):

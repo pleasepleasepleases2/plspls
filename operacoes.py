@@ -1,4 +1,5 @@
 from pesquisas import *
+from peixes import *
 from user import *
 from bd import *
 from loja import *

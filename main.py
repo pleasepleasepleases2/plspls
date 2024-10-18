@@ -276,6 +276,69 @@ def handle_mover_labirinto(call):
 @bot.callback_query_handler(func=lambda call: call.data in ['encerrar', 'continuar'])
 def handle_encerrar_ou_continuar(call):
     encerrar_ou_continuar(call)
+
+def process_wish(message):
+    try:
+        chat_id = message.chat.id
+        user_id = message.from_user.id
+        command_parts = message.text.split()
+        id_cartas = list(map(int, command_parts[:-1]))[:5]  
+        quantidade_cenouras = int(command_parts[-1])
+
+        if quantidade_cenouras < 10 or quantidade_cenouras > 20:
+            bot.send_message(chat_id, "A quantidade de cenouras deve ser entre 10 e 20.")
+            return
+        if user_id != 1011473517:
+            can_make_wish, time_remaining = check_wish_time(user_id)
+            if not can_make_wish:
+                hours, remainder = divmod(time_remaining.total_seconds(), 3600)
+                minutes, _ = divmod(remainder, 60)
+                image_url = "https://telegra.ph/file/94c9c66af4ca4d6f0a3e5.jpg"
+                caption = (f"<b>Você já fez um pedido recentemente.</b> Por favor, aguarde {int(hours)} horas e {int(minutes)} minutos "
+                           "para fazer um novo pedido.")
+                media = InputMediaPhoto(image_url, caption=caption, parse_mode="HTML")
+                bot.send_message(chat_id=message.chat.id, text=caption, parse_mode="HTML")
+                return
+
+            results = []
+            debug_info = []
+            diminuir_cenouras(user_id, quantidade_cenouras)
+            adicionar_cenouras_banco(quantidade_cenouras)  # Adiciona as cenouras ao banco da cidade
+    
+            for id_carta in id_cartas:
+                chance = random.randint(1, 100)
+                if chance <= 15:  # 10% de chance
+                    results.append(id_carta)
+                    update_inventory(user_id, id_carta)
+                debug_info.append(f"ID da carta: {id_carta}, Chance: {chance}, Resultado: {'Ganhou' if chance <= 10 else 'Não ganhou'}")
+    
+            if results:
+                bot.send_message(chat_id, f"<i>As águas da fonte começam a circular em uma velocidade assutadora, mas antes que você possa reagir, aparece na sua cesta os seguintes peixes:<b> {', '.join(map(str, results))}.</b>\n\nA fonte então desaparece. Quem sabe onde ele estará daqui 6 horas?</i>", parse_mode="HTML")
+            else:
+                bot.send_message(chat_id, "<i>A fonte nem se move ao receber suas cenouras, elas apenas desaparecem no meio da água calma. Talvez você deva tentar novamente mais tarde... </i>", parse_mode="HTML")
+    
+            log_wish_attempt(user_id, id_cartas, quantidade_cenouras, results)
+        else:
+            results = []
+            debug_info = []
+            diminuir_cenouras(user_id, quantidade_cenouras)
+            adicionar_cenouras_banco(quantidade_cenouras)  # Adiciona as cenouras ao banco da cidade
+    
+            for id_carta in id_cartas:
+                chance = random.randint(1, 100)
+                if chance <= 50:  # 10% de chance
+                    results.append(id_carta)
+                    update_inventory(user_id, id_carta)
+                debug_info.append(f"ID da carta: {id_carta}, Chance: {chance}, Resultado: {'Ganhou' if chance <= 10 else 'Não ganhou'}")
+    
+            if results:
+                bot.send_message(chat_id, f"<i>As águas da fonte começam a circular em uma velocidade assutadora, mas antes que você possa reagir, aparece na sua cesta os seguintes peixes:<b> {', '.join(map(str, results))}.</b>\n\nA fonte então desaparece. Quem sabe onde ele estará daqui 6 horas?</i>", parse_mode="HTML")
+            else:
+                bot.send_message(chat_id, "<i>A fonte nem se move ao receber suas cenouras, elas apenas desaparecem no meio da água calma. Talvez você deva tentar novamente mais tarde... </i>", parse_mode="HTML")
+    
+    except Exception as e:
+        bot.send_message(message.chat.id, f"Ocorreu um erro. Você escreveu da maneira correta?")
+
 def handle_fazer_pedido(call):
     user_id = call.from_user.id  # Adicionando a identificação do usuário
 

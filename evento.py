@@ -166,3 +166,100 @@ def callback_subcategory(call):
         newrelic.agent.record_exception()    
         print(f"Erro ao processar callback de subcategoria: {e}")
         traceback.print_exc()
+
+
+def handle_evento_command(message):
+    try:
+        verificar_id_na_tabela(message.from_user.id, "ban", "iduser")
+        conn, cursor = conectar_banco_dados()
+        qnt_carta(message.from_user.id)
+        id_usuario = message.from_user.id
+        user = message.from_user
+        usuario = user.first_name
+        
+        comando_parts = message.text.split('/evento ', 1)[1].strip().lower().split(' ')
+        if len(comando_parts) >= 2:
+            evento = comando_parts[1]
+            subcategoria = ' '.join(comando_parts[1:])
+        else:
+            resposta = "Comando inválido. Use /evento <evento> <subcategoria>."
+            bot.send_message(message.chat.id, resposta)
+            return
+
+        sql_evento_existente = f"SELECT DISTINCT evento FROM evento WHERE evento = '{evento}'"
+        cursor.execute(sql_evento_existente)
+        evento_existente = cursor.fetchone()
+        if not evento_existente:
+            resposta = f"Evento '{evento}' não encontrado na tabela de eventos."
+            bot.send_message(message.chat.id, resposta)
+            return
+
+        if message.text.startswith('/evento s'):
+            resposta_completa = comando_evento_s(id_usuario, evento, subcategoria, cursor, usuario)
+        elif message.text.startswith('/evento f'):
+            resposta_completa = comando_evento_f(id_usuario, evento, subcategoria, cursor, usuario)
+        else:
+            resposta = "Comando inválido. Use /evento s <evento> <subcategoria> ou /evento f <evento> <subcategoria>."
+            bot.send_message(message.chat.id, resposta)
+            return
+
+        if isinstance(resposta_completa, tuple):
+            subcategoria_pesquisada, lista, total_pages = resposta_completa
+            resposta = f"{lista}\n\nPágina 1 de {total_pages}"
+
+            markup = InlineKeyboardMarkup()
+            if total_pages > 1:
+                markup.add(InlineKeyboardButton("Próxima", callback_data=f"evt_next_{id_usuario}_{evento[:10]}_{subcategoria_pesquisada[:10]}_2"))
+
+            bot.send_message(message.chat.id, resposta, reply_markup=markup)
+        else:
+            bot.send_message(message.chat.id, resposta_completa)
+    except ValueError as e:
+        print(f"Erro: {e}")
+        newrelic.agent.record_exception()    
+        mensagem_banido = "Você foi banido permanentemente do garden. Entre em contato com o suporte caso haja dúvidas."
+        bot.send_message(message.chat.id, mensagem_banido)
+    finally:
+        fechar_conexao(cursor, conn)
+
+
+def handle_callback_query_evento(call):
+    data_parts = call.data.split('_')
+    action = data_parts[1]
+    id_usuario_inicial = int(data_parts[2])
+    evento = data_parts[3]
+    subcategoria = data_parts[4]
+    page = int(data_parts[5])
+    
+    try:
+        conn, cursor = conectar_banco_dados()
+
+        if action == "prev":
+            page -= 1
+        elif action == "next":
+            page += 1
+
+        if call.message.text.startswith('🌾'):
+            resposta_completa = comando_evento_s(id_usuario_inicial, evento, subcategoria, cursor, call.from_user.first_name, page)
+        else:
+            resposta_completa = comando_evento_f(id_usuario_inicial, evento, subcategoria, cursor, call.from_user.first_name, page)
+
+        if isinstance(resposta_completa, tuple):
+            subcategoria_pesquisada, lista, total_pages = resposta_completa
+            resposta = f"{lista}\n\nPágina {page} de {total_pages}"
+
+            markup = InlineKeyboardMarkup()
+            if page > 1:
+                markup.add(InlineKeyboardButton("Anterior", callback_data=f"evt_prev_{id_usuario_inicial}_{evento}_{subcategoria}_{page}"))
+            if page < total_pages:
+                markup.add(InlineKeyboardButton("Próxima", callback_data=f"evt_next_{id_usuario_inicial}_{evento}_{subcategoria}_{page}"))
+
+            bot.edit_message_text(resposta, chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=markup)
+        else:
+            bot.edit_message_text(resposta_completa, chat_id=call.message.chat.id, message_id=call.message.message_id)
+    except mysql.connector.Error as err:
+        bot.send_message(call.message.chat.id, f"Erro ao buscar perfil: {err}")
+        newrelic.agent.record_exception()     
+    finally:
+        fechar_conexao(cursor, conn)
+

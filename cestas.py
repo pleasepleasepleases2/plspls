@@ -675,3 +675,93 @@ def handle_callback_query_cesta(call):
     finally:
         processing_lock.release()
 
+def processar_cesta(message):
+    try:
+        parts = message.text.split(' ', 2)
+        if len(parts) < 3:
+            bot.reply_to(message, "Por favor, forneça o tipo ('s', 'f', 'c', 'se', 'fe' ou 'cf') e a subcategoria após o comando, por exemplo: /cesta s bts")
+            return
+
+        tipo = parts[1].strip()
+        subcategoria = parts[2].strip()
+
+        id_usuario = message.from_user.id
+        nome_usuario = message.from_user.first_name
+        apagar_cartas_quantidade_zero_ou_negativa()
+
+        if tipo in ['s', 'se']:
+            subcategoria_proxima = encontrar_subcategoria_proxima(subcategoria)
+            if not subcategoria_proxima:
+                bot.reply_to(message, "Espécie não identificada. Você digitou certo? 🤭")
+                return
+
+            ids_personagens = obter_ids_personagens_inventario(id_usuario, subcategoria_proxima)
+            if 'e' in tipo:
+                ids_personagens += obter_ids_personagens_evento(id_usuario, subcategoria_proxima, incluir=False)
+            total_personagens_subcategoria = obter_total_personagens_subcategoria(subcategoria_proxima)
+            total_registros = len(ids_personagens)
+
+            if total_registros > 0:
+                total_paginas = (total_registros // 15) + (1 if total_registros % 15 > 0 else 0)
+                mostrar_pagina_cesta_s(message, subcategoria_proxima, id_usuario, 1, total_paginas, ids_personagens, total_personagens_subcategoria, nome_usuario)
+            else:
+                bot.reply_to(message, f"🌧️ Sem peixes de {subcategoria_proxima} na cesta... a jornada continua.")
+
+        elif tipo in ['f', 'fe']:
+            subcategoria_proxima = encontrar_subcategoria_proxima(subcategoria)
+            if not subcategoria_proxima:
+                bot.reply_to(message, "Espécie não identificada. Você digitou certo? 🤭")
+                return
+
+            ids_personagens_faltantes = obter_ids_personagens_faltantes(id_usuario, subcategoria_proxima)
+            if 'e' in tipo:
+                ids_personagens_faltantes += obter_ids_personagens_evento(id_usuario, subcategoria_proxima, incluir=True)
+            total_personagens_subcategoria = obter_total_personagens_subcategoria(subcategoria_proxima)
+            total_registros = len(ids_personagens_faltantes)
+
+            if total_registros > 0:
+                total_paginas = (total_registros // 15) + (1 if total_registros % 15 > 0 else 0)
+                mostrar_pagina_cesta_f(message, subcategoria_proxima, id_usuario, 1, total_paginas, ids_personagens_faltantes, total_personagens_subcategoria, nome_usuario)
+            else:
+                bot.reply_to(message, f"☀️ Nada como a alegria de ter todos os peixes de {subcategoria_proxima} na cesta!")
+
+        elif tipo == 'c':
+            subcategoria_proxima = encontrar_categoria_proxima(subcategoria)
+            if not subcategoria_proxima:
+                bot.reply_to(message, "Espécie não identificada. Você digitou certo? 🤭")
+                return
+
+            ids_personagens = obter_ids_personagens_categoria(id_usuario, subcategoria_proxima)
+            total_personagens_categoria = obter_total_personagens_categoria(subcategoria_proxima)
+            total_registros = len(ids_personagens)
+
+            if total_registros > 0:
+                total_paginas = (total_registros // 15) + (1 if total_registros % 15 > 0 else 0)
+                mostrar_pagina_cesta_c(message, subcategoria_proxima, id_usuario, 1, total_paginas, ids_personagens, total_personagens_categoria, nome_usuario)
+            else:
+                bot.reply_to(message, f"🌧️ Sem peixes de {subcategoria_proxima} na cesta... a jornada continua.")
+
+        elif tipo == 'cf':
+            subcategoria_proxima = encontrar_categoria_proxima(subcategoria)
+            if not subcategoria_proxima:
+                bot.reply_to(message, "Espécie não identificada. Você digitou certo? 🤭")
+                return
+
+            ids_personagens_faltantes = obter_ids_personagens_faltantes_categoria(id_usuario, subcategoria_proxima)
+            total_personagens_categoria = obter_total_personagens_categoria(subcategoria_proxima)
+            total_registros = len(ids_personagens_faltantes)
+
+            if total_registros > 0:
+                total_paginas = (total_registros // 15) + (1 if total_registros % 15 > 0 else 0)
+                mostrar_pagina_cesta_cf(message, subcategoria_proxima, id_usuario, 1, total_paginas, ids_personagens_faltantes, total_personagens_categoria, nome_usuario)
+            else:
+                bot.reply_to(message, f"☀️ Nada como a alegria de ter todos os peixes de {subcategoria_proxima} na cesta!")
+
+        else:
+            bot.reply_to(message, "Tipo inválido. Use 's' para os personagens que você possui, 'f' para os que você não possui, 'c' para uma categoria completa ou 'cf' para faltantes na categoria.")
+
+    except IndexError:
+        bot.reply_to(message, "Por favor, forneça o tipo ('s', 'f', 'c', 'se', 'fe' ou 'cf') e a subcategoria desejada após o comando, por exemplo: /cesta s bts")
+
+    except Exception as e:
+        print(f"Erro ao processar comando /cesta: {e}")

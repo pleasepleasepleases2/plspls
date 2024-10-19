@@ -1184,7 +1184,6 @@ def callback_paginacao_armazem(call):
 def handle_callback_subcategory(call):
     callback_subcategory(call)
 
-
 @bot.message_handler(commands=['cenourar'])
 def handle_cenourar(message):
     processar_verificar_e_cenourar(message, bot)
@@ -1192,7 +1191,6 @@ def handle_cenourar(message):
 @bot.callback_query_handler(func=lambda call: call.data.startswith('cenourar_'))
 def handle_cenourar_callback(call):
     callback_cenourar(call, bot)
-
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith('loja_geral'))
 def callback_loja_geral(call):

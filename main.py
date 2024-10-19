@@ -3019,55 +3019,6 @@ def admin(message):
         import traceback
         traceback.print_exc()
 
-
-        
-@bot.message_handler(commands=['colagem'])
-def criar_colagem(message):
-    try:
-
-        if len(message.text.split()) != 7:
-            bot.reply_to(message, "Por favor, forneça exatamente 6 IDs de cartas separados por espaços.")
-            return
-        ids_cartas = message.text.split()[1:]
-        imagens = []
-        
-        for id_carta in ids_cartas:
-            img_url = obter_url_imagem_por_id(id_carta)
-            if img_url:
-                print(id_carta)
-                response = requests.get(img_url)
-                if response.status_code == 200:
-                    img = Image.open(io.BytesIO(response.content))
-                    img = manter_proporcoes(img, 300, 400)  
-                else:
-                    img = Image.new('RGB', (300, 400), color='black')
-            else:
-                img = Image.new('RGB', (300, 400), color='black')
-            imagens.append(img)
-        
-        altura_total = ((len(imagens) - 1) // 3 + 1) * 400
-        colagem = Image.new('RGB', (900, altura_total))  
-        coluna_atual = 0
-        linha_atual = 0
-
-        for img in imagens:
-            colagem.paste(img, (coluna_atual, linha_atual))
-            coluna_atual += 300
-
-            if coluna_atual >= 900:
-                coluna_atual = 0
-                linha_atual += 400
-
-        colagem_path = 'colagem_cartas.png'
-        colagem.save(colagem_path)
-
-        with open(colagem_path, 'rb') as photo:
-            bot.send_photo(message.chat.id, photo)
-
-    except Exception as e:
-        print(f"Erro ao criar colagem: {e}")
-        bot.reply_to(message, "Erro ao criar colagem.")
-
 @bot.message_handler(commands=['enviar_mensagem'])
 def enviar_mensagem_privada(message):
     try:
@@ -3258,6 +3209,79 @@ def registrar_mensagens_privadas(message):
     finally:
         fechar_conexao(cursor, conn)   
 
+def manter_proporcoes(imagem, largura_maxima, altura_maxima):
+    largura_original, altura_original = imagem.size
+    proporcao_original = largura_original / altura_original
+
+    if proporcao_original > 1:
+        nova_largura = largura_maxima
+        nova_altura = int(largura_maxima / proporcao_original)
+    else:
+        nova_altura = altura_maxima
+        nova_largura = int(altura_maxima * proporcao_original)
+
+    return imagem.resize((nova_largura, nova_altura))        
+
+# Função para criar a colagem
+def criar_colagem(message):
+    if message.from_user.id not in allowed_user_ids:
+        bot.send_message(message.chat.id, "Você não tem permissão para usar este comando.")
+        return
+
+    try:
+        cartas_aleatorias = obter_cartas_aleatorias()
+        data_atual_str = dt_module.date.today().strftime("%Y-%m-%d") 
+        if not cartas_aleatorias:
+            bot.send_message(message.chat.id, "Não foi possível obter cartas aleatórias.")
+            return
+
+        registrar_cartas_loja(cartas_aleatorias, data_atual_str)
+
+        imagens = []
+        for carta in cartas_aleatorias:
+            img_url = carta.get('imagem', '')
+            try:
+                if img_url:
+                    response = requests.get(img_url)
+                    if response.status_code == 200:
+                        img = Image.open(io.BytesIO(response.content))
+                        img = img.resize((300, 400), Image.LANCZOS)
+                    else:
+                        img = Image.new('RGB', (300, 400), color='black')
+                else:
+                    img = Image.new('RGB', (300, 400), color='black')
+            except Exception as e:
+                print(f"Erro ao abrir a imagem da carta {carta['id']}: {e}")
+                img = Image.new('RGB', (300, 400), color='black')
+            imagens.append(img)
+
+        altura_total = (len(imagens) // 3) * 400
+
+        colagem = Image.new('RGB', (900, altura_total))  
+        coluna_atual = 0
+        linha_atual = 0
+
+        for img in imagens:
+            colagem.paste(img, (coluna_atual, linha_atual))
+            coluna_atual += 300
+
+            if coluna_atual >= 900:
+                coluna_atual = 0
+                linha_atual += 400
+
+        colagem.save('colagem_cartas.png')
+        
+        mensagem_loja = "🐟 Peixes na vendinha hoje:\n\n"
+        for carta in cartas_aleatorias:
+            mensagem_loja += f"{carta['emoji']}| {carta['id']} • {carta['nome']} - {carta['subcategoria']}\n"
+        mensagem_loja += "\n🥕 Acesse usando o comando /vendinha"
+
+        with open('colagem_cartas.png', 'rb') as photo:
+            bot.send_photo(message.chat.id, photo, caption=mensagem_loja, reply_to_message_id=message.message_id)
+
+    except Exception as e:
+        print(f"Erro ao criar colagem: {e}")
+        bot.send_message(message.chat.id, "Erro ao criar colagem.")
 
 if __name__ == "__main__":
     app.run(host=WEBHOOK_LISTEN, port=int(WEBHOOK_PORT), debug=False)

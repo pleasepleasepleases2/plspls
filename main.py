@@ -626,7 +626,6 @@ def del_page(message):
 
         conn, cursor = conectar_banco_dados()
 
-        # Recupera a página correspondente
         cursor.execute("SELECT data, anotacao FROM anotacoes WHERE id_usuario = %s ORDER BY data DESC", (user_id,))
         anotacoes = cursor.fetchall()
 
@@ -636,12 +635,12 @@ def del_page(message):
 
         data, anotacao = anotacoes[page_number - 1]
 
-        # Exibe a anotação com um botão para confirmar a exclusão
-        response = f"Mabigarden, dia {data.strftime('%d/%m/%Y')}\n\nQuerido diário... {anotacao}\n\nDeseja deletar esta página?"
+        response = f"Mabigarden, dia {data.strftime('%d/%m/%Y')}\n\n<i>\"{anotacao}\"</i>\n\nDeseja deletar esta página?"
 
         markup = types.InlineKeyboardMarkup()
-        confirm_button = types.InlineKeyboardButton("Confirmar", callback_data=f"confirmar_delete_{page_number}")
-        markup.add(confirm_button)
+        confirm_button = types.InlineKeyboardButton("✔️ Confirmar", callback_data=f"confirmar_delete_{page_number}")
+        cancel_button = types.InlineKeyboardButton("❌ Cancelar", callback_data=f"cancelar_delete_{page_number}")
+        markup.add(confirm_button, cancel_button)
 
         bot.send_message(message.chat.id, response, reply_markup=markup)
 
@@ -657,7 +656,6 @@ def confirmar_delete(call):
 
         conn, cursor = conectar_banco_dados()
 
-        # Recupera a página correspondente
         cursor.execute("SELECT id FROM anotacoes WHERE id_usuario = %s ORDER BY data DESC LIMIT 1 OFFSET %s", (user_id, page_number - 1))
         anotacao_id = cursor.fetchone()
 
@@ -671,6 +669,11 @@ def confirmar_delete(call):
     except Exception as e:
         bot.send_message(call.message.chat.id, "Erro ao deletar a página.")
         print(f"Erro ao deletar página: {e}")
+
+@bot.callback_query_handler(func=lambda call: call.data.startswith('cancelar_delete_'))
+def cancelar_delete(call):
+    bot.edit_message_text("Ação cancelada.", call.message.chat.id, call.message.message_id)
+
 
 @bot.message_handler(commands=['editdiary'])
 def edit_diary(message):

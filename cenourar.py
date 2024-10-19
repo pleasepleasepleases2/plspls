@@ -1,18 +1,8 @@
 import telebot
-import mysql.connector
-from mysql.connector import pooling
-import concurrent.futures
-from datetime import datetime
+import traceback
+from bd import conectar_banco_dados, fechar_conexao
 
-from pesquisas import *
-from user import *
-from bd import *
-from loja import *
-from gnome import *
-from operacoes import *
-
-
-def enviar_pergunta_cenoura(message, id_usuario, id_personagem, quantidade):
+def enviar_pergunta_cenoura(message, id_usuario, id_personagem):
     try:
         texto_pergunta = f"Você deseja mesmo cenourar a carta {id_personagem}?"
         keyboard = telebot.types.InlineKeyboardMarkup()
@@ -23,119 +13,84 @@ def enviar_pergunta_cenoura(message, id_usuario, id_personagem, quantidade):
     except Exception as e:
         print(f"Erro ao enviar pergunta de cenourar: {e}")
 
-
-def processar_verificar_e_cenourar(message):
+def processar_verificar_e_cenourar(message, bot):
     try:
         conn, cursor = conectar_banco_dados()
         id_usuario = message.from_user.id
         id_personagem = message.text.replace('/cenourar', '').strip()
 
+        # Verifica se a carta está no inventário
         cursor.execute("SELECT quantidade FROM inventario WHERE id_usuario = %s AND id_personagem = %s", (id_usuario, id_personagem))
         quantidade_atual = cursor.fetchone()
 
         if quantidade_atual and quantidade_atual[0] >= 1:
-            enviar_pergunta_cenoura(message, id_usuario, id_personagem, quantidade_atual[0])
+            enviar_pergunta_cenoura(message, id_usuario, id_personagem)
         else:
             bot.send_message(message.chat.id, "Você não possui essa carta no inventário ou não tem quantidade suficiente.")
     except Exception as e:
         print(f"Erro ao processar o comando de cenourar: {e}")
         bot.send_message(message.chat.id, "Erro ao processar o comando de cenourar.")
     finally:
-        if cursor:
-            cursor.close()
-        if conn:
-            conn.close()
+        fechar_conexao(cursor, conn)
 
-
-def processar_verificar_e_cenourar(message):
-    try:
-        conn = conectar_banco_dados()
-        cursor = conn.cursor()
-        id_usuario = message.from_user.id
-        id_personagem = message.text.replace('/cenourar', '').strip()
-
-        cursor.execute("SELECT quantidade FROM inventario WHERE id_usuario = %s AND id_personagem = %s", (id_usuario, id_personagem))
-        quantidade_atual = cursor.fetchone()
-
-        if quantidade_atual and quantidade_atual[0] >= 1:
-            enviar_pergunta_cenoura(message, id_usuario, id_personagem, quantidade_atual[0])
-        else:
-            bot.send_message(message.chat.id, "Você não possui essa carta no inventário ou não tem quantidade suficiente.")
-    except Exception as e:
-        print(f"Erro ao processar o comando de cenourar: {e}")
-        bot.send_message(message.chat.id, "Erro ao processar o comando de cenourar.")
-    finally:
-        if cursor:
-            cursor.close()
-        if conn:
-            conn.close()
-
-def cenourar_carta(call, id_usuario, id_personagem):
+def cenourar_carta(call, id_usuario, id_personagem, bot):
     try:
         conn, cursor = conectar_banco_dados()
         chat_id = call.message.chat.id
         message_id = call.message.message_id
         
-        id_personagens_list = id_personagem.split(",")
-        id_personagens_list = [id.strip() for id in id_personagens_list]
-
-        if len(id_personagens_list) > 10:
-            mensagem_progresso = "Você pode cenourar no máximo 10 cartas por vez."
-            bot.edit_message_text(chat_id=chat_id, message_id=message_id, text=mensagem_progresso)
-            return
+        cursor.execute("SELECT quantidade FROM inventario WHERE id_usuario = %s AND id_personagem = %s", (id_usuario, id_personagem))
+        quantidade_atual = cursor.fetchone()[0]
         
-        # Verificar se possui todas as cartas
-        cartas_a_cenourar = []
-        for id_personagem in id_personagens_list:
-            cursor.execute("SELECT quantidade FROM inventario WHERE id_usuario = %s AND id_personagem = %s", (id_usuario, id_personagem))
-            quantidade_atual = cursor.fetchone()
-            if quantidade_atual and quantidade_atual[0] > 0:
-                cartas_a_cenourar.append(id_personagem)
-            else:
-                bot.send_message(chat_id, f"A carta {id_personagem} não foi encontrada no inventário ou a quantidade é insuficiente e será ignorada.")
-        
-        if not cartas_a_cenourar:
-            bot.edit_message_text(chat_id=chat_id, message_id=message_id, text="Nenhuma carta válida para cenourar foi encontrada.")
-            return
-        
-        cartas_cenouradas = []
-        for id_personagem in cartas_a_cenourar:
-            cursor.execute("SELECT quantidade FROM inventario WHERE id_usuario = %s AND id_personagem = %s", (id_usuario, id_personagem))
-            quantidade_atual = cursor.fetchone()[0]
-            
+        if quantidade_atual > 0:
+            # Atualiza o inventário
             nova_quantidade = quantidade_atual - 1
-            cursor.execute("UPDATE inventario SET quantidade = %s WHERE id_usuario = %s AND id_personagem = %s", (nova_quantidade, id_usuario, id_personagem))
+            cursor.execute("UPDATE inventario SET quantidade = %s WHERE id_usuario = %s AND id_personagem = %s", 
+                           (nova_quantidade, id_usuario, id_personagem))
             
+            # Adiciona cenouras ao usuário
             cursor.execute("SELECT cenouras FROM usuarios WHERE id_usuario = %s", (id_usuario,))
-            cenouras = int(cursor.fetchone()[0])
-            novas_cenouras = cenouras + 1
-            cursor.execute("UPDATE usuarios SET cenouras = %s WHERE id_usuario = %s", (novas_cenouras, id_usuario))
-
-            # Verificar se a carta já está na tabela banco_inventario
+            cenouras = cursor.fetchone()[0] + 1
+            cursor.execute("UPDATE usuarios SET cenouras = %s WHERE id_usuario = %s", (cenouras, id_usuario))
+            
+            # Adiciona a carta ao banco de inventário
             cursor.execute("SELECT quantidade FROM banco_inventario WHERE id_personagem = %s", (id_personagem,))
             quantidade_banco = cursor.fetchone()
+            
             if quantidade_banco:
                 nova_quantidade_banco = quantidade_banco[0] + 1
-                cursor.execute("UPDATE banco_inventario SET quantidade = %s WHERE id_personagem = %s", (nova_quantidade_banco, id_personagem))
+                cursor.execute("UPDATE banco_inventario SET quantidade = %s WHERE id_personagem = %s", 
+                               (nova_quantidade_banco, id_personagem))
             else:
-                cursor.execute("INSERT INTO banco_inventario (id_personagem, quantidade) VALUES (%s, %s)", (id_personagem, 1))
+                cursor.execute("INSERT INTO banco_inventario (id_personagem, quantidade) VALUES (%s, %s)", 
+                               (id_personagem, 1))
             
             conn.commit()
-            cartas_cenouradas.append(id_personagem)
-            mensagem_progresso = f"🔄 Cenourando carta:\n{id_personagem}\n\n✅ Cartas cenouradas:\n" + "\n🥕".join(cartas_cenouradas)
-            bot.edit_message_text(chat_id=chat_id, message_id=message_id, text=mensagem_progresso)
-
-        mensagem_final = "🥕 Cartas cenouradas com sucesso:\n\n" + "\n".join(cartas_cenouradas)
-        bot.edit_message_text(chat_id=chat_id, message_id=message_id, text=mensagem_final)
+            bot.edit_message_text(f"🥕 A carta {id_personagem} foi cenourada com sucesso!", chat_id, message_id)
+        else:
+            bot.edit_message_text(f"A carta {id_personagem} não está mais disponível para cenourar.", chat_id, message_id)
     
     except Exception as e:
-        print(f"Erro ao processar cenoura: {e}")
+        print(f"Erro ao processar cenourar: {e}")
         bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text="Erro ao processar a cenoura.")
     finally:
-        if cursor:
-            cursor.close()
-        if conn:
-            conn.close()
+        fechar_conexao(cursor, conn)
+
+def callback_cenourar(call, bot):
+    try:
+        data_parts = call.data.split("_")
+        acao = data_parts[1]
+        id_usuario = int(data_parts[2])
+        id_personagem = data_parts[3]
+        
+        if acao == "sim":
+            cenourar_carta(call, id_usuario, id_personagem, bot)
+        elif acao == "nao":
+            bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text="Operação de cenoura cancelada.")
+    except Exception as e:
+        print(f"Erro ao processar callback de cenoura: {e}")
+        bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text="Erro ao processar a cenoura.")
+        traceback.print_exc()
 
 def verificar_id_na_tabelabeta(user_id):
     try:
@@ -152,22 +107,4 @@ def verificar_id_na_tabelabeta(user_id):
         cursor.close()
         conn.close()
 
-import traceback
-
-def callback_cenourar(call):
-    try:
-        data_parts = call.data.split("_")
-        acao = data_parts[1]
-        id_usuario = int(data_parts[2])
-        id_personagem = data_parts[3] if len(data_parts) >= 3 else ""
-        print(data_parts)
-        
-        if acao == "sim":
-            cenourar_carta(call, id_usuario, id_personagem)
-        elif acao == "nao":
-            bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text="Operação de cenoura cancelada.")
-    except Exception as e:
-        print(f"Erro ao processar callback de cenoura: {e}")
-        bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text="Erro ao processar a cenoura.")
-        traceback.print_exc()
 

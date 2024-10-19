@@ -2,6 +2,10 @@ import telebot
 import traceback
 from bd import conectar_banco_dados, fechar_conexao
 
+import telebot
+import traceback
+from bd import conectar_banco_dados, fechar_conexao
+
 def enviar_pergunta_cenoura(message, id_usuario, id_personagem, bot):
     try:
         texto_pergunta = f"Você deseja mesmo cenourar a carta {id_personagem}?"
@@ -21,7 +25,6 @@ def processar_verificar_e_cenourar(message, bot):
         id_usuario = message.from_user.id
         print(f"ID do usuário: {id_usuario}")
 
-        # Verificar se o ID do personagem foi fornecido no comando
         if len(message.text.split()) < 2:
             bot.send_message(message.chat.id, "Por favor, forneça o ID do personagem que deseja cenourar. Exemplo: /cenourar 12345")
             return
@@ -33,10 +36,9 @@ def processar_verificar_e_cenourar(message, bot):
         cursor.execute("SELECT quantidade FROM inventario WHERE id_usuario = %s AND id_personagem = %s", (id_usuario, id_personagem))
         quantidade_atual = cursor.fetchone()
 
-        if quantidade_atual:
-            print(f"Quantidade atual da carta: {quantidade_atual[0]}")
-        else:
-            print("Nenhuma quantidade encontrada para essa carta.")
+        # Certifique-se de consumir os resultados
+        if cursor.with_rows:
+            cursor.fetchall()
 
         if quantidade_atual and quantidade_atual[0] >= 1:
             enviar_pergunta_cenoura(message, id_usuario, id_personagem, bot)
@@ -63,21 +65,28 @@ def cenourar_carta(call, id_usuario, id_personagem, bot):
         quantidade_atual = cursor.fetchone()
         print(f"Quantidade atual no inventário: {quantidade_atual}")
 
+        # Certifique-se de consumir os resultados
+        if cursor.with_rows:
+            cursor.fetchall()
+
         if quantidade_atual and quantidade_atual[0] > 0:
-            # Atualiza o inventário
             nova_quantidade = quantidade_atual[0] - 1
             cursor.execute("UPDATE inventario SET quantidade = %s WHERE id_usuario = %s AND id_personagem = %s", 
                            (nova_quantidade, id_usuario, id_personagem))
             
-            # Adiciona cenouras ao usuário
+            # Adicionar cenouras
             cursor.execute("SELECT cenouras FROM usuarios WHERE id_usuario = %s", (id_usuario,))
             cenouras = cursor.fetchone()[0] + 1
             cursor.execute("UPDATE usuarios SET cenouras = %s WHERE id_usuario = %s", (cenouras, id_usuario))
             
-            # Adiciona a carta ao banco de inventário
+            # Adicionar ao banco de inventário
             cursor.execute("SELECT quantidade FROM banco_inventario WHERE id_personagem = %s", (id_personagem,))
             quantidade_banco = cursor.fetchone()
-            
+
+            # Certifique-se de consumir os resultados
+            if cursor.with_rows:
+                cursor.fetchall()
+
             if quantidade_banco:
                 nova_quantidade_banco = quantidade_banco[0] + 1
                 cursor.execute("UPDATE banco_inventario SET quantidade = %s WHERE id_personagem = %s", 
@@ -96,7 +105,10 @@ def cenourar_carta(call, id_usuario, id_personagem, bot):
         traceback.print_exc()
         bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text="Erro ao processar a cenoura.")
     finally:
-        fechar_conexao(cursor, conn)
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
 
 def callback_cenourar(call, bot):
     try:

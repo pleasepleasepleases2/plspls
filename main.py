@@ -1052,7 +1052,7 @@ def callback_especies(call):
         query_total = "SELECT COUNT(DISTINCT subcategoria) FROM personagens WHERE categoria = %s"
         cursor.execute(query_total, (categoria,))
         total_registros = cursor.fetchone()[0]
-        total_paginas = (total_registros // 15) + (1 if total_registros % 15 > 0 else 0)
+        total_paginas = (total_registros // 20) + (1 if total_registros % 15 > 0 else 0)
 
         # Editar a mensagem com os novos dados da página
         editar_mensagem_especies(call, categoria, pagina_atual, total_paginas)

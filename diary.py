@@ -30,3 +30,117 @@ def receive_note(message):
         bot.send_message(message.chat.id, "Ocorreu um erro ao tentar registrar sua anotação. Tente novamente mais tarde.")
     finally:
         fechar_conexao(cursor, conn)
+
+def diary_command(message):
+    user_id = message.from_user.id
+    today = date.today()
+
+    conn, cursor = conectar_banco_dados()
+
+    try:
+        cursor.execute("SELECT COUNT(*) FROM vips WHERE id_usuario = %s", (user_id,))
+        is_vip = cursor.fetchone()[0] > 0
+
+        cursor.execute("SELECT ultimo_diario, dias_consecutivos FROM diario WHERE id_usuario = %s", (user_id,))
+        result = cursor.fetchone()
+
+        if result:
+            ultimo_diario, dias_consecutivos = result
+
+            if ultimo_diario == today:
+                bot.send_message(message.chat.id, "Você já recebeu suas cenouras hoje. Volte amanhã!")
+                return
+
+            if ultimo_diario == today - timedelta(days=1):
+                dias_consecutivos += 1
+            elif is_vip and ultimo_diario == today - timedelta(days=2):
+                dias_consecutivos += 1
+            else:
+                dias_consecutivos = 1
+
+            cenouras = min(dias_consecutivos * 10, 100)
+
+            cursor.execute("UPDATE diario SET ultimo_diario = %s, dias_consecutivos = %s WHERE id_usuario = %s", (today, dias_consecutivos, user_id))
+            cursor.execute("UPDATE usuarios SET cenouras = cenouras + %s WHERE id_usuario = %s", (cenouras, user_id))
+            conn.commit()
+
+        else:
+            cenouras = 10
+            dias_consecutivos = 1
+            cursor.execute("INSERT INTO diario (id_usuario, ultimo_diario, dias_consecutivos) VALUES (%s, %s, %s)", (user_id, today, dias_consecutivos))
+            cursor.execute("UPDATE usuarios SET cenouras = cenouras + %s WHERE id_usuario = %s", (cenouras, user_id))
+            conn.commit()
+
+        phrase = random.choice(phrases)
+        fortune = random.choice(fortunes)
+        bot.send_message(message.chat.id, f"<i>{phrase}</i>\n\n<b>{fortune}</b>\n\nVocê recebeu <i>{cenouras} cenouras</i>!\n\n<b>Dias consecutivos:</b> <i>{dias_consecutivos}</i>\n\n", parse_mode="HTML")
+
+        markup = telebot.types.InlineKeyboardMarkup()
+        markup.add(telebot.types.InlineKeyboardButton(text="Sim", callback_data="add_note"))
+        markup.add(telebot.types.InlineKeyboardButton(text="Não", callback_data="cancel_note"))
+        bot.send_message(message.chat.id, "Deseja anotar algo nesse dia especial?", reply_markup=markup)
+
+    except mysql.connector.Error as err:
+        print(f"Erro ao processar o comando /diary: {err}")
+        bot.send_message(message.chat.id, "Ocorreu um erro ao tentar registrar seu diário. Tente novamente mais tarde.")
+    finally:
+        fechar_conexao(cursor, conn)
+
+def pages_command(message):
+    user_id = message.from_user.id
+    conn, cursor = conectar_banco_dados()
+
+    try:
+        cursor.execute("SELECT data, anotacao FROM anotacoes WHERE id_usuario = %s ORDER BY data DESC", (user_id,))
+        anotacoes = cursor.fetchall()
+
+        if not anotacoes:
+            bot.send_message(message.chat.id, "Você ainda não tem anotações no diário.")
+            return
+
+        response = ""
+        total_anotacoes = len(anotacoes)
+        for i, (data, anotacao) in enumerate(anotacoes, 1):
+            page_number = total_anotacoes - i + 1
+            response += f"Dia {page_number} - {data.strftime('%d/%m/%Y')}\n"
+        
+        bot.send_message(message.chat.id, response)
+
+    except mysql.connector.Error as err:
+        print(f"Erro ao obter anotações: {err}")
+        bot.send_message(message.chat.id, "Ocorreu um erro ao tentar obter suas anotações. Tente novamente mais tarde.")
+    finally:
+        fechar_conexao(cursor, conn)
+
+def page_command(message):
+    user_id = message.from_user.id
+    params = message.text.split(' ', 1)[1:]
+    if len(params) < 1:
+        bot.send_message(message.chat.id, "Uso: /page <número_da_página>")
+        return
+    page_number = int(params[0])
+
+    conn, cursor = conectar_banco_dados()
+
+    try:
+        cursor.execute("SELECT data, anotacao FROM anotacoes WHERE id_usuario = %s ORDER BY data DESC", (user_id,))
+        anotacoes = cursor.fetchall()
+
+        if not anotacoes:
+            bot.send_message(message.chat.id, "Você ainda não tem anotações no diário.")
+            return
+
+        if page_number < 1 or page_number > len(anotacoes):
+            bot.send_message(message.chat.id, "Número de página inválido.")
+            return
+
+        data, anotacao = anotacoes[page_number - 1]
+        response = f"Mabigarden, dia {data.strftime('%d/%m/%Y')}\n\nQuerido diário... {anotacao}"
+        
+        bot.send_message(message.chat.id, response)
+
+    except mysql.connector.Error as err:
+        print(f"Erro ao obter anotação: {err}")
+        bot.send_message(message.chat.id, "Ocorreu um erro ao tentar obter sua anotação. Tente novamente mais tarde.")
+    finally:
+        fechar_conexao(cursor, conn)

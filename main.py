@@ -443,7 +443,7 @@ def handle_pedido_submenu_command(message):
 @bot.message_handler(commands=['pedidovip'])
 def handle_pedidovip_command(message):
     pedidovip_command(message)
-
+allowed_user_ids = [5532809878, 1805086442]
 @bot.message_handler(commands=['criarvendinha'])
 def criar_colagem(message):
     if message.from_user.id not in allowed_user_ids:

@@ -1232,225 +1232,21 @@ def submenu_command(message):
 def callback_navegacao_submenus(call):
     callback_navegacao_submenus(call)
 
-@bot.message_handler(commands=['hist'])
 def command_historico(message):
-    id_usuario = message.chat.id  
-    tipo_historico = message.text.split()[-1].lower()  
-
-    if tipo_historico == 'troca':
-        historico = obter_historico_trocas(id_usuario)
-        if historico:
-            historico_mensagem = "🤝 | Seu histórico de trocas:\n\n"
-            for troca in historico:
-                id_usuario1, id_usuario2, carta1, carta2, aceita = troca
-                carta1 = obter_nome(carta1)
-                carta2 = obter_nome(carta2)
-                nome1 = obter_nome_usuario_por_id(id_usuario1)
-                nome2 = obter_nome_usuario_por_id(id_usuario2)
-                status = "✅" if aceita else "⛔️"
-                mensagem = f"ꕤ Troca entre {nome1} e {nome2}:\n{carta1} e {carta2} - {status}\n\n"
-                historico_mensagem += mensagem
-
-            bot.send_message(id_usuario, historico_mensagem)
-        else:
-            bot.send_message(id_usuario, "Nenhuma troca encontrada para este usuário.")
-
-    elif tipo_historico == 'pesca':
-        historico = obter_historico_pescas(id_usuario)
-        if historico:
-            historico_mensagem = "🎣 | Seu histórico de pescas:\n\n"
-            for pesca in historico:
-                id_carta, data_hora = pesca
-                carta1 = obter_nome(id_carta)
-                data_formatada = datetime.strftime(data_hora, "%d/%m/%Y - %H:%M")
-                mensagem = f"✦ Carta: {id_carta} → {carta1}\nPescada em: {data_formatada}\n\n"
-                historico_mensagem += mensagem
-
-            bot.send_message(id_usuario, historico_mensagem)
-        else:
-            bot.send_message(id_usuario, "Nenhuma pesca encontrada para este usuário.")
-
-
-
-
+    processar_historico_command(message)
+    
 @bot.message_handler(commands=['sub'])
 def sub_command(message):
-    try:
-        parts = message.text.split(' ', 2)
-        if len(parts) < 2:
-            bot.reply_to(message, "Por favor, forneça o tipo ('s' ou 'f') e o nome do sub após o comando, por exemplo: /sub s loona")
-            return
-
-        tipo = parts[1].strip().lower()
-        sub_nome = parts[2].strip().lower() if len(parts) > 2 else None
-
-        id_usuario = message.from_user.id
-        nome_usuario = message.from_user.first_name
-
-        conn, cursor = conectar_banco_dados()
-
-        # Corrigir a consulta para incluir o emoji
-        query_todos = """
-        SELECT s.id_personagem, p.nome, p.subcategoria, p.emoji
-        FROM sub s
-        JOIN personagens p ON s.id_personagem = p.id_personagem
-        WHERE s.sub_nome = %s
-        """
-        cursor.execute(query_todos, (sub_nome,))
-        # Agora, incluir o emoji corretamente
-        todos_personagens = {row[0]: (row[1], row[2], row[3]) for row in cursor.fetchall()}
-
-        if not todos_personagens:
-            bot.reply_to(message, f"O sub '{sub_nome}' não existe.")
-            return
-
-        # Adicionar o emoji também no inventário
-        query_possui = """
-        SELECT s.id_personagem, p.nome, p.subcategoria, p.emoji
-        FROM inventario inv
-        JOIN sub s ON inv.id_personagem = s.id_personagem
-        JOIN personagens p ON s.id_personagem = p.id_personagem
-        WHERE inv.id_usuario = %s AND s.sub_nome = %s
-        """
-        cursor.execute(query_possui, (id_usuario, sub_nome))
-        personagens_possui = {row[0]: (row[1], row[2], row[3]) for row in cursor.fetchall()}
-
-        query_imagem = """
-        SELECT Imagem FROM subcategorias WHERE nomesub = %s
-        """
-        cursor.execute(query_imagem, (sub_nome,))
-        resultado_imagem = cursor.fetchone()
-        imagem_subgrupo = resultado_imagem[0] if resultado_imagem else None
-
-        subcategoria = next(iter(todos_personagens.values()), ("", ""))[1]
-
-        if tipo == 's':
-            if personagens_possui:
-                enviar_pagina(message.chat.id, message.message_id, 1, 's', personagens_possui, len(todos_personagens), sub_nome, nome_usuario, imagem_subgrupo, id_usuario, is_first_page=True)
-            else:
-                bot.reply_to(message, f"🌧️ Você não possui nenhum personagem neste subgrupo.")
-
-        elif tipo == 'f':
-            personagens_faltantes = {id_personagem: (nome, subcategoria, emoji) for id_personagem, (nome, subcategoria, emoji) in todos_personagens.items() if id_personagem not in personagens_possui}
-            if personagens_faltantes:
-                enviar_pagina(message.chat.id, message.message_id, 1, 'f', personagens_faltantes, len(todos_personagens), sub_nome, nome_usuario, imagem_subgrupo, id_usuario, is_first_page=True)
-            else:
-                bot.reply_to(message, f"☀️ Nada como a alegria de ter todos os personagens de {sub_nome.capitalize()} na cesta!")
-
-        elif tipo == 'all':
-            enviar_pagina(message.chat.id, message.message_id, 1, 'all', todos_personagens, len(todos_personagens), sub_nome, "", imagem_subgrupo, id_usuario, is_first_page=True)
-
-        else:
-            bot.reply_to(message, "Tipo inválido. Use 's' para os personagens que você possui, 'f' para os que você não possui, ou 'all' para ver todos.")
-
-    except Exception as e:
-        print(f"Erro ao processar comando /sub: {e}")
-
-    finally:
-        fechar_conexao(cursor, conn)
-
+    processar_sub_command(message)
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith(('s_pagina_', 'f_pagina_', 'all_pagina_')))
 def callback_pagina(call):
-    try:
-        partes = call.data.split('_')
-        tipo = partes[0]
-        pagina = int(partes[2])
-        sub_nome = partes[3]
-        id_usuario = int(partes[4])  # O ID do usuário original que iniciou a interação
-
-        conn, cursor = conectar_banco_dados()
-
-        # Consulta para todos os personagens, incluindo o emoji
-        query_todos = """
-        SELECT s.id_personagem, p.nome, p.subcategoria, p.emoji
-        FROM sub s
-        JOIN personagens p ON s.id_personagem = p.id_personagem
-        WHERE s.sub_nome = %s
-        """
-        cursor.execute(query_todos, (sub_nome,))
-        todos_personagens = {row[0]: (row[1], row[2], row[3]) for row in cursor.fetchall()}
-
-        # Consulta para os personagens que o usuário possui, incluindo o emoji
-        query_possui = """
-        SELECT s.id_personagem, p.nome, p.subcategoria, p.emoji
-        FROM inventario inv
-        JOIN sub s ON inv.id_personagem = s.id_personagem
-        JOIN personagens p ON s.id_personagem = p.id_personagem
-        WHERE inv.id_usuario = %s AND s.sub_nome = %s
-        """
-        cursor.execute(query_possui, (id_usuario, sub_nome))
-        personagens_possui = {row[0]: (row[1], row[2], row[3]) for row in cursor.fetchall()}
-
-        # Consulta para obter a imagem do subgrupo
-        query_imagem = """
-        SELECT Imagem FROM subcategorias WHERE nomesub = %s
-        """
-        cursor.execute(query_imagem, (sub_nome,))
-        resultado_imagem = cursor.fetchone()
-        imagem_subgrupo = resultado_imagem[0] if resultado_imagem else None
-
-        nome_usuario = call.from_user.first_name
-
-        if tipo == 's':
-            enviar_pagina(call.message.chat.id, call.message.message_id, pagina, 's', personagens_possui, len(todos_personagens), sub_nome, nome_usuario, imagem_subgrupo, id_usuario)
-        elif tipo == 'f':
-            personagens_faltantes = {id_personagem: (nome, subcategoria, emoji) for id_personagem, (nome, subcategoria, emoji) in todos_personagens.items() if id_personagem not in personagens_possui}
-            enviar_pagina(call.message.chat.id, call.message.message_id, pagina, 'f', personagens_faltantes, len(todos_personagens), sub_nome, nome_usuario, imagem_subgrupo, id_usuario)
-        elif tipo == 'all':
-            enviar_pagina(call.message.chat.id, call.message.message_id, pagina, 'all', todos_personagens, len(todos_personagens), sub_nome, nome_usuario, imagem_subgrupo, id_usuario)
-
-        bot.answer_callback_query(call.id)
-
-    except Exception as e:
-        print(f"Erro ao processar callback de navegação: {e}")
-        bot.send_message(call.message.chat.id, "Ocorreu um erro ao processar a navegação.")
-    finally:
-        fechar_conexao(cursor, conn)
-
-
-        
+    callback_pagina_sub(call)
+    
 @bot.message_handler(commands=['deltag'])
 def deletar_tag(message):
-    try:
-        conn, cursor = conectar_banco_dados()
-        id_usuario = message.from_user.id
-        args = message.text.split(maxsplit=1)
-        
-        if len(args) == 2:
-            tag_info = args[1].strip()
-
-            if '|' in tag_info:
-                id_list, nometag = [part.strip() for part in tag_info.split('|')]
-                ids_personagens = [id.strip() for id in id_list.split(',')]
-
-                for id_personagem in ids_personagens:
-                    cursor.execute("SELECT idtags FROM tags WHERE id_usuario = %s AND id_personagem = %s AND nometag = %s",
-                                   (id_usuario, id_personagem, nometag))
-                    tag_existente = cursor.fetchone()
-                    
-                    if tag_existente:
-                        idtag = tag_existente[0]
-                        cursor.execute("DELETE FROM tags WHERE idtags = %s", (idtag,))
-                        conn.commit()
-                        bot.reply_to(message, f"ID {id_personagem} removido da tag '{nometag}' com sucesso.")
-                    else:
-                        bot.reply_to(message, f"O ID {id_personagem} não está associado à tag '{nometag}'.")
-            
-            else:
-                nometag = tag_info.strip()
-                cursor.execute("DELETE FROM tags WHERE id_usuario = %s AND nometag = %s", (id_usuario, nometag))
-                conn.commit()
-                bot.reply_to(message, f"A tag '{nometag}' foi removida completamente.")
-        
-        else:
-            bot.reply_to(message, "Formato incorreto. Use /deltag id1, id2, id3 | nometag para remover IDs específicos da tag ou /deltag nometag para remover a tag inteira.")
-
-    except Exception as e:
-        print(f"Erro ao deletar tag: {e}")
-    finally:
-        fechar_conexao(cursor, conn)
-
+    processar_deletar_tag(message)
+    
 @bot.message_handler(commands=['apoiar'])
 def doacao(message):
     markup = telebot.types.InlineKeyboardMarkup()
@@ -1460,65 +1256,11 @@ def doacao(message):
 
 @bot.message_handler(commands=['gift'])
 def handle_gift_cards(message):
-    conn, cursor = conectar_banco_dados()
-    if message.from_user.id != 5532809878 and message.from_user.id != 1805086442:
-        bot.reply_to(message, "Você não é a Hashi ou a Skar para usar esse comando.")
-        return
-    try:
-        _, quantity, card_id, user_id = message.text.split()
-        quantity = int(quantity)
-        card_id = int(card_id)
-        user_id = int(user_id)
-    except (ValueError, IndexError):
-        bot.reply_to(message, "Por favor, use o formato correto: /gift quantidade card_id user_id")
-        return
-    gift_cards(quantity, card_id, user_id)
-    bot.reply_to(message, f"{quantity} cartas adicionadas com sucesso!")
+    processar_gift_cards(message)
 
 @bot.message_handler(commands=['addbanco'])
 def addbanco_command(message):
-    try:
-        conn, cursor = conectar_banco_dados()
-        partes_comando = message.text.split()
-        if len(partes_comando) != 2:
-            bot.send_message(message.chat.id, "Uso: /addbanco <id_usuario>")
-            return
-
-        id_usuario = int(partes_comando[1])
-
-        conn, cursor = conectar_banco_dados()
-        cursor.execute("SELECT id_personagem, quantidade FROM inventario WHERE id_usuario = %s", (id_usuario,))
-        cartas_usuario = cursor.fetchall()
-
-        if not cartas_usuario:
-            bot.send_message(message.chat.id, "Usuário não possui cartas.")
-            return
-        for carta in cartas_usuario:
-            id_personagem, quantidade = carta
-            
-            cursor.execute("SELECT COUNT(*) FROM banco_inventario WHERE id_personagem = %s", (id_personagem,))
-            existe = cursor.fetchone()[0]
-            
-            if existe:
-                cursor.execute("UPDATE banco_inventario SET quantidade = quantidade + %s WHERE id_personagem = %s", (quantidade, id_personagem))
-            else:
-                cursor.execute("INSERT INTO banco_inventario (id_personagem, quantidade) VALUES (%s, %s)", (id_personagem, quantidade))
-        cursor.execute("DELETE FROM inventario WHERE id_usuario = %s", (id_usuario,))
-
-        conn.commit()
-        bot.send_message(message.chat.id, f"Cartas do usuário {id_usuario} transferidas para o banco com sucesso.")
-
-    except Exception as e:
-        print(f"Erro ao transferir cartas para o banco: {e}")
-        bot.send_message(message.chat.id, "Erro ao transferir cartas para o banco.")
-    finally:
-        fechar_conexao(cursor, conn)
-
-def obter_nome_usuario(id_usuario, cursor):
-    query = "SELECT nome FROM usuarios WHERE id_usuario = %s"
-    cursor.execute(query, (id_usuario,))
-    resultado = cursor.fetchone()
-    return resultado[0] if resultado else "Usuário Desconhecido"
+    processar_addbanco(message)
        
 @bot.callback_query_handler(func=lambda call: call.data.startswith('cartas_compradas_pagina_'))
 def callback_cartas_compradas(call):

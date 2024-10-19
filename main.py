@@ -1726,7 +1726,6 @@ def handle_setbio(message):
 @bot.message_handler(commands=['setgif'])
 def handle_setgif(message):
     enviar_gif(message)
-from admin import admin, enviar_mensagem_privada, enviar_mensagem_grupo
 
 @bot.message_handler(commands=['admin'])
 def handle_admin(message):

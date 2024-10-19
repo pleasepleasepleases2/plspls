@@ -1,5 +1,6 @@
 import telebot
 import traceback
+from credentials import *
 from bd import conectar_banco_dados, fechar_conexao
 def enviar_pergunta_cenoura(message, id_usuario, cartas_a_cenourar, bot):
     try:

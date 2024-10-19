@@ -3,7 +3,7 @@ from user import *
 from bd import *
 import functools
 from pescar import *
-
+import traceback
 
         
 MAX_RETRIES = 5

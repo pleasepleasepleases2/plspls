@@ -84,6 +84,7 @@ from compat import *
 from armazem import *
 from diamantes import *
 from diary import *
+from game import *
 # Configuração de Webhook
 WEBHOOK_URL_PATH = '/' + API_TOKEN + '/'
 WEBHOOK_LISTEN = "0.0.0.0"
@@ -114,70 +115,15 @@ def set_webhook():
 def index():
     return 'Server is running.'
 
+
 @bot.message_handler(commands=['jogodavelha'])
 def handle_jogo_da_velha(message):
-    iniciar_jogo(bot, message) 
-# Função para manipular as jogadas do jogador
-@bot.callback_query_handler(func=lambda call: call.data.startswith('jogada_'))
-def jogador_fazer_jogada(call):
-    try:
-        id_usuario = call.from_user.id
-        # Verifica se o jogo foi iniciado
-        if id_usuario not in globals.jogos_da_velha:
-            bot.send_message(call.message.chat.id, "Você não iniciou um jogo da velha. Use /jogodavelha para começar.")
-            return
+    iniciar_jogo(bot, message)
 
-        # Verifica se a jogada é inválida
-        if call.data == "jogada_disabled":
-            bot.answer_callback_query(call.id, "Essa posição já está ocupada!")
-            return
+@bot.callback_query_handler(func=lambda call: call.data.isdigit())
+def handle_jogada(call):
+    jogador_fazer_jogada(bot, call)
 
-        # Processa a jogada
-        tabuleiro = globals.jogos_da_velha[id_usuario]
-        _, i, j = call.data.split('_')
-        i, j = int(i), int(j)
-
-        if tabuleiro[i][j] != '⬜':
-            bot.answer_callback_query(call.id, "Essa posição já está ocupada!")
-            return
-
-        # Atualiza o tabuleiro com a jogada do jogador
-        tabuleiro[i][j] = '✔️'
-
-        # Verifica se o jogador venceu
-        if verificar_vitoria(tabuleiro, '✔️'):
-            bot.edit_message_text(f"🎉 Parabéns! Você venceu!\n\n{mostrar_tabuleiro(tabuleiro)}", call.message.chat.id, call.message.message_id)
-            del globals.jogos_da_velha[id_usuario]
-            return
-
-        # Verifica se houve empate
-        if verificar_empate(tabuleiro):
-            bot.edit_message_text(f"😐 Empate!\n\n{mostrar_tabuleiro(tabuleiro)}", call.message.chat.id, call.message.message_id)
-            del globals.jogos_da_velha[id_usuario]
-            return
-
-        # Jogada do bot
-        tabuleiro = bot_fazer_jogada(tabuleiro, '❌', '✔️')
-
-        # Verifica se o bot venceu
-        if verificar_vitoria(tabuleiro, '❌'):
-            bot.edit_message_text(f"😎 Eu venci! Melhor sorte da próxima vez.\n\n{mostrar_tabuleiro(tabuleiro)}", call.message.chat.id, call.message.message_id)
-            del globals.jogos_da_velha[id_usuario]
-            return
-
-        # Verifica novamente se houve empate após a jogada do bot
-        if verificar_empate(tabuleiro):
-            bot.edit_message_text(f"😐 Empate!\n\n{mostrar_tabuleiro(tabuleiro)}", call.message.chat.id, call.message.message_id)
-            del globals.jogos_da_velha[id_usuario]
-            return
-
-        # Atualiza o tabuleiro com os novos botões
-        markup = criar_botoes_tabuleiro(tabuleiro)
-        bot.edit_message_text(f"Seu turno!\n\n{mostrar_tabuleiro(tabuleiro)}", call.message.chat.id, call.message.message_id, reply_markup=markup)
-
-    except Exception as e:
-        print(f"Erro ao processar o jogo da velha: {e}")
-        traceback.print_exc()    
 @bot.message_handler(commands=['picnic', 'trocar', 'troca'])
 def trade(message):
     try:

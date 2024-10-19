@@ -4,6 +4,7 @@ from bd import conectar_banco_dados, fechar_conexao
 
 def enviar_pergunta_cenoura(message, id_usuario, ids_personagens, bot):
     try:
+        print(f"DEBUG: Enviando pergunta de cenourar para as cartas: {ids_personagens}")
         texto_pergunta = f"Você deseja cenourar as cartas: {', '.join(ids_personagens)}?"
         keyboard = telebot.types.InlineKeyboardMarkup()
         sim_button = telebot.types.InlineKeyboardButton(text="Sim", callback_data=f"cenourar_sim_{id_usuario}_{','.join(ids_personagens)}")
@@ -11,15 +12,15 @@ def enviar_pergunta_cenoura(message, id_usuario, ids_personagens, bot):
         keyboard.row(sim_button, nao_button)
         bot.send_message(message.chat.id, texto_pergunta, reply_markup=keyboard)
     except Exception as e:
-        print(f"Erro ao enviar pergunta de cenourar: {e}")
+        print(f"DEBUG: Erro ao enviar pergunta de cenourar: {e}")
         traceback.print_exc()
 
 def processar_verificar_e_cenourar(message, bot):
     try:
-        print("Processando comando de cenourar...")
+        print("DEBUG: Iniciando o processamento de comando de cenourar...")
         conn, cursor = conectar_banco_dados()
         id_usuario = message.from_user.id
-        print(f"ID do usuário: {id_usuario}")
+        print(f"DEBUG: ID do usuário: {id_usuario}")
 
         if len(message.text.split()) < 2:
             bot.send_message(message.chat.id, "Por favor, forneça os IDs dos personagens que deseja cenourar, separados por vírgulas. Exemplo: /cenourar 12345,67890")
@@ -27,19 +28,24 @@ def processar_verificar_e_cenourar(message, bot):
         
         ids_personagens = message.text.split()[1].strip().split(',')
         ids_personagens = [id_personagem.strip() for id_personagem in ids_personagens]
-        print(f"IDs dos personagens: {ids_personagens}")
+        print(f"DEBUG: IDs dos personagens recebidos: {ids_personagens}")
 
         # Verifica se as cartas estão no inventário
         cartas_a_cenourar = []
         cartas_nao_encontradas = []
 
         for id_personagem in ids_personagens:
+            print(f"DEBUG: Verificando carta com ID {id_personagem} no inventário...")
             cursor.execute("SELECT quantidade FROM inventario WHERE id_usuario = %s AND id_personagem = %s", (id_usuario, id_personagem))
             quantidade_atual = cursor.fetchone()
+            print(f"DEBUG: Quantidade atual da carta {id_personagem}: {quantidade_atual}")
             if quantidade_atual and quantidade_atual[0] >= 1:
                 cartas_a_cenourar.append(id_personagem)
             else:
                 cartas_nao_encontradas.append(id_personagem)
+
+        print(f"DEBUG: Cartas a cenourar: {cartas_a_cenourar}")
+        print(f"DEBUG: Cartas não encontradas ou insuficientes: {cartas_nao_encontradas}")
 
         if cartas_a_cenourar:
             enviar_pergunta_cenoura(message, id_usuario, cartas_a_cenourar, bot)
@@ -48,7 +54,7 @@ def processar_verificar_e_cenourar(message, bot):
         if not cartas_a_cenourar and not cartas_nao_encontradas:
             bot.send_message(message.chat.id, "Nenhuma carta válida foi encontrada para cenourar.")
     except Exception as e:
-        print(f"Erro ao processar o comando de cenourar: {e}")
+        print(f"DEBUG: Erro ao processar o comando de cenourar: {e}")
         traceback.print_exc()
         bot.send_message(message.chat.id, "Erro ao processar o comando de cenourar.")
     finally:
@@ -56,6 +62,7 @@ def processar_verificar_e_cenourar(message, bot):
             cursor.close()
         if conn:
             conn.close()
+
 
 def verificar_id_na_tabelabeta(user_id):
     try:

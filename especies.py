@@ -65,16 +65,15 @@ def editar_mensagem_especies(call, categoria, pagina_atual, total_paginas):
         print(f"Erro ao editar mensagem de espécies: {e}")
         bot.reply_to(call.message, "Ocorreu um erro ao processar sua solicitação.")
 
-
 def criar_markup_especies(pagina_atual, total_paginas, categoria):
     markup = telebot.types.InlineKeyboardMarkup()
 
     if pagina_atual > 1:
-        btn_anterior = telebot.types.InlineKeyboardButton("⬅️ Anterior", callback_data=f"especies_{pagina_atual-1}_{categoria}")
+        btn_anterior = telebot.types.InlineKeyboardButton("⬅️", callback_data=f"especies_{pagina_atual-1}_{categoria}")
         markup.add(btn_anterior)
     
     if pagina_atual < total_paginas:
-        btn_proxima = telebot.types.InlineKeyboardButton("Próxima ➡️", callback_data=f"especies_{pagina_atual+1}_{categoria}")
+        btn_proxima = telebot.types.InlineKeyboardButton("➡️", callback_data=f"especies_{pagina_atual+1}_{categoria}")
         markup.add(btn_proxima)
 
     return markup

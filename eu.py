@@ -68,7 +68,7 @@ def handle_obter_username(message):
         username = obter_username_por_id(user_id)
         bot.reply_to(message, username)
     else:
-        bot.reply_to(message, "Formato incorreto. Use /usuario seguido do ID desejado, por exemplo: /usuario 123")
+        bot.reply_to(message, "Formato incorreto. Use /usuario seguido do user desejado, por exemplo: /usuario manoela")
 
 def handle_me_command(message):
     id_usuario = message.from_user.id
@@ -270,7 +270,7 @@ def enviar_gif(message):
                 fechar_conexao(cursor, conn)
                 return
 
-        bot.send_message(message.chat.id, "Eba! Você pode escolher um gif!\nEnvie o link do gif gerado pelo @UploadTelegraphBot:")
+        bot.send_message(message.chat.id, "Eba! Você pode escolher um gif!\nEnvie o link do gif gerado pelo @LinksdamabiBot:")
         globals.links_gif[message.from_user.id] = id_personagem
         bot.register_next_step_handler(message, receber_link_gif, id_personagem)
 

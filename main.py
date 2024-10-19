@@ -1187,10 +1187,27 @@ def handle_callback_subcategory(call):
 @bot.message_handler(commands=['cenourar'])
 def handle_cenourar(message):
     processar_verificar_e_cenourar(message, bot)
-
+    
 @bot.callback_query_handler(func=lambda call: call.data.startswith('cenourar_'))
-def handle_cenourar_callback(call):
-    callback_cenourar(call, bot)
+def callback_cenourar(call):
+    try:
+        # Dividindo os dados do callback para extrair ação, usuário e cartas
+        data_parts = call.data.split("_")
+        acao = data_parts[1]  # Ação (sim ou nao)
+        id_usuario = int(data_parts[2])  # ID do usuário
+        ids_personagens = data_parts[3].split(",")  # IDs das cartas
+
+        print(f"DEBUG: Ação recebida no callback: {acao}")
+        print(f"DEBUG: IDs das cartas no callback: {ids_personagens}")
+
+        if acao == "sim":
+            cenourar_carta(call, id_usuario, ids_personagens)
+        elif acao == "nao":
+            bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text="Operação de cenoura cancelada.")
+    except Exception as e:
+        print(f"Erro ao processar callback de cenoura: {e}")
+        traceback.print_exc()
+        bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text="Erro ao processar a cenoura.")
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith('loja_geral'))
 def callback_loja_geral(call):

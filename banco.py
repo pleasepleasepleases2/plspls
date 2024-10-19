@@ -389,3 +389,87 @@ def processar_saldo_usuario(message):
         bot.reply_to(message, "Ocorreu um erro ao verificar seu saldo.")
     finally:
         fechar_conexao(cursor, conn)
+
+
+def processar_banco_command(message):
+    try:
+        parts = message.text.split(' ', 2)
+        categoria = parts[1].strip() if len(parts) > 1 else None
+        subcategoria = parts[2].strip() if len(parts) > 2 else None
+
+        conn, cursor = conectar_banco_dados()
+
+        # Construir a consulta SQL com base na categoria e subcategoria
+        query = "SELECT p.id_personagem, bi.quantidade, p.nome, p.subcategoria, p.emoji FROM banco_inventario bi JOIN personagens p ON bi.id_personagem = p.id_personagem"
+        query_params = []
+
+        if categoria:
+            query += " WHERE p.categoria = %s"
+            query_params.append(categoria)
+        if subcategoria:
+            query += " AND p.subcategoria = %s"
+            query_params.append(subcategoria)
+
+        query += " ORDER BY p.id_personagem ASC"
+        
+        cursor.execute(query, tuple(query_params))
+        cartas_banco = cursor.fetchall()
+
+        if not cartas_banco:
+            bot.send_message(message.chat.id, "Não há cartas no banco para os critérios especificados.")
+            return
+
+        total_paginas = (len(cartas_banco) // 30) + (1 if len(cartas_banco) % 30 > 0 else 0)
+        total_cartas = sum([quantidade for _, quantidade, _, _, _ in cartas_banco])
+        
+        mostrar_cartas_banco(message.chat.id, 1, total_paginas, cartas_banco, total_cartas, message.message_id, categoria, subcategoria)
+
+    except Exception as e:
+        print(f"Erro ao processar o comando /banco: {e}")
+        bot.send_message(message.chat.id, "Erro ao processar o comando.")
+    finally:
+        fechar_conexao(cursor, conn)
+
+
+def processar_callback_banco_pagina(call):
+    data = call.data.split('_')
+    pagina = int(data[2])
+    categoria = data[3] if len(data) > 3 and data[3] else None
+    subcategoria = data[4] if len(data) > 4 and data[4] else None
+
+    conn, cursor = conectar_banco_dados()
+
+    query = "SELECT p.id_personagem, bi.quantidade, p.nome, p.subcategoria, p.emoji FROM banco_inventario bi JOIN personagens p ON bi.id_personagem = p.id_personagem"
+    query_params = []
+
+    if categoria:
+        query += " WHERE p.categoria = %s"
+        query_params.append(categoria)
+    if subcategoria:
+        query += " AND p.subcategoria = %s"
+        query_params.append(subcategoria)
+
+    query += " ORDER BY p.id_personagem ASC"
+    
+    cursor.execute(query, tuple(query_params))
+    cartas_banco = cursor.fetchall()
+
+    total_paginas = (len(cartas_banco) // 30) + (1 if len(cartas_banco) % 30 > 0 else 0)
+    total_cartas = sum([quantidade for _, quantidade, _, _, _ in cartas_banco])
+
+    mostrar_cartas_banco(call.message.chat.id, pagina, total_paginas, cartas_banco, total_cartas, call.message.message_id, categoria, subcategoria)
+
+    fechar_conexao(cursor, conn)
+
+
+def processar_callback_cartas_compradas(call):
+    pagina_atual = int(call.data.split('_')[-1])
+    id_usuario = call.from_user.id
+
+    if id_usuario in globals.cartas_compradas_dict:
+        cartas = globals.cartas_compradas_dict[id_usuario]
+        mostrar_cartas_compradas(call.message.chat.id, cartas, id_usuario, pagina_atual, call.message.message_id)
+    else:
+        bot.send_message(call.message.chat.id, "Erro ao exibir cartas compradas. Tente novamente.")
+
+    fechar_conexao(cursor, conn)

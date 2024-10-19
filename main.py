@@ -1184,9 +1184,13 @@ def callback_paginacao_armazem(call):
 def handle_callback_subcategory(call):
     callback_subcategory(call)
 
-@bot.callback_query_handler(func=lambda call: call.data.startswith('cenourar_sim_'))
-def handle_callback_cenourar(call):
-    callback_cenourar(call)
+@bot.message_handler(commands=['cenourar'])
+def handle_cenourar(message):
+    processar_verificar_e_cenourar(message, bot)
+
+@bot.callback_query_handler(func=lambda call: call.data.startswith('cenourar_'))
+def handle_cenourar_callback(call):
+    callback_cenourar(call, bot)
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith('loja_geral'))
 def callback_loja_geral(call):
@@ -1812,10 +1816,6 @@ def handle_add_to_wishlist(message):
 @bot.message_handler(commands=['removew', 'delw'])
 def handle_removew(message):
     remover_da_wishlist(message)
-    
-@bot.message_handler(commands=['cenourar'])
-def handle_cenourar(message):
-    processar_verificar_e_cenourar(message)
 
 @bot.message_handler(commands=['setbio'])
 def handle_setbio(message):

@@ -23,6 +23,30 @@ def enviar_pergunta_cenoura(message, id_usuario, id_personagem, quantidade):
     except Exception as e:
         print(f"Erro ao enviar pergunta de cenourar: {e}")
 
+
+def processar_verificar_e_cenourar(message):
+    try:
+        conn, cursor = conectar_banco_dados()
+        id_usuario = message.from_user.id
+        id_personagem = message.text.replace('/cenourar', '').strip()
+
+        cursor.execute("SELECT quantidade FROM inventario WHERE id_usuario = %s AND id_personagem = %s", (id_usuario, id_personagem))
+        quantidade_atual = cursor.fetchone()
+
+        if quantidade_atual and quantidade_atual[0] >= 1:
+            enviar_pergunta_cenoura(message, id_usuario, id_personagem, quantidade_atual[0])
+        else:
+            bot.send_message(message.chat.id, "Você não possui essa carta no inventário ou não tem quantidade suficiente.")
+    except Exception as e:
+        print(f"Erro ao processar o comando de cenourar: {e}")
+        bot.send_message(message.chat.id, "Erro ao processar o comando de cenourar.")
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+
+
 def processar_verificar_e_cenourar(message):
     try:
         conn = conectar_banco_dados()

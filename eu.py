@@ -281,3 +281,63 @@ def enviar_gif(message):
     except Exception as e:
         print(f"Erro ao processar o comando /setgif: {e}")
         fechar_conexao(cursor, conn)
+
+import re
+import mysql.connector
+
+def set_nome_command(message):
+    command_parts = message.text.split(maxsplit=1)
+    if len(command_parts) == 2:
+        novo_nome = command_parts[1].strip()
+        id_usuario = message.from_user.id
+        atualizar_coluna_usuario(id_usuario, 'nome', novo_nome)
+        bot.send_message(message.chat.id, f"Nome atualizado para: {novo_nome}", reply_to_message_id=message.message_id)
+    else:
+        bot.send_message(message.chat.id,
+                         "Formato incorreto. Use /setnome seguido do novo nome, por exemplo: /setnome Manoela Gavassi", reply_to_message_id=message.message_id)
+
+
+def setuser_comando(message):
+    command_parts = message.text.split()
+    if len(command_parts) != 2:
+        bot.send_message(message.chat.id, "Formato incorreto. Use /setuser seguido do user desejado, por exemplo: /setuser novouser.", reply_to_message_id=message.message_id)
+        return
+
+    nome_usuario = command_parts[1].strip()
+
+    if not re.match("^[a-zA-Z0-9_]{1,20}$", nome_usuario):
+        bot.send_message(message.chat.id, "Nome de usuário inválido. Use apenas letras, números e '_' e não ultrapasse 20 caracteres.", reply_to_message_id=message.message_id)
+        return
+
+    try:
+        conn, cursor = conectar_banco_dados()
+        cursor.execute("SELECT 1 FROM usuarios WHERE user = %s", (nome_usuario,))
+        if cursor.fetchone():
+            bot.send_message(message.chat.id, "O nome de usuário já está em uso. Escolha outro nome de usuário.", reply_to_message_id=message.message_id)
+            return
+
+        cursor.execute("SELECT 1 FROM usuarios_banidos WHERE id_usuario = %s", (nome_usuario,))
+        if cursor.fetchone():
+            bot.send_message(message.chat.id, "O nome de usuário já está em uso. Escolha outro nome de usuário.", reply_to_message_id=message.message_id)
+            return
+
+        cursor.execute("UPDATE usuarios SET user = %s WHERE id_usuario = %s", (nome_usuario, message.from_user.id))
+        conn.commit()
+
+        bot.send_message(message.chat.id, f"O nome de usuário foi alterado para '{nome_usuario}'.", reply_to_message_id=message.message_id)
+
+    except mysql.connector.Error as err:
+        bot.send_message(message.chat.id, f"Erro ao processar comando /setuser: {err}", reply_to_message_id=message.message_id)
+
+    finally:
+        fechar_conexao(cursor, conn)
+
+
+def remove_fav_command(message):
+    id_usuario = message.from_user.id
+
+    conn, cursor = conectar_banco_dados()
+    cursor.execute("UPDATE usuarios SET fav = NULL WHERE id_usuario = %s", (id_usuario,))
+    conn.commit()
+
+    bot.send_message(message.chat.id, "Favorito removido com sucesso.", reply_to_message_id=message.message_id)

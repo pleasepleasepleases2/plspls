@@ -765,3 +765,17 @@ def processar_cesta(message):
 
     except Exception as e:
         print(f"Erro ao processar comando /cesta: {e}")
+
+def apagar_cartas_quantidade_zero_ou_negativa():
+    conn, cursor = conectar_banco_dados()
+
+    try:
+        query = "DELETE FROM inventario WHERE quantidade <= 0"
+        cursor.execute(query)
+        conn.commit()
+        print(f"{cursor.rowcount} cartas deletadas.")
+    except mysql.connector.Error as err:
+        print(f"Erro: {err}")
+    finally:
+        cursor.close()
+        conn.close()

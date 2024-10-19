@@ -496,33 +496,33 @@ def callback_pagina_sub(call):
 
 
 def enviar_pagina(chat_id, message_id, pagina, tipo, personagens, total_personagens, sub_nome, nome_usuario, imagem_subgrupo, id_usuario, is_first_page=False):
-    # Função para gerar e enviar a mensagem de página, com os botões de navegação, para os personagens de uma subcategoria.
-    try:
-        pagina_tamanho = 10
-        total_paginas = (total_personagens // pagina_tamanho) + (1 if total_personagens % pagina_tamanho > 0 else 0)
-        personagens_pagina = list(personagens.items())[(pagina - 1) * pagina_tamanho:pagina * pagina_tamanho]
+    itens_por_pagina = 15
+    inicio = (pagina - 1) * itens_por_pagina
+    fim = inicio + itens_por_pagina
+    personagens_pagina = list(personagens.items())[inicio:fim]
+    
+    if tipo == 's':
+        titulo = f"☀️ Peixes do subgrupo {sub_nome.title()} na cesta de {nome_usuario} 👩🏻‍🌾!\n\n🐟 | {len(personagens)}/{total_personagens}"
+    elif tipo == 'f':
+        titulo = f"☀️ Peixes do subgrupo {sub_nome.title()} faltantes na cesta de {nome_usuario} 👩🏻‍🌾!\n\n🐟 | {len(personagens)}/{total_personagens}"
+    elif tipo == 'all':
+        titulo = f"🌳 Todos os Peixes do subgrupo {sub_nome.title()}"
 
-        mensagem = f"🌳 | Sub: {sub_nome.capitalize()} ({tipo}) - Página {pagina}/{total_paginas}\n\n"
-        for id_personagem, (nome, subcategoria, emoji) in personagens_pagina:
-            mensagem += f"{emoji} <code>{id_personagem}</code> • {nome} ({subcategoria})\n"
+    # Preparar a mensagem com os personagens da página atual
+    mensagem = f"{titulo}\n\n"
+    for id_personagem, (nome, subcategoria, emoji) in personagens_pagina:
+        mensagem += f"{emoji} <code>{id_personagem}</code> • {nome}\n"
 
-        # Adiciona imagem do subgrupo, se disponível
-        if imagem_subgrupo:
-            bot.send_photo(chat_id, imagem_subgrupo, caption=mensagem, parse_mode="HTML")
-        else:
-            bot.send_message(chat_id, mensagem, parse_mode="HTML")
+    # Preparar os botões de navegação
+    markup = InlineKeyboardMarkup()
+    if pagina > 1:
+        markup.add(InlineKeyboardButton("⬅️ Anterior", callback_data=f"{tipo}_pagina_{pagina-1}_{sub_nome}_{id_usuario}"))
+    if fim < len(personagens):
+        markup.add(InlineKeyboardButton("Próxima ➡️", callback_data=f"{tipo}_pagina_{pagina+1}_{sub_nome}_{id_usuario}"))
 
-        markup = InlineKeyboardMarkup()
-        if pagina > 1:
-            markup.add(InlineKeyboardButton("⬅️ Anterior", callback_data=f'{tipo}_pagina_{pagina - 1}_{sub_nome}_{id_usuario}'))
-        if pagina < total_paginas:
-            markup.add(InlineKeyboardButton("Próxima ➡️", callback_data=f'{tipo}_pagina_{pagina + 1}_{sub_nome}_{id_usuario}'))
-
-        if is_first_page:
-            bot.send_message(chat_id, mensagem, parse_mode="HTML", reply_markup=markup)
-        else:
-            bot.edit_message_text(mensagem, chat_id=chat_id, message_id=message_id, reply_markup=markup, parse_mode="HTML")
-
-    except Exception as e:
-        print(f"Erro ao enviar página: {e}")
+    # Se for a primeira página, enviar a foto, caso contrário, editar a mensagem anterior
+    if is_first_page and imagem_subgrupo:
+        bot.send_photo(chat_id, imagem_subgrupo, caption=mensagem, reply_markup=markup, parse_mode="HTML")
+    else:
+        bot.edit_message_text(mensagem, chat_id=chat_id, message_id=message_id, reply_markup=markup, parse_mode="HTML")
 

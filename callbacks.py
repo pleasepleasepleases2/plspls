@@ -511,4 +511,182 @@ def troca_callback(call):
                                  caption="Alguém não tem o lanche enviado.\nQue tal olhar sua cesta novamente?")
     finally:
         fechar_conexao(cursor, conn)
+def process_callback(call):
+    try:
+        message = call.message
+        conn, cursor = conectar_banco_dados()
+        chat_id = call.message.chat.id
+
+        if call.message:
+            chat_id = call.message.chat.id
+            if not verificar_tempo_passado(chat_id):
+                return
+            else:
+                ultima_interacao[chat_id] = datetime.now()
+
+            # Condicionais para verificar o callback data
+            if call.data.startswith("geral_compra_"):
+                geral_compra_callback(call)
+
+            elif call.data.startswith('confirmar_iscas'):
+                message_id = call.message.message_id
+                confirmar_iscas(call, message_id)
+
+            elif call.data.startswith("liberar_beta"):
+                process_beta_liberacao(call, message)
+                
+            elif call.data.startswith("remover_beta"):
+                process_beta_remocao(call, message)
+
+            elif call.data.startswith("beta_"):
+                mostrar_opcoes_beta(call)
+
+            elif call.data.startswith("verificarban_"):
+                verificar_ban(call)
+
+            elif call.data.startswith("ban_"):
+                mostrar_opcoes_ban(call)
+
+            elif call.data.startswith("novogif"):
+                processar_comando_gif(message)
+
+            elif call.data.startswith("delgif"):
+                processar_comando_delgif(message)
+
+            elif call.data.startswith("gif_"):
+                mostrar_opcoes_gif(call)
+
+            elif call.data.startswith("tag"):
+                processar_pagina_tag(call)
+
+            elif call.data.startswith("admdar_"):
+                mostrar_opcoes_adm(call)
+
+            elif call.data.startswith("dar_cenoura"):
+                obter_dados_cenouras(call, message)
+
+            elif call.data.startswith("dar_iscas"):
+                obter_dados_iscas(call, message)
+
+            elif call.data.startswith("tirar_cenoura"):
+                remover_dados_cenouras(call, message)
+
+            elif call.data.startswith("tirar_isca"):
+                remover_dados_iscas(call, message)
+
+            elif call.data.startswith("privacy"):
+                processar_privacidade(call)
+
+            elif call.data == 'open_profile':
+                alterar_privacidade_perfil(call, False)
+
+            elif call.data == 'lock_profile':
+                alterar_privacidade_perfil(call, True)
+
+            elif call.data == 'pcancelar':
+                cancelar_processo(call)
+
+            elif call.data.startswith("pronomes_"):
+                atualizar_pronomes(call)
+
+            elif call.data.startswith("bpronomes_"):
+                mostrar_opcoes_pronome(call)
+
+            elif call.data.startswith('troca_'):
+                troca_callback(call)
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+
+
+# Funções extras para cada bloco de callback
+def process_beta_liberacao(call, message):
+    try:
+        bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
+                              text="Por favor, envie o ID da pessoa a ser liberada no beta:")                    
+        bot.register_next_step_handler(message, obter_id_beta)
+    except Exception as e:
+        bot.reply_to(message, f"Ocorreu um erro: {e}")
+
+def process_beta_remocao(call, message):
+    try:
+        bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
+                              text="Por favor, envie o ID da pessoa a ser removida do beta:")                    
+        bot.register_next_step_handler(message, remover_beta)
+    except Exception as e:
+        bot.reply_to(message, f"Ocorreu um erro: {e}")
+
+def mostrar_opcoes_beta(call):
+    try:
+        markup = types.InlineKeyboardMarkup()
+        btn_cenoura = types.InlineKeyboardButton("🥕 Liberar Usuario", callback_data=f"liberar_beta")
+        btn_iscas = types.InlineKeyboardButton("🐟 Remover Usuario", callback_data=f"remover_beta")
+        btn_5 = types.InlineKeyboardButton("❌ Cancelar", callback_data=f"pcancelar")
+        markup.row(btn_cenoura, btn_iscas)
+        markup.row(btn_5)
+
+        bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
+                              text="Escolha o que deseja fazer:", reply_markup=markup)
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+
+def mostrar_opcoes_ban(call):
+    try:
+        markup = types.InlineKeyboardMarkup()
+        btn_cenoura = types.InlineKeyboardButton("🚫 Banir", callback_data=f"banir_{call.message.chat.id}")
+        btn_iscas = types.InlineKeyboardButton("🔍 Verificar Banimento", callback_data=f"verificarban_{call.message.chat.id}")
+        btn_5 = types.InlineKeyboardButton("❌ Cancelar", callback_data=f"pcancelar")
+        markup.row(btn_cenoura, btn_iscas)
+        markup.row(btn_5)
+
+        bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
+                              text="Escolha o que deseja fazer:", reply_markup=markup)
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+
+def mostrar_opcoes_gif(call):
+    try:
+        markup = types.InlineKeyboardMarkup()
+        btn_cenoura = types.InlineKeyboardButton("Alterar gif", callback_data=f"novogif")
+        btn_iscas = types.InlineKeyboardButton("Deletar Gif", callback_data=f"delgif")
+        btn_5 = types.InlineKeyboardButton("❌ Cancelar", callback_data=f"pcancelar")
+        markup.row(btn_cenoura, btn_iscas)
+        markup.row(btn_5)
+
+        bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
+                              text="Escolha o que deseja fazer:", reply_markup=markup)
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+
+def mostrar_opcoes_adm(call):
+    try:
+        markup = types.InlineKeyboardMarkup()
+        btn_cenoura = types.InlineKeyboardButton("🥕 Dar Cenouras", callback_data=f"dar_cenoura_{call.message.chat.id}")
+        btn_iscas = types.InlineKeyboardButton("🐟 Dar Iscas", callback_data=f"dar_iscas_{call.message.chat.id}")
+        btn_1 = types.InlineKeyboardButton("🥕 Tirar Cenouras", callback_data=f"tirar_cenoura_{call.message.chat.id}")
+        btn_2 = types.InlineKeyboardButton("🐟 Tirar Iscas", callback_data=f"tirar_isca_{call.message.chat.id}")
+        btn_5 = types.InlineKeyboardButton("❌ Cancelar", callback_data=f"pcancelar")
+        markup.row(btn_cenoura, btn_iscas)
+        markup.row(btn_1, btn_2)
+        markup.row(btn_5)
+
+        bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
+                              text="Escolha o que deseja fazer:", reply_markup=markup)
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+
+def processar_pagina_tag(call):
+    try:
+        parts = call.data.split('_')
+        pagina = int(parts[1])
+        nometag = parts[2]
+        id_usuario = call.from_user.id 
+        editar_mensagem_tag(call.message, nometag, pagina, id_usuario)
+    except Exception as e:
+        print(f"Erro ao processar callback de página para a tag: {e}")
 

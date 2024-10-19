@@ -83,63 +83,70 @@ def cenourar_carta(call, id_usuario, ids_personagens):
         message_id = call.message.message_id
 
         cartas_cenouradas = []
+        cartas_nao_encontradas = []
+
+        # Itera sobre cada ID de personagem
         for id_personagem in ids_personagens:
-            # Certifique-se de consumir os resultados completamente
+            print(f"DEBUG: Verificando quantidade no inventário da carta {id_personagem}")
+            
+            # Verifica se o personagem está no inventário
             cursor.execute("SELECT quantidade FROM inventario WHERE id_usuario = %s AND id_personagem = %s", (id_usuario, id_personagem))
             quantidade_atual = cursor.fetchone()
-            if quantidade_atual:  # Consome o resultado antes de seguir
-                print(f"DEBUG: Quantidade atual da carta {id_personagem}: {quantidade_atual}")
 
+            # Se a carta existe no inventário e há quantidade suficiente
             if quantidade_atual and quantidade_atual[0] > 0:
                 nova_quantidade = quantidade_atual[0] - 1
-                cursor.execute("UPDATE inventario SET quantidade = %s WHERE id_usuario = %s AND id_personagem = %s", (nova_quantidade, id_usuario, id_personagem))
-                conn.commit()
+                
+                # Atualiza a quantidade da carta no inventário
+                cursor.execute("UPDATE inventario SET quantidade = %s WHERE id_usuario = %s AND id_personagem = %s", 
+                               (nova_quantidade, id_usuario, id_personagem))
 
-                # Atualizar cenouras
+                # Atualiza o número de cenouras do usuário
                 cursor.execute("SELECT cenouras FROM usuarios WHERE id_usuario = %s", (id_usuario,))
-                cenouras = cursor.fetchone()[0]  # Certifica-se de consumir o resultado
+                cenouras = cursor.fetchone()[0]  # Obtém as cenouras
                 novas_cenouras = cenouras + 1
                 cursor.execute("UPDATE usuarios SET cenouras = %s WHERE id_usuario = %s", (novas_cenouras, id_usuario))
-                conn.commit()
 
-                # Atualizar banco de inventário
+                # Verifica se a carta já está no banco de inventário
                 cursor.execute("SELECT quantidade FROM banco_inventario WHERE id_personagem = %s", (id_personagem,))
                 quantidade_banco = cursor.fetchone()
-                if quantidade_banco:  # Consome o resultado antes de seguir
-                    print(f"DEBUG: Quantidade no banco da carta {id_personagem}: {quantidade_banco}")
 
+                # Atualiza o banco de inventário
                 if quantidade_banco:
                     nova_quantidade_banco = quantidade_banco[0] + 1
-                    cursor.execute("UPDATE banco_inventario SET quantidade = %s WHERE id_personagem = %s", (nova_quantidade_banco, id_personagem))
+                    cursor.execute("UPDATE banco_inventario SET quantidade = %s WHERE id_personagem = %s", 
+                                   (nova_quantidade_banco, id_personagem))
                 else:
-                    cursor.execute("INSERT INTO banco_inventario (id_personagem, quantidade) VALUES (%s, %s)", (id_personagem, 1))
+                    cursor.execute("INSERT INTO banco_inventario (id_personagem, quantidade) VALUES (%s, %s)", 
+                                   (id_personagem, 1))
 
+                # Commit após cada operação de cenourar
                 conn.commit()
                 cartas_cenouradas.append(id_personagem)
+            else:
+                cartas_nao_encontradas.append(id_personagem)
 
-                # Certificar-se de que todos os resultados estão consumidos antes de continuar
-                if cursor.with_rows and cursor.fetchall():
-                    print(f"DEBUG: Resultados adicionais foram lidos para {id_personagem}.")
-
+        # Mensagens de confirmação
         if cartas_cenouradas:
-            mensagem_final = "🥕 Cartas cenouradas com sucesso:\n\n" + "\n".join(cartas_cenouradas)
+            mensagem_final = f"🥕 Cartas cenouradas com sucesso:\n\n{', '.join(cartas_cenouradas)}"
             bot.edit_message_text(chat_id=chat_id, message_id=message_id, text=mensagem_final)
-        else:
-            bot.edit_message_text(chat_id=chat_id, message_id=message_id, text="Nenhuma carta foi cenourada.")
+        
+        if cartas_nao_encontradas:
+            bot.send_message(chat_id, f"As seguintes cartas não foram encontradas no inventário ou a quantidade é insuficiente: {', '.join(cartas_nao_encontradas)}")
     
-    except Exception as e:
+    except mysql.connector.Error as e:
         print(f"Erro ao processar cenoura: {e}")
         bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text="Erro ao processar a cenoura.")
     finally:
+        # Fechando o cursor e conexão adequadamente
         try:
             if cursor:
-                if cursor.with_rows:
-                    cursor.fetchall()  # Garante que nenhum resultado não lido permaneça
-                cursor.close()  # Certifique-se de que o cursor seja fechado adequadamente
+                cursor.close()
             if conn:
                 conn.close()
         except Exception as e:
             print(f"Erro ao fechar conexão ou cursor: {e}")
+
 
 def verificar_id_na_tabelabeta(user_id):
     try:

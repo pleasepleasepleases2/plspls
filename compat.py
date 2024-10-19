@@ -131,3 +131,52 @@ def youcompat_command(message):
 
     finally:
         fechar_conexao(cursor, conn)
+
+def mecompat_command(message):
+    conn, cursor = conectar_banco_dados()
+    try:
+        if not message.reply_to_message:
+            bot.reply_to(message, "Você precisa usar este comando em resposta a uma mensagem de outro usuário.")
+            return
+
+        args = message.text.split()
+        if len(args) < 2:
+            bot.reply_to(message, "Uso: /mecompat <subcategoria>")
+            return
+        
+        subcategoria = ' '.join(args[1:])
+        subcategoria = verificar_apelido(subcategoria)
+        subcategoria_titulo = subcategoria.title()
+        
+        id_usuario_1 = message.from_user.id
+        nome_usuario_1 = message.from_user.first_name
+        id_usuario_2 = message.reply_to_message.from_user.id
+        nome_usuario_2 = message.reply_to_message.from_user.first_name
+
+        query = """
+        SELECT inv.id_personagem, per.nome
+        FROM inventario inv
+        JOIN personagens per ON inv.id_personagem = per.id_personagem
+        WHERE inv.id_usuario = %s AND per.subcategoria = %s
+        """
+        cursor.execute(query, (id_usuario_1, subcategoria))
+        personagens_usuario_1 = {row[0]: row[1] for row in cursor.fetchall()}
+
+        cursor.execute(query, (id_usuario_2, subcategoria))
+        personagens_usuario_2 = {row[0]: row[1] for row in cursor.fetchall()}
+
+        diferenca = set(personagens_usuario_2.keys()) - set(personagens_usuario_1.keys())
+        mensagem = f"<b>🎀 COMPATIBILIDADE 🎀 \n\n</b>🍎 | <b><i>{subcategoria_titulo}</i></b>\n🧺 |<b> Cesta de:</b> {nome_usuario_2} \n⛈️ | <b>Faltantes de:</b> {nome_usuario_1} \n\n"
+
+        if diferenca:
+            for id_personagem in diferenca:
+                mensagem += f"<code>{id_personagem}</code> - {personagens_usuario_2.get(id_personagem)}\n"
+        else:
+            mensagem = "Parece que não temos um match."
+
+        bot.send_message(message.chat.id, mensagem, parse_mode="HTML", reply_to_message_id=message.id)
+
+    except Exception as e:
+        bot.reply_to(message, f"Ocorreu um erro ao processar o comando: {e}")
+    finally:
+        fechar_conexao(cursor, conn)

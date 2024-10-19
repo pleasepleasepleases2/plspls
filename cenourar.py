@@ -20,14 +20,14 @@ def processar_verificar_e_cenourar(message, bot):
         conn, cursor = conectar_banco_dados()
         id_usuario = message.from_user.id
         print(f"DEBUG: ID do usuário: {id_usuario}")
-        print(message)
+        print(message.text)
         # Verifica se o comando tem pelo menos dois argumentos (comando e IDs)
         if len(message.text.split()) < 2:
             bot.send_message(message.chat.id, "Por favor, forneça os IDs dos personagens que deseja cenourar, separados por vírgulas. Exemplo: /cenourar 12345,67890")
             return
         
         # Remove espaços extras e divide os IDs por vírgula, filtrando entradas vazias
-        ids_personagens_bruto = message.text.split()[1].strip()  # Pegando apenas a parte após o comando
+        ids_personagens_bruto = message.text.split()[0].strip()  # Pegando apenas a parte após o comando
         print(f"DEBUG: IDs dos personagens brutos: {ids_personagens_bruto}")
 
         ids_personagens = [id_personagem.strip() for id_personagem in ids_personagens_bruto.split(',') if id_personagem.strip()]

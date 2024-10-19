@@ -241,10 +241,6 @@ def registrar_interacao(id_usuario, id_carta, gostou):
     fechar_conexao(cursor, conn)
     return True  # Interação registrada com sucesso
 
-import traceback
-import globals
-from telebot import types
-
 # Inicializa o tabuleiro vazio
 def inicializar_tabuleiro():
     return [' ' for _ in range(9)]
@@ -283,92 +279,6 @@ def iniciar_jogo(bot, message):
         print(f"Erro ao processar o jogo da velha: {e}")
         traceback.print_exc()
 
-def gerar_proxima_carta():
-    """Seleciona uma carta aleatória do banco de dados."""
-    conn, cursor = conectar_banco_dados()
-    cursor.execute("SELECT id_personagem, nome, subcategoria, emoji, categoria FROM personagens ORDER BY RAND() LIMIT 1")
-    carta = cursor.fetchone()
-    fechar_conexao(cursor, conn)
-    return carta
-
-def consultar_popularidade():
-    """Consulta as cartas mais amadas e mais rejeitadas."""
-    conn, cursor = conectar_banco_dados()
-    
-    cursor.execute("SELECT id_carta, gostos, rejeicoes FROM popularidade_cartas ORDER BY gostos DESC LIMIT 10")
-    mais_amadas = cursor.fetchall()
-    
-    cursor.execute("SELECT id_carta, gostos, rejeicoes FROM popularidade_cartas ORDER BY rejeicoes DESC LIMIT 10")
-    mais_rejeitadas = cursor.fetchall()
-    
-    fechar_conexao(cursor, conn)
-    return mais_amadas, mais_rejeitadas
-
-import traceback
-from telebot import types
-import globals
-
-# Função para manipular as jogadas do jogador
-@bot.callback_query_handler(func=lambda call: call.data.startswith('jogada_'))
-def jogador_fazer_jogada(call):
-    try:
-        id_usuario = call.from_user.id
-        # Verifica se o jogo foi iniciado
-        if id_usuario not in globals.jogos_da_velha:
-            bot.send_message(call.message.chat.id, "Você não iniciou um jogo da velha. Use /jogodavelha para começar.")
-            return
-
-        # Verifica se a jogada é inválida
-        if call.data == "jogada_disabled":
-            bot.answer_callback_query(call.id, "Essa posição já está ocupada!")
-            return
-
-        # Processa a jogada
-        tabuleiro = globals.jogos_da_velha[id_usuario]
-        _, i, j = call.data.split('_')
-        i, j = int(i), int(j)
-
-        if tabuleiro[i][j] != '⬜':
-            bot.answer_callback_query(call.id, "Essa posição já está ocupada!")
-            return
-
-        # Atualiza o tabuleiro com a jogada do jogador
-        tabuleiro[i][j] = '✔️'
-
-        # Verifica se o jogador venceu
-        if verificar_vitoria(tabuleiro, '✔️'):
-            bot.edit_message_text(f"🎉 Parabéns! Você venceu!\n\n{mostrar_tabuleiro(tabuleiro)}", call.message.chat.id, call.message.message_id)
-            del globals.jogos_da_velha[id_usuario]
-            return
-
-        # Verifica se houve empate
-        if verificar_empate(tabuleiro):
-            bot.edit_message_text(f"😐 Empate!\n\n{mostrar_tabuleiro(tabuleiro)}", call.message.chat.id, call.message.message_id)
-            del globals.jogos_da_velha[id_usuario]
-            return
-
-        # Jogada do bot
-        tabuleiro = bot_fazer_jogada(tabuleiro, '❌', '✔️')
-
-        # Verifica se o bot venceu
-        if verificar_vitoria(tabuleiro, '❌'):
-            bot.edit_message_text(f"😎 Eu venci! Melhor sorte da próxima vez.\n\n{mostrar_tabuleiro(tabuleiro)}", call.message.chat.id, call.message.message_id)
-            del globals.jogos_da_velha[id_usuario]
-            return
-
-        # Verifica novamente se houve empate após a jogada do bot
-        if verificar_empate(tabuleiro):
-            bot.edit_message_text(f"😐 Empate!\n\n{mostrar_tabuleiro(tabuleiro)}", call.message.chat.id, call.message.message_id)
-            del globals.jogos_da_velha[id_usuario]
-            return
-
-        # Atualiza o tabuleiro com os novos botões
-        markup = criar_botoes_tabuleiro(tabuleiro)
-        bot.edit_message_text(f"Seu turno!\n\n{mostrar_tabuleiro(tabuleiro)}", call.message.chat.id, call.message.message_id, reply_markup=markup)
-
-    except Exception as e:
-        print(f"Erro ao processar o jogo da velha: {e}")
-        traceback.print_exc()
 # Função para escolher uma palavra aleatória com base no tamanho
 def escolher_palavra():
     todas_palavras = palavras_4_letras + palavras_5_letras + palavras_6_letras + palavras_7_letras + palavras_8_letras

@@ -674,31 +674,18 @@ def confirmar_delete(call):
 def cancelar_delete(call):
     bot.edit_message_text("Ação cancelada.", call.message.chat.id, call.message.message_id)
 
-
 @bot.message_handler(commands=['editdiary'])
-def edit_diary(message):
-    user_id = message.from_user.id
-    today = date.today()
+def handle_edit_diary(message):
+    edit_diary(message, bot)
 
-    conn, cursor = conectar_banco_dados()
+@bot.callback_query_handler(func=lambda call: call.data == 'edit_note')
+def handle_edit_note_callback(call):
+    bot.send_message(call.message.chat.id, "Envie a nova anotação para editar.")
+    bot.register_next_step_handler(call.message, salvar_ou_editar_anotacao, call.from_user.id, date.today(), bot)
 
-    try:
-        cursor.execute("SELECT anotacao FROM anotacoes WHERE id_usuario = %s AND data = %s", (user_id, today))
-        result = cursor.fetchone()
-
-        if result:
-            anotacao = result[0]
-            bot.send_message(message.chat.id, f"Sua anotação para hoje é:\n\n<i>\"{anotacao}\"</i>\n\nEnvie a nova anotação para editar.")
-        else:
-            bot.send_message(message.chat.id, "Você ainda não tem uma anotação para hoje. Envie sua primeira anotação.")
-        
-        bot.register_next_step_handler(message, salvar_ou_editar_anotacao, user_id, today)
-
-    except Exception as e:
-        bot.send_message(message.chat.id, "Erro ao processar o comando de edição do diário.")
-        print(f"Erro ao editar anotação: {e}")
-    finally:
-        fechar_conexao(cursor, conn)
+@bot.callback_query_handler(func=lambda call: call.data == 'cancel_edit')
+def handle_cancel_edit_callback(call):
+    cancelar_edicao(call, bot)
 
 @bot.message_handler(commands=['gnome'])
 def handle_gnome(message):

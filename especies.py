@@ -13,13 +13,13 @@ def mostrar_primeira_pagina_especies(message, categoria):
         cursor.execute(query_total, (categoria,))
         total_registros = cursor.fetchone()[0]
 
-        total_paginas = (total_registros // 15) + (1 if total_registros % 15 > 0 else 0)
+        total_paginas = (total_registros // 20) + (1 if total_registros % 20 > 0 else 0)
 
         if total_registros == 0:
             bot.reply_to(message, f"Nenhuma subcategoria encontrada para a categoria '{categoria}'.")
             return
 
-        query = "SELECT DISTINCT subcategoria FROM personagens WHERE categoria = %s LIMIT 15"
+        query = "SELECT DISTINCT subcategoria FROM personagens WHERE categoria = %s LIMIT 20"
         cursor.execute(query, (categoria,))
         resultados = cursor.fetchall()
 
@@ -44,8 +44,8 @@ def editar_mensagem_especies(call, categoria, pagina_atual, total_paginas):
     try:
         conn, cursor = conectar_banco_dados()
 
-        offset = (pagina_atual - 1) * 15
-        query = "SELECT DISTINCT subcategoria FROM personagens WHERE categoria = %s LIMIT 15 OFFSET %s"
+        offset = (pagina_atual - 1) * 20
+        query = "SELECT DISTINCT subcategoria FROM personagens WHERE categoria = %s LIMIT 20 OFFSET %s"
         cursor.execute(query, (categoria, offset))
         resultados = cursor.fetchall()
 

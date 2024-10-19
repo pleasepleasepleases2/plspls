@@ -264,3 +264,29 @@ def add_to_wish(message):
         print(f"Erro ao adicionar carta à wishlist: {err}")
     finally:
         fechar_conexao(cursor, conn)
+
+def remover_da_wishlist(message):
+    try:
+        chat_id = message.chat.id
+        id_usuario = message.from_user.id
+        command_parts = message.text.split()
+        if len(command_parts) == 2:
+            id_personagem = command_parts[1]
+            
+        conn, cursor = conectar_banco_dados()
+        cursor.execute("SELECT COUNT(*) FROM wishlist WHERE id_usuario = %s AND id_personagem = %s",
+                       (id_usuario, id_personagem))
+        existing_carta_count = cursor.fetchone()[0]
+
+        if existing_carta_count > 0:
+            cursor.execute("DELETE FROM wishlist WHERE id_usuario = %s AND id_personagem = %s",
+                           (id_usuario, id_personagem))
+            bot.send_message(chat_id=chat_id, text="Carta removida da sua wishlist!", reply_to_message_id=message.message_id)
+        else:
+            bot.send_message(chat_id=chat_id, text="Você não possui essa carta na wishlist.", reply_to_message_id=message.message_id)
+        conn.commit()
+
+    except mysql.connector.Error as err:
+        print(f"Erro ao remover carta da wishlist: {err}")
+    finally:
+        fechar_conexao(cursor, conn)

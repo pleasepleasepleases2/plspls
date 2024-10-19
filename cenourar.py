@@ -26,7 +26,10 @@ def processar_verificar_e_cenourar(message, bot):
             return
         
         # Remove espaços extras e divide os IDs por vírgula
-        ids_personagens = [id_personagem.strip() for id_personagem in message.text.split()[1].split(',') if id_personagem.strip()]
+        ids_personagens_bruto = message.text.split()[1]  # Pegando apenas a parte após o comando
+        print(f"DEBUG: IDs dos personagens brutos: {ids_personagens_bruto}")
+
+        ids_personagens = [id_personagem.strip() for id_personagem in ids_personagens_bruto.split(',') if id_personagem.strip()]
         print(f"DEBUG: IDs dos personagens recebidos (após limpeza): {ids_personagens}")
 
         # Verifica se as cartas estão no inventário

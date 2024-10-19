@@ -161,7 +161,37 @@ def page_command(message):
     finally:
         fechar_conexao(cursor, conn)
 
-def salvar_ou_editar_anotacao(message, user_id, today):
+def edit_diary(message, bot):
+    user_id = message.from_user.id
+    today = date.today()
+
+    conn, cursor = conectar_banco_dados()
+
+    try:
+        cursor.execute("SELECT anotacao FROM anotacoes WHERE id_usuario = %s AND data = %s", (user_id, today))
+        result = cursor.fetchone()
+
+        if result:
+            anotacao = result[0]
+            bot.send_message(message.chat.id, f"Sua anotação para hoje é:\n\n<i>\"{anotacao}\"</i>\n\nEscolha uma ação:")
+        else:
+            bot.send_message(message.chat.id, "Você ainda não tem uma anotação para hoje. Deseja fazer uma anotação?")
+        
+        # Botões para editar ou apagar a mensagem
+        markup = types.InlineKeyboardMarkup()
+        edit_button = types.InlineKeyboardButton("✍️ Editar", callback_data="edit_note")
+        cancel_button = types.InlineKeyboardButton("❌ Cancelar", callback_data="cancel_edit")
+        markup.add(edit_button, cancel_button)
+
+        bot.send_message(message.chat.id, "Escolha uma opção:", reply_markup=markup)
+
+    except Exception as e:
+        bot.send_message(message.chat.id, "Erro ao processar o comando de edição do diário.")
+        print(f"Erro ao editar anotação: {e}")
+    finally:
+        fechar_conexao(cursor, conn)
+
+def salvar_ou_editar_anotacao(message, user_id, today, bot):
     anotacao = message.text
 
     conn, cursor = conectar_banco_dados()
@@ -185,3 +215,7 @@ def salvar_ou_editar_anotacao(message, user_id, today):
         print(f"Erro ao salvar ou editar anotação: {e}")
     finally:
         fechar_conexao(cursor, conn)
+
+def cancelar_edicao(call, bot):
+    bot.delete_message(call.message.chat.id, call.message.message_id)
+

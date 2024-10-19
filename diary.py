@@ -20,6 +20,7 @@ def receive_note(message):
     conn, cursor = conectar_banco_dados()
 
     try:
+        # Registrar a anotação no banco de dados
         cursor.execute("INSERT INTO anotacoes (id_usuario, data, nome_usuario, anotacao) VALUES (%s, %s, %s, %s)",
                        (user_id, today, user_name, note))
         conn.commit()
@@ -30,7 +31,7 @@ def receive_note(message):
         bot.send_message(message.chat.id, "Ocorreu um erro ao tentar registrar sua anotação. Tente novamente mais tarde.")
     finally:
         fechar_conexao(cursor, conn)
-
+        
 def diary_command(message):
     user_id = message.from_user.id
     today = date.today()

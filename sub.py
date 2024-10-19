@@ -361,3 +361,168 @@ def encontrar_submenu_proximo(submenu):
         return None
     finally:
         fechar_conexao(cursor, conn)
+
+
+def processar_sub_command(message):
+    try:
+        parts = message.text.split(' ', 2)
+        if len(parts) < 2:
+            bot.reply_to(message, "Por favor, forneça o tipo ('s' ou 'f') e o nome do sub após o comando, por exemplo: /sub s loona")
+            return
+
+        tipo = parts[1].strip().lower()
+        sub_nome = parts[2].strip().lower() if len(parts) > 2 else None
+
+        id_usuario = message.from_user.id
+        nome_usuario = message.from_user.first_name
+
+        conn, cursor = conectar_banco_dados()
+
+        # Corrigir a consulta para incluir o emoji
+        query_todos = """
+        SELECT s.id_personagem, p.nome, p.subcategoria, p.emoji
+        FROM sub s
+        JOIN personagens p ON s.id_personagem = p.id_personagem
+        WHERE s.sub_nome = %s
+        """
+        cursor.execute(query_todos, (sub_nome,))
+        todos_personagens = {row[0]: (row[1], row[2], row[3]) for row in cursor.fetchall()}
+
+        if not todos_personagens:
+            bot.reply_to(message, f"O sub '{sub_nome}' não existe.")
+            return
+
+        # Adicionar o emoji também no inventário
+        query_possui = """
+        SELECT s.id_personagem, p.nome, p.subcategoria, p.emoji
+        FROM inventario inv
+        JOIN sub s ON inv.id_personagem = s.id_personagem
+        JOIN personagens p ON s.id_personagem = p.id_personagem
+        WHERE inv.id_usuario = %s AND s.sub_nome = %s
+        """
+        cursor.execute(query_possui, (id_usuario, sub_nome))
+        personagens_possui = {row[0]: (row[1], row[2], row[3]) for row in cursor.fetchall()}
+
+        query_imagem = """
+        SELECT Imagem FROM subcategorias WHERE nomesub = %s
+        """
+        cursor.execute(query_imagem, (sub_nome,))
+        resultado_imagem = cursor.fetchone()
+        imagem_subgrupo = resultado_imagem[0] if resultado_imagem else None
+
+        subcategoria = next(iter(todos_personagens.values()), ("", ""))[1]
+
+        if tipo == 's':
+            if personagens_possui:
+                enviar_pagina(message.chat.id, message.message_id, 1, 's', personagens_possui, len(todos_personagens), sub_nome, nome_usuario, imagem_subgrupo, id_usuario, is_first_page=True)
+            else:
+                bot.reply_to(message, f"🌧️ Você não possui nenhum personagem neste subgrupo.")
+
+        elif tipo == 'f':
+            personagens_faltantes = {id_personagem: (nome, subcategoria, emoji) for id_personagem, (nome, subcategoria, emoji) in todos_personagens.items() if id_personagem not in personagens_possui}
+            if personagens_faltantes:
+                enviar_pagina(message.chat.id, message.message_id, 1, 'f', personagens_faltantes, len(todos_personagens), sub_nome, nome_usuario, imagem_subgrupo, id_usuario, is_first_page=True)
+            else:
+                bot.reply_to(message, f"☀️ Nada como a alegria de ter todos os personagens de {sub_nome.capitalize()} na cesta!")
+
+        elif tipo == 'all':
+            enviar_pagina(message.chat.id, message.message_id, 1, 'all', todos_personagens, len(todos_personagens), sub_nome, "", imagem_subgrupo, id_usuario, is_first_page=True)
+
+        else:
+            bot.reply_to(message, "Tipo inválido. Use 's' para os personagens que você possui, 'f' para os que você não possui, ou 'all' para ver todos.")
+
+    except Exception as e:
+        print(f"Erro ao processar comando /sub: {e}")
+
+    finally:
+        fechar_conexao(cursor, conn)
+
+
+def callback_pagina_sub(call):
+    try:
+        partes = call.data.split('_')
+        tipo = partes[0]
+        pagina = int(partes[2])
+        sub_nome = partes[3]
+        id_usuario = int(partes[4])  # O ID do usuário original que iniciou a interação
+
+        conn, cursor = conectar_banco_dados()
+
+        # Consulta para todos os personagens, incluindo o emoji
+        query_todos = """
+        SELECT s.id_personagem, p.nome, p.subcategoria, p.emoji
+        FROM sub s
+        JOIN personagens p ON s.id_personagem = p.id_personagem
+        WHERE s.sub_nome = %s
+        """
+        cursor.execute(query_todos, (sub_nome,))
+        todos_personagens = {row[0]: (row[1], row[2], row[3]) for row in cursor.fetchall()}
+
+        # Consulta para os personagens que o usuário possui, incluindo o emoji
+        query_possui = """
+        SELECT s.id_personagem, p.nome, p.subcategoria, p.emoji
+        FROM inventario inv
+        JOIN sub s ON inv.id_personagem = s.id_personagem
+        JOIN personagens p ON s.id_personagem = p.id_personagem
+        WHERE inv.id_usuario = %s AND s.sub_nome = %s
+        """
+        cursor.execute(query_possui, (id_usuario, sub_nome))
+        personagens_possui = {row[0]: (row[1], row[2], row[3]) for row in cursor.fetchall()}
+
+        query_imagem = """
+        SELECT Imagem FROM subcategorias WHERE nomesub = %s
+        """
+        cursor.execute(query_imagem, (sub_nome,))
+        resultado_imagem = cursor.fetchone()
+        imagem_subgrupo = resultado_imagem[0] if resultado_imagem else None
+
+        nome_usuario = call.from_user.first_name
+
+        if tipo == 's':
+            enviar_pagina(call.message.chat.id, call.message.message_id, pagina, 's', personagens_possui, len(todos_personagens), sub_nome, nome_usuario, imagem_subgrupo, id_usuario)
+        elif tipo == 'f':
+            personagens_faltantes = {id_personagem: (nome, subcategoria, emoji) for id_personagem, (nome, subcategoria, emoji) in todos_personagens.items() if id_personagem not in personagens_possui}
+            enviar_pagina(call.message.chat.id, call.message.message_id, pagina, 'f', personagens_faltantes, len(todos_personagens), sub_nome, nome_usuario, imagem_subgrupo, id_usuario)
+        elif tipo == 'all':
+            enviar_pagina(call.message.chat.id, call.message.message_id, pagina, 'all', todos_personagens, len(todos_personagens), sub_nome, nome_usuario, imagem_subgrupo, id_usuario)
+
+        bot.answer_callback_query(call.id)
+
+    except Exception as e:
+        print(f"Erro ao processar callback de navegação: {e}")
+        bot.send_message(call.message.chat.id, "Ocorreu um erro ao processar a navegação.")
+    finally:
+        fechar_conexao(cursor, conn)
+
+
+def enviar_pagina(chat_id, message_id, pagina, tipo, personagens, total_personagens, sub_nome, nome_usuario, imagem_subgrupo, id_usuario, is_first_page=False):
+    # Função para gerar e enviar a mensagem de página, com os botões de navegação, para os personagens de uma subcategoria.
+    try:
+        pagina_tamanho = 10
+        total_paginas = (total_personagens // pagina_tamanho) + (1 if total_personagens % pagina_tamanho > 0 else 0)
+        personagens_pagina = list(personagens.items())[(pagina - 1) * pagina_tamanho:pagina * pagina_tamanho]
+
+        mensagem = f"🌳 | Sub: {sub_nome.capitalize()} ({tipo}) - Página {pagina}/{total_paginas}\n\n"
+        for id_personagem, (nome, subcategoria, emoji) in personagens_pagina:
+            mensagem += f"{emoji} <code>{id_personagem}</code> • {nome} ({subcategoria})\n"
+
+        # Adiciona imagem do subgrupo, se disponível
+        if imagem_subgrupo:
+            bot.send_photo(chat_id, imagem_subgrupo, caption=mensagem, parse_mode="HTML")
+        else:
+            bot.send_message(chat_id, mensagem, parse_mode="HTML")
+
+        markup = InlineKeyboardMarkup()
+        if pagina > 1:
+            markup.add(InlineKeyboardButton("⬅️ Anterior", callback_data=f'{tipo}_pagina_{pagina - 1}_{sub_nome}_{id_usuario}'))
+        if pagina < total_paginas:
+            markup.add(InlineKeyboardButton("Próxima ➡️", callback_data=f'{tipo}_pagina_{pagina + 1}_{sub_nome}_{id_usuario}'))
+
+        if is_first_page:
+            bot.send_message(chat_id, mensagem, parse_mode="HTML", reply_markup=markup)
+        else:
+            bot.edit_message_text(mensagem, chat_id=chat_id, message_id=message_id, reply_markup=markup, parse_mode="HTML")
+
+    except Exception as e:
+        print(f"Erro ao enviar página: {e}")
+

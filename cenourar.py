@@ -75,6 +75,7 @@ def processar_verificar_e_cenourar(message, bot):
             cursor.close()
         if conn:
             conn.close()
+
 def cenourar_carta(call, id_usuario, ids_personagens):
     try:
         conn, cursor = conectar_banco_dados()
@@ -96,7 +97,7 @@ def cenourar_carta(call, id_usuario, ids_personagens):
 
                 # Atualizar cenouras
                 cursor.execute("SELECT cenouras FROM usuarios WHERE id_usuario = %s", (id_usuario,))
-                cenouras = cursor.fetchone()[0]
+                cenouras = cursor.fetchone()[0]  # Certifica-se de consumir o resultado
                 novas_cenouras = cenouras + 1
                 cursor.execute("UPDATE usuarios SET cenouras = %s WHERE id_usuario = %s", (novas_cenouras, id_usuario))
                 conn.commit()
@@ -116,6 +117,10 @@ def cenourar_carta(call, id_usuario, ids_personagens):
                 conn.commit()
                 cartas_cenouradas.append(id_personagem)
 
+                # Certificar-se de que todos os resultados estão consumidos antes de continuar
+                if cursor.with_rows and cursor.fetchall():
+                    print(f"DEBUG: Resultados adicionais foram lidos para {id_personagem}.")
+
         if cartas_cenouradas:
             mensagem_final = "🥕 Cartas cenouradas com sucesso:\n\n" + "\n".join(cartas_cenouradas)
             bot.edit_message_text(chat_id=chat_id, message_id=message_id, text=mensagem_final)
@@ -126,11 +131,15 @@ def cenourar_carta(call, id_usuario, ids_personagens):
         print(f"Erro ao processar cenoura: {e}")
         bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text="Erro ao processar a cenoura.")
     finally:
-        if cursor:
-            cursor.close()  # Certifique-se de que o cursor seja fechado adequadamente
-        if conn:
-            conn.close()
-
+        try:
+            if cursor:
+                if cursor.with_rows:
+                    cursor.fetchall()  # Garante que nenhum resultado não lido permaneça
+                cursor.close()  # Certifique-se de que o cursor seja fechado adequadamente
+            if conn:
+                conn.close()
+        except Exception as e:
+            print(f"Erro ao fechar conexão ou cursor: {e}")
 
 def verificar_id_na_tabelabeta(user_id):
     try:

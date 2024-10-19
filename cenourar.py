@@ -88,10 +88,13 @@ def cenourar_carta(call, id_usuario, ids_personagens):
         # Itera sobre cada ID de personagem
         for id_personagem in ids_personagens:
             print(f"DEBUG: Verificando quantidade no inventário da carta {id_personagem}")
-            
+
             # Verifica se o personagem está no inventário
             cursor.execute("SELECT quantidade FROM inventario WHERE id_usuario = %s AND id_personagem = %s", (id_usuario, id_personagem))
             quantidade_atual = cursor.fetchone()
+
+            # Certifique-se de consumir todos os resultados anteriores
+            conn.commit()
 
             # Se a carta existe no inventário e há quantidade suficiente
             if quantidade_atual and quantidade_atual[0] > 0:
@@ -100,12 +103,14 @@ def cenourar_carta(call, id_usuario, ids_personagens):
                 # Atualiza a quantidade da carta no inventário
                 cursor.execute("UPDATE inventario SET quantidade = %s WHERE id_usuario = %s AND id_personagem = %s", 
                                (nova_quantidade, id_usuario, id_personagem))
+                conn.commit()
 
                 # Atualiza o número de cenouras do usuário
                 cursor.execute("SELECT cenouras FROM usuarios WHERE id_usuario = %s", (id_usuario,))
-                cenouras = cursor.fetchone()[0]  # Obtém as cenouras
+                cenouras = cursor.fetchone()[0]
                 novas_cenouras = cenouras + 1
                 cursor.execute("UPDATE usuarios SET cenouras = %s WHERE id_usuario = %s", (novas_cenouras, id_usuario))
+                conn.commit()
 
                 # Verifica se a carta já está no banco de inventário
                 cursor.execute("SELECT quantidade FROM banco_inventario WHERE id_personagem = %s", (id_personagem,))

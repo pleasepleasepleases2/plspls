@@ -83,20 +83,30 @@ def cenourar_carta(call, id_usuario, ids_personagens):
 
         cartas_cenouradas = []
         for id_personagem in ids_personagens:
+            # Certifique-se de consumir os resultados completamente
             cursor.execute("SELECT quantidade FROM inventario WHERE id_usuario = %s AND id_personagem = %s", (id_usuario, id_personagem))
             quantidade_atual = cursor.fetchone()
-            
+            if quantidade_atual:  # Consome o resultado antes de seguir
+                print(f"DEBUG: Quantidade atual da carta {id_personagem}: {quantidade_atual}")
+
             if quantidade_atual and quantidade_atual[0] > 0:
                 nova_quantidade = quantidade_atual[0] - 1
                 cursor.execute("UPDATE inventario SET quantidade = %s WHERE id_usuario = %s AND id_personagem = %s", (nova_quantidade, id_usuario, id_personagem))
+                conn.commit()
 
                 # Atualizar cenouras
-                cursor.execute("UPDATE usuarios SET cenouras = cenouras + 1 WHERE id_usuario = %s", (id_usuario,))
+                cursor.execute("SELECT cenouras FROM usuarios WHERE id_usuario = %s", (id_usuario,))
+                cenouras = cursor.fetchone()[0]
+                novas_cenouras = cenouras + 1
+                cursor.execute("UPDATE usuarios SET cenouras = %s WHERE id_usuario = %s", (novas_cenouras, id_usuario))
+                conn.commit()
 
                 # Atualizar banco de inventário
                 cursor.execute("SELECT quantidade FROM banco_inventario WHERE id_personagem = %s", (id_personagem,))
                 quantidade_banco = cursor.fetchone()
-                
+                if quantidade_banco:  # Consome o resultado antes de seguir
+                    print(f"DEBUG: Quantidade no banco da carta {id_personagem}: {quantidade_banco}")
+
                 if quantidade_banco:
                     nova_quantidade_banco = quantidade_banco[0] + 1
                     cursor.execute("UPDATE banco_inventario SET quantidade = %s WHERE id_personagem = %s", (nova_quantidade_banco, id_personagem))
@@ -117,9 +127,10 @@ def cenourar_carta(call, id_usuario, ids_personagens):
         bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text="Erro ao processar a cenoura.")
     finally:
         if cursor:
-            cursor.close()
+            cursor.close()  # Certifique-se de que o cursor seja fechado adequadamente
         if conn:
             conn.close()
+
 
 def verificar_id_na_tabelabeta(user_id):
     try:

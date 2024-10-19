@@ -13,7 +13,6 @@ def enviar_pergunta_cenoura(message, id_usuario, ids_personagens, bot):
     except Exception as e:
         print(f"DEBUG: Erro ao enviar pergunta de cenourar: {e}")
         traceback.print_exc()
-
 def processar_verificar_e_cenourar(message, bot):
     try:
         print("DEBUG: Iniciando o processamento de comando de cenourar...")
@@ -21,15 +20,17 @@ def processar_verificar_e_cenourar(message, bot):
         id_usuario = message.from_user.id
         print(f"DEBUG: ID do usuário: {id_usuario}")
         print(message.text)
+
         # Verifica se o comando tem pelo menos dois argumentos (comando e IDs)
         if len(message.text.split()) < 2:
             bot.send_message(message.chat.id, "Por favor, forneça os IDs dos personagens que deseja cenourar, separados por vírgulas. Exemplo: /cenourar 12345,67890")
             return
-        
+
         # Remove espaços extras e divide os IDs por vírgula, filtrando entradas vazias
-        ids_personagens_bruto = message.text.split()[1:].strip()  # Pegando apenas a parte após o comando
+        ids_personagens_bruto = ' '.join(message.text.split()[1:]).strip()  # Pega o texto após o comando, unido por espaço
         print(f"DEBUG: IDs dos personagens brutos: {ids_personagens_bruto}")
 
+        # Divide os IDs por vírgula, remove espaços em branco e filtra IDs vazios
         ids_personagens = [id_personagem.strip() for id_personagem in ids_personagens_bruto.split(',') if id_personagem.strip()]
         print(f"DEBUG: IDs dos personagens recebidos (após limpeza): {ids_personagens}")
 
@@ -50,8 +51,10 @@ def processar_verificar_e_cenourar(message, bot):
         print(f"DEBUG: Cartas a cenourar: {cartas_a_cenourar}")
         print(f"DEBUG: Cartas não encontradas ou insuficientes: {cartas_nao_encontradas}")
 
+        # Envia a pergunta de confirmação para as cartas que podem ser cenouradas
         if cartas_a_cenourar:
             enviar_pergunta_cenoura(message, id_usuario, cartas_a_cenourar, bot)
+        # Mensagem de erro para cartas que não foram encontradas ou quantidade insuficiente
         if cartas_nao_encontradas:
             bot.send_message(message.chat.id, f"As seguintes cartas não foram encontradas no inventário ou você não tem quantidade suficiente: {', '.join(cartas_nao_encontradas)}")
         if not cartas_a_cenourar and not cartas_nao_encontradas:

@@ -360,3 +360,43 @@ def handle_completos(message):
     finally:
         fechar_conexao(cursor, conn)
        
+from datetime import datetime
+
+def processar_historico_command(message):
+    id_usuario = message.chat.id  
+    tipo_historico = message.text.split()[-1].lower()  
+
+    if tipo_historico == 'troca':
+        historico = obter_historico_trocas(id_usuario)
+        if historico:
+            historico_mensagem = "🤝 | Seu histórico de trocas:\n\n"
+            for troca in historico:
+                id_usuario1, id_usuario2, carta1, carta2, aceita = troca
+                carta1 = obter_nome(carta1)
+                carta2 = obter_nome(carta2)
+                nome1 = obter_nome_usuario_por_id(id_usuario1)
+                nome2 = obter_nome_usuario_por_id(id_usuario2)
+                status = "✅" if aceita else "⛔️"
+                mensagem = f"ꕤ Troca entre {nome1} e {nome2}:\n{carta1} e {carta2} - {status}\n\n"
+                historico_mensagem += mensagem
+
+            bot.send_message(id_usuario, historico_mensagem)
+        else:
+            bot.send_message(id_usuario, "Nenhuma troca encontrada para este usuário.")
+
+    elif tipo_historico == 'pesca':
+        historico = obter_historico_pescas(id_usuario)
+        if historico:
+            historico_mensagem = "🎣 | Seu histórico de pescas:\n\n"
+            for pesca in historico:
+                id_carta, data_hora = pesca
+                carta1 = obter_nome(id_carta)
+                data_formatada = datetime.strftime(data_hora, "%d/%m/%Y - %H:%M")
+                mensagem = f"✦ Carta: {id_carta} → {carta1}\nPescada em: {data_formatada}\n\n"
+                historico_mensagem += mensagem
+
+            bot.send_message(id_usuario, historico_mensagem)
+        else:
+            bot.send_message(id_usuario, "Nenhuma pesca encontrada para este usuário.")
+    else:
+        bot.send_message(id_usuario, "Tipo de histórico inválido. Use 'troca' ou 'pesca'.")

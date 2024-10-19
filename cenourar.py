@@ -1,7 +1,18 @@
 import telebot
 import traceback
 from bd import conectar_banco_dados, fechar_conexao
-
+def enviar_pergunta_cenoura(message, id_usuario, ids_personagens, bot):
+    try:
+        print(f"DEBUG: Enviando pergunta de cenourar para as cartas: {ids_personagens}")
+        texto_pergunta = f"Você deseja cenourar as cartas: {', '.join(ids_personagens)}?"
+        keyboard = telebot.types.InlineKeyboardMarkup()
+        sim_button = telebot.types.InlineKeyboardButton(text="Sim", callback_data=f"cenourar_sim_{id_usuario}_{','.join(ids_personagens)}")
+        nao_button = telebot.types.InlineKeyboardButton(text="Não", callback_data=f"cenourar_nao_{id_usuario}_{','.join(ids_personagens)}")
+        keyboard.row(sim_button, nao_button)
+        bot.send_message(message.chat.id, texto_pergunta, reply_markup=keyboard)
+    except Exception as e:
+        print(f"DEBUG: Erro ao enviar pergunta de cenourar: {e}")
+        traceback.print_exc()
 def processar_verificar_e_cenourar(message, bot):
     try:
         print("DEBUG: Iniciando o processamento de comando de cenourar...")

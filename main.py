@@ -680,13 +680,12 @@ def edit_diary(message):
     conn, cursor = conectar_banco_dados()
 
     try:
-        # Verifica se há uma anotação para o dia atual
         cursor.execute("SELECT anotacao FROM anotacoes WHERE id_usuario = %s AND data = %s", (user_id, today))
         result = cursor.fetchone()
 
         if result:
             anotacao = result[0]
-            bot.send_message(message.chat.id, f"Sua anotação para hoje:\n\n{anotacao}\n\nEnvie a nova anotação para editar.")
+            bot.send_message(message.chat.id, f"Sua anotação para hoje é:\n\n<i>\"{anotacao}\"</i>\n\nEnvie a nova anotação para editar.")
         else:
             bot.send_message(message.chat.id, "Você ainda não tem uma anotação para hoje. Envie sua primeira anotação.")
         

@@ -83,7 +83,6 @@ from petalas import *
 from compat import *
 from armazem import *
 from diamantes import *
-from diary import *
 from game import *
 # Configuração de Webhook
 WEBHOOK_URL_PATH = '/' + API_TOKEN + '/'

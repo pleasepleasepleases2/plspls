@@ -613,6 +613,33 @@ def gperfil_command(message):
 def config_command(message):
     from eu import handle_config
     handle_config(message)
+
+@bot.message_handler(commands=['editdiary'])
+def edit_diary(message):
+    user_id = message.from_user.id
+    today = date.today()
+
+    conn, cursor = conectar_banco_dados()
+
+    try:
+        # Verifica se há uma anotação para o dia atual
+        cursor.execute("SELECT anotacao FROM anotacoes WHERE id_usuario = %s AND data = %s", (user_id, today))
+        result = cursor.fetchone()
+
+        if result:
+            anotacao = result[0]
+            bot.send_message(message.chat.id, f"Sua anotação para hoje:\n\n{anotacao}\n\nEnvie a nova anotação para editar.")
+        else:
+            bot.send_message(message.chat.id, "Você ainda não tem uma anotação para hoje. Envie sua primeira anotação.")
+        
+        bot.register_next_step_handler(message, salvar_ou_editar_anotacao, user_id, today)
+
+    except Exception as e:
+        bot.send_message(message.chat.id, "Erro ao processar o comando de edição do diário.")
+        print(f"Erro ao editar anotação: {e}")
+    finally:
+        fechar_conexao(cursor, conn)
+
 @bot.message_handler(commands=['gnome'])
 def handle_gnome(message):
     chat_id = message.chat.id

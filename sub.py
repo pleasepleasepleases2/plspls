@@ -157,3 +157,207 @@ def get_personagens_ids_quantidade_por_subcategoria_f(id_subcategoria, user_id):
     """
     cursor.execute(query, (user_id, id_subcategoria))
     return {row[0]: row[1] for row in cursor.fetchall()}
+def processar_submenus_command(message):
+    try:
+        parts = message.text.split(' ', 1)
+        conn, cursor = conectar_banco_dados()
+
+        if len(parts) == 1:
+            pagina = 1
+            submenus_por_pagina = 15
+
+            query_todos_submenus = """
+            SELECT subcategoria, submenu
+            FROM personagens
+            WHERE submenu IS NOT NULL AND submenu != ''
+            GROUP BY subcategoria, submenu
+            ORDER BY subcategoria, submenu
+            LIMIT %s OFFSET %s
+            """
+            offset = (pagina - 1) * submenus_por_pagina
+            cursor.execute(query_todos_submenus, (submenus_por_pagina, offset))
+            submenus = cursor.fetchall()
+            cursor.execute("SELECT COUNT(DISTINCT subcategoria, submenu) FROM personagens WHERE submenu IS NOT NULL AND submenu != ''")
+            total_submenus = cursor.fetchone()[0]
+            total_paginas = (total_submenus // submenus_por_pagina) + (1 if total_submenus % submenus_por_pagina > 0 else 0)
+
+            if submenus:
+                mensagem = "<b>📂 Todos os Submenus:</b>\n\n"
+                for subcategoria, submenu in submenus:
+                    mensagem += f"🍎 {subcategoria} - {submenu}\n"
+                mensagem += f"\nPágina {pagina}/{total_paginas}"
+                markup = InlineKeyboardMarkup()
+                if total_paginas > 1:
+                    markup.row(
+                        InlineKeyboardButton("⬅️", callback_data=f"navigate_submenus_{pagina - 1 if pagina > 1 else total_paginas}"),
+                        InlineKeyboardButton("➡️", callback_data=f"navigate_submenus_{pagina + 1 if pagina < total_paginas else 1}")
+                    )
+
+                bot.send_message(message.chat.id, mensagem, parse_mode="HTML", reply_to_message_id=message.message_id, reply_markup=markup)
+            else:
+                bot.send_message(message.chat.id, "Não foram encontrados submenus.", parse_mode="HTML", reply_to_message_id=message.message_id)
+
+        else:
+            subcategoria = parts[1].strip()
+            query_submenus = """
+            SELECT DISTINCT submenu
+            FROM personagens
+            WHERE subcategoria = %s AND submenu IS NOT NULL AND submenu != ''
+            """
+            cursor.execute(query_submenus, (subcategoria,))
+            submenus = [row[0] for row in cursor.fetchall()]
+
+            if submenus:
+                mensagem = f"<b>🌳 Submenus na subcategoria {subcategoria.title()}:</b>\n\n"
+                for submenu in submenus:
+                    mensagem += f"🍎 {subcategoria.title()}- {submenu}\n"
+            else:
+                mensagem = f"Não foram encontrados submenus para a subcategoria '{subcategoria.title()}'."
+
+            bot.send_message(message.chat.id, mensagem, parse_mode="HTML", reply_to_message_id=message.message_id)
+
+    except Exception as e:
+        print(f"Erro ao processar comando /submenus: {e}")
+
+    finally:
+        fechar_conexao(cursor, conn)
+
+
+def processar_submenu_command(message):
+    try:
+        parts = message.text.split(' ', 2)
+        if len(parts) < 3:
+            bot.reply_to(message, "Por favor, forneça o tipo ('s' ou 'f') e o nome do submenu após o comando, por exemplo: /submenu s bts")
+            return
+
+        tipo = parts[1].strip()
+        submenu = parts[2].strip()
+
+        submenu_proximo = encontrar_submenu_proximo(submenu)
+        if not submenu_proximo:
+            bot.reply_to(message, "Submenu não identificado. Verifique se digitou corretamente.")
+            return
+
+        id_usuario = message.from_user.id
+        nome_usuario = message.from_user.first_name
+
+        conn, cursor = conectar_banco_dados()
+
+        query_todos = """
+        SELECT id_personagem, nome, subcategoria
+        FROM personagens
+        WHERE submenu = %s
+        """
+        cursor.execute(query_todos, (submenu_proximo,))
+        todos_personagens = {row[0]: (row[1], row[2]) for row in cursor.fetchall()}
+
+        if not todos_personagens:
+            bot.reply_to(message, f"O submenu '{submenu_proximo}' não existe.")
+            return
+
+        query_possui = """
+        SELECT per.id_personagem, per.nome, per.subcategoria
+        FROM inventario inv
+        JOIN personagens per ON inv.id_personagem = per.id_personagem
+        WHERE inv.id_usuario = %s AND per.submenu = %s
+        """
+        cursor.execute(query_possui, (id_usuario, submenu_proximo))
+        personagens_possui = {row[0]: (row[1], row[2]) for row in cursor.fetchall()}
+
+        subcategoria = next(iter(todos_personagens.values()), ("", ""))[1]  # Definindo subcategoria para uso na mensagem
+
+        if tipo == 's':
+            if personagens_possui:
+                mensagem = f"☀️ Peixes do submenu na cesta de {nome_usuario}!\n\n"
+                mensagem += f"🌳 | {subcategoria} \n"
+                mensagem += f"🍎 | {submenu_proximo}\n"
+                mensagem += f"🐟 | {len(personagens_possui)}/{len(todos_personagens)}\n\n"
+                for id_personagem, (nome, subcategoria) in personagens_possui.items():
+                    mensagem += f"<code>{id_personagem}</code> • {nome}\n"
+            else:
+                mensagem = f"🌧️ Você não possui nenhum personagem neste submenu."
+
+        elif tipo == 'f':
+            personagens_faltantes = {id_personagem: (nome, subcategoria) for id_personagem, (nome, subcategoria) in todos_personagens.items() if id_personagem not in personagens_possui}
+            if personagens_faltantes:
+                mensagem = f"🌧️ Faltam do submenu na cesta de {nome_usuario}:\n\n"
+                mensagem += f"🌳 | {subcategoria} \n"
+                mensagem += f"🍎 | {submenu_proximo}\n"
+                mensagem += f"🐟 | {len(personagens_faltantes)}/{len(todos_personagens)}\n\n"
+                for id_personagem, (nome, subcategoria) in personagens_faltantes.items():
+                    mensagem += f"<code>{id_personagem}</code> • {nome}\n"
+            else:
+                mensagem = f"☀️ Nada como a alegria de ter todos os peixes de {submenu_proximo} na cesta!"
+
+        else:
+            bot.reply_to(message, "Tipo inválido. Use 's' para os personagens que você possui e 'f' para os que você não possui.")
+            return
+
+        bot.send_message(message.chat.id, mensagem, parse_mode="HTML")
+
+    except Exception as e:
+        print(f"Erro ao processar comando /submenu: {e}")
+
+    finally:
+        fechar_conexao(cursor, conn)
+
+
+def callback_navegacao_submenus(call):
+    try:
+        data = call.data.split('_')
+        pagina_str = data[-1]
+        pagina = int(pagina_str)
+        submenus_por_pagina = 15
+
+        conn, cursor = conectar_banco_dados()
+
+        query_todos_submenus = """
+        SELECT subcategoria, submenu
+        FROM personagens
+        WHERE submenu IS NOT NULL AND submenu != ''
+        GROUP BY subcategoria, submenu
+        ORDER BY subcategoria, submenu
+        LIMIT %s OFFSET %s
+        """
+        offset = (pagina - 1) * submenus_por_pagina
+        cursor.execute(query_todos_submenus, (submenus_por_pagina, offset))
+        submenus = cursor.fetchall()
+
+        cursor.execute("SELECT COUNT(DISTINCT subcategoria, submenu) FROM personagens WHERE submenu IS NOT NULL AND submenu != ''")
+        total_submenus = cursor.fetchone()[0]
+        total_paginas = (total_submenus // submenus_por_pagina) + (1 if total_submenus % submenus_por_pagina > 0 else 0)
+
+        if submenus:
+            mensagem = "<b>🌳 Todos os Submenus: </b>\n\n"
+            for subcategoria, submenu in submenus:
+                mensagem += f"🍎 {subcategoria} - {submenu}\n"
+            mensagem += f"\nPágina {pagina}/{total_paginas}"
+
+            markup = InlineKeyboardMarkup()
+            if total_paginas > 1:
+                markup.row(
+                    InlineKeyboardButton("⬅️", callback_data=f"navigate_submenus_{pagina - 1 if pagina > 1 else total_paginas}"),
+                    InlineKeyboardButton("➡️", callback_data=f"navigate_submenus_{pagina + 1 if pagina < total_paginas else 1}")
+                )
+
+            bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text=mensagem, parse_mode="HTML", reply_markup=markup)
+
+    except Exception as e:
+        print(f"Erro ao processar callback de navegação: {e}")
+
+    finally:
+        fechar_conexao(cursor, conn)
+
+
+def encontrar_submenu_proximo(submenu):
+    try:
+        conn, cursor = conectar_banco_dados()
+        query = "SELECT DISTINCT submenu FROM personagens WHERE submenu LIKE %s LIMIT 1"
+        cursor.execute(query, (f"%{submenu}%",))
+        resultado = cursor.fetchone()
+        return resultado[0] if resultado else None
+    except Exception as e:
+        print(f"Erro ao encontrar submenu mais próximo: {e}")
+        return None
+    finally:
+        fechar_conexao(cursor, conn)

@@ -206,3 +206,45 @@ def adicionar_tag(message):
     
     finally:
         fechar_conexao(cursor, conn)
+
+
+def processar_deletar_tag(message):
+    try:
+        conn, cursor = conectar_banco_dados()
+        id_usuario = message.from_user.id
+        args = message.text.split(maxsplit=1)
+        
+        if len(args) == 2:
+            tag_info = args[1].strip()
+
+            if '|' in tag_info:
+                id_list, nometag = [part.strip() for part in tag_info.split('|')]
+                ids_personagens = [id.strip() for id in id_list.split(',')]
+
+                for id_personagem in ids_personagens:
+                    cursor.execute("SELECT idtags FROM tags WHERE id_usuario = %s AND id_personagem = %s AND nometag = %s",
+                                   (id_usuario, id_personagem, nometag))
+                    tag_existente = cursor.fetchone()
+                    
+                    if tag_existente:
+                        idtag = tag_existente[0]
+                        cursor.execute("DELETE FROM tags WHERE idtags = %s", (idtag,))
+                        conn.commit()
+                        bot.reply_to(message, f"ID {id_personagem} removido da tag '{nometag}' com sucesso.")
+                    else:
+                        bot.reply_to(message, f"O ID {id_personagem} não está associado à tag '{nometag}'.")
+            
+            else:
+                nometag = tag_info.strip()
+                cursor.execute("DELETE FROM tags WHERE id_usuario = %s AND nometag = %s", (id_usuario, nometag))
+                conn.commit()
+                bot.reply_to(message, f"A tag '{nometag}' foi removida completamente.")
+        
+        else:
+            bot.reply_to(message, "Formato incorreto. Use /deltag id1, id2, id3 | nometag para remover IDs específicos da tag ou /deltag nometag para remover a tag inteira.")
+
+    except Exception as e:
+        print(f"Erro ao deletar tag: {e}")
+    finally:
+        fechar_conexao(cursor, conn)
+

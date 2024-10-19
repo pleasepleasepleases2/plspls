@@ -1,18 +1,23 @@
 import telebot
 import traceback
 from bd import conectar_banco_dados, fechar_conexao
-def enviar_pergunta_cenoura(message, id_usuario, ids_personagens, bot):
+def enviar_pergunta_cenoura(message, id_usuario, cartas_a_cenourar, bot):
     try:
-        print(f"DEBUG: Enviando pergunta de cenourar para as cartas: {ids_personagens}")
-        texto_pergunta = f"Você deseja cenourar as cartas: {', '.join(ids_personagens)}?"
+        # Preparando os dados para o callback
+        ids_personagens = ','.join(cartas_a_cenourar)  # Concatenar IDs em uma string separada por vírgula
+        texto_pergunta = f"Você deseja cenourar as cartas: {ids_personagens}?"
+        
+        # Criando botões de confirmação
         keyboard = telebot.types.InlineKeyboardMarkup()
-        sim_button = telebot.types.InlineKeyboardButton(text="Sim", callback_data=f"cenourar_sim_{id_usuario}_{','.join(ids_personagens)}")
-        nao_button = telebot.types.InlineKeyboardButton(text="Não", callback_data=f"cenourar_nao_{id_usuario}_{','.join(ids_personagens)}")
+        sim_button = telebot.types.InlineKeyboardButton(text="Sim", callback_data=f"cenourar_sim_{id_usuario}_{ids_personagens}")
+        nao_button = telebot.types.InlineKeyboardButton(text="Não", callback_data=f"cenourar_nao_{id_usuario}_{ids_personagens}")
         keyboard.row(sim_button, nao_button)
+
+        # Enviando a pergunta com os botões
         bot.send_message(message.chat.id, texto_pergunta, reply_markup=keyboard)
     except Exception as e:
-        print(f"DEBUG: Erro ao enviar pergunta de cenourar: {e}")
-        traceback.print_exc()
+        print(f"Erro ao enviar pergunta de cenourar: {e}")
+
 def processar_verificar_e_cenourar(message, bot):
     try:
         print("DEBUG: Iniciando o processamento de comando de cenourar...")
@@ -63,6 +68,51 @@ def processar_verificar_e_cenourar(message, bot):
         print(f"DEBUG: Erro ao processar o comando de cenourar: {e}")
         traceback.print_exc()
         bot.send_message(message.chat.id, "Erro ao processar o comando de cenourar.")
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+def cenourar_carta(call, id_usuario, ids_personagens):
+    try:
+        conn, cursor = conectar_banco_dados()
+        chat_id = call.message.chat.id
+        message_id = call.message.message_id
+
+        cartas_cenouradas = []
+        for id_personagem in ids_personagens:
+            cursor.execute("SELECT quantidade FROM inventario WHERE id_usuario = %s AND id_personagem = %s", (id_usuario, id_personagem))
+            quantidade_atual = cursor.fetchone()
+            
+            if quantidade_atual and quantidade_atual[0] > 0:
+                nova_quantidade = quantidade_atual[0] - 1
+                cursor.execute("UPDATE inventario SET quantidade = %s WHERE id_usuario = %s AND id_personagem = %s", (nova_quantidade, id_usuario, id_personagem))
+
+                # Atualizar cenouras
+                cursor.execute("UPDATE usuarios SET cenouras = cenouras + 1 WHERE id_usuario = %s", (id_usuario,))
+
+                # Atualizar banco de inventário
+                cursor.execute("SELECT quantidade FROM banco_inventario WHERE id_personagem = %s", (id_personagem,))
+                quantidade_banco = cursor.fetchone()
+                
+                if quantidade_banco:
+                    nova_quantidade_banco = quantidade_banco[0] + 1
+                    cursor.execute("UPDATE banco_inventario SET quantidade = %s WHERE id_personagem = %s", (nova_quantidade_banco, id_personagem))
+                else:
+                    cursor.execute("INSERT INTO banco_inventario (id_personagem, quantidade) VALUES (%s, %s)", (id_personagem, 1))
+
+                conn.commit()
+                cartas_cenouradas.append(id_personagem)
+
+        if cartas_cenouradas:
+            mensagem_final = "🥕 Cartas cenouradas com sucesso:\n\n" + "\n".join(cartas_cenouradas)
+            bot.edit_message_text(chat_id=chat_id, message_id=message_id, text=mensagem_final)
+        else:
+            bot.edit_message_text(chat_id=chat_id, message_id=message_id, text="Nenhuma carta foi cenourada.")
+    
+    except Exception as e:
+        print(f"Erro ao processar cenoura: {e}")
+        bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text="Erro ao processar a cenoura.")
     finally:
         if cursor:
             cursor.close()

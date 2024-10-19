@@ -1,24 +1,23 @@
+import random
 from telebot import types
 import globals
 
 # Função para inicializar o tabuleiro vazio
 def inicializar_tabuleiro():
-    return [' ' for _ in range(9)]
+    return ['⬜' for _ in range(9)]
 
-# Função para mostrar o tabuleiro formatado
+# Função para mostrar o tabuleiro formatado com '✔️' e '❌'
 def mostrar_tabuleiro(tabuleiro):
-    return f"{tabuleiro[0]} | {tabuleiro[1]} | {tabuleiro[2]}\n" \
-           f"--+---+--\n" \
-           f"{tabuleiro[3]} | {tabuleiro[4]} | {tabuleiro[5]}\n" \
-           f"--+---+--\n" \
-           f"{tabuleiro[6]} | {tabuleiro[7]} | {tabuleiro[8]}"
+    return f"{tabuleiro[0]} {tabuleiro[1]} {tabuleiro[2]}\n" \
+           f"{tabuleiro[3]} {tabuleiro[4]} {tabuleiro[5]}\n" \
+           f"{tabuleiro[6]} {tabuleiro[7]} {tabuleiro[8]}"
 
 # Função para criar botões interativos para o tabuleiro
 def criar_botoes_tabuleiro(tabuleiro):
     markup = types.InlineKeyboardMarkup()
     botoes = []
     for i in range(9):
-        texto = tabuleiro[i] if tabuleiro[i] != ' ' else str(i + 1)
+        texto = tabuleiro[i] if tabuleiro[i] != '⬜' else str(i + 1)
         botoes.append(types.InlineKeyboardButton(text=texto, callback_data=str(i)))
         if (i + 1) % 3 == 0:
             markup.row(*botoes)
@@ -34,7 +33,58 @@ def verificar_vitoria(tabuleiro, jogador):
 
 # Função para verificar se houve empate
 def verificar_empate(tabuleiro):
-    return all(celula != ' ' for celula in tabuleiro)
+    return all(celula != '⬜' for celula in tabuleiro)
+
+# Função Minimax para determinar a melhor jogada para o bot
+def minimax(tabuleiro, profundidade, is_bot, simbolo_bot, simbolo_jogador):
+    if verificar_vitoria(tabuleiro, simbolo_bot):
+        return 10 - profundidade  # Quanto mais rápido vencer, melhor
+    elif verificar_vitoria(tabuleiro, simbolo_jogador):
+        return profundidade - 10  # Quanto mais rápido perder, pior
+    elif verificar_empate(tabuleiro):
+        return 0  # Empate
+
+    if is_bot:
+        melhor_valor = -float('inf')
+        for i in range(9):
+            if tabuleiro[i] == '⬜':
+                tabuleiro[i] = simbolo_bot
+                valor = minimax(tabuleiro, profundidade + 1, False, simbolo_bot, simbolo_jogador)
+                tabuleiro[i] = '⬜'
+                melhor_valor = max(melhor_valor, valor)
+        return melhor_valor
+    else:
+        melhor_valor = float('inf')
+        for i in range(9):
+            if tabuleiro[i] == '⬜':
+                tabuleiro[i] = simbolo_jogador
+                valor = minimax(tabuleiro, profundidade + 1, True, simbolo_bot, simbolo_jogador)
+                tabuleiro[i] = '⬜'
+                melhor_valor = min(melhor_valor, valor)
+        return melhor_valor
+
+# Função para o bot fazer uma jogada com 70% de chance de ser inteligente
+def bot_fazer_jogada(tabuleiro, simbolo_bot, simbolo_jogador):
+    if random.random() < 0.7:  # 70% de chance de usar Minimax
+        melhor_valor = -float('inf')
+        melhor_jogada = None
+        for i in range(9):
+            if tabuleiro[i] == '⬜':
+                tabuleiro[i] = simbolo_bot
+                valor = minimax(tabuleiro, 0, False, simbolo_bot, simbolo_jogador)
+                tabuleiro[i] = '⬜'
+                if valor > melhor_valor:
+                    melhor_valor = valor
+                    melhor_jogada = i
+        if melhor_jogada is not None:
+            tabuleiro[melhor_jogada] = simbolo_bot
+            return tabuleiro
+    # 30% de chance de fazer uma jogada aleatória
+    while True:
+        jogada_aleatoria = random.randint(0, 8)
+        if tabuleiro[jogada_aleatoria] == '⬜':
+            tabuleiro[jogada_aleatoria] = simbolo_bot
+            return tabuleiro
 
 # Função para iniciar o jogo da velha
 def iniciar_jogo(bot, message):
@@ -42,16 +92,8 @@ def iniciar_jogo(bot, message):
     tabuleiro = inicializar_tabuleiro()
     globals.jogos_da_velha[id_usuario] = tabuleiro
     
-    bot.send_message(message.chat.id, f"Vamos jogar Jogo da Velha! Você é 'X' e eu sou 'O'.\n\n{mostrar_tabuleiro(tabuleiro)}",
+    bot.send_message(message.chat.id, f"Vamos jogar Jogo da Velha! Você é o '✔️' e eu sou o '❌'.\n\n{mostrar_tabuleiro(tabuleiro)}",
                      reply_markup=criar_botoes_tabuleiro(tabuleiro))
-
-# Função para o bot fazer uma jogada aleatória
-def bot_fazer_jogada(tabuleiro):
-    for i in range(9):
-        if tabuleiro[i] == ' ':
-            tabuleiro[i] = 'O'
-            break
-    return tabuleiro
 
 # Função para processar as jogadas do jogador
 def jogador_fazer_jogada(bot, call):
@@ -64,15 +106,15 @@ def jogador_fazer_jogada(bot, call):
         tabuleiro = globals.jogos_da_velha[id_usuario]
         jogada = int(call.data)
 
-        if tabuleiro[jogada] != ' ':
+        if tabuleiro[jogada] != '⬜':
             bot.answer_callback_query(call.id, "Essa posição já está ocupada!")
             return
 
         # Jogada do jogador
-        tabuleiro[jogada] = 'X'
+        tabuleiro[jogada] = '✔️'
 
         # Verifica se o jogador venceu
-        if verificar_vitoria(tabuleiro, 'X'):
+        if verificar_vitoria(tabuleiro, '✔️'):
             bot.edit_message_text(f"🎉 Parabéns! Você venceu!\n\n{mostrar_tabuleiro(tabuleiro)}", call.message.chat.id, call.message.message_id)
             del globals.jogos_da_velha[id_usuario]
             return
@@ -84,10 +126,10 @@ def jogador_fazer_jogada(bot, call):
             return
 
         # Jogada do bot
-        tabuleiro = bot_fazer_jogada(tabuleiro)
+        tabuleiro = bot_fazer_jogada(tabuleiro, '❌', '✔️')
 
         # Verifica se o bot venceu
-        if verificar_vitoria(tabuleiro, 'O'):
+        if verificar_vitoria(tabuleiro, '❌'):
             bot.edit_message_text(f"😎 Eu venci! Melhor sorte da próxima vez.\n\n{mostrar_tabuleiro(tabuleiro)}", call.message.chat.id, call.message.message_id)
             del globals.jogos_da_velha[id_usuario]
             return

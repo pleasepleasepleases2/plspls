@@ -160,3 +160,31 @@ def page_command(message):
         bot.send_message(message.chat.id, "Ocorreu um erro ao tentar obter sua anotação. Tente novamente mais tarde.")
     finally:
         fechar_conexao(cursor, conn)
+
+def salvar_ou_editar_anotacao(message, user_id, today):
+    anotacao = message.text
+
+    conn, cursor = conectar_banco_dados()
+
+    try:
+        # Verifica se existe uma anotação para o dia atual
+        cursor.execute("SELECT COUNT(*) FROM anotacoes WHERE id_usuario = %s AND data = %s", (user_id, today))
+        existe_anotacao = cursor.fetchone()[0]
+
+        if existe_anotacao:
+            # Edita a anotação existente
+            cursor.execute("UPDATE anotacoes SET anotacao = %s WHERE id_usuario = %s AND data = %s", (anotacao, user_id, today))
+            bot.send_message(message.chat.id, "Sua anotação foi editada com sucesso!")
+        else:
+            # Cria uma nova anotação
+            cursor.execute("INSERT INTO anotacoes (id_usuario, data, nome_usuario, anotacao) VALUES (%s, %s, %s, %s)", 
+                           (user_id, today, message.from_user.first_name, anotacao))
+            bot.send_message(message.chat.id, "Sua anotação foi registrada com sucesso!")
+        
+        conn.commit()
+
+    except Exception as e:
+        bot.send_message(message.chat.id, "Erro ao salvar ou editar sua anotação.")
+        print(f"Erro ao salvar ou editar anotação: {e}")
+    finally:
+        fechar_conexao(cursor, conn)

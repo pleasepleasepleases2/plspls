@@ -1012,12 +1012,13 @@ def handle_submenu(call):
     callback_submenu(call)
 
 @bot.callback_query_handler(func=lambda call: call.data == "add_note")
-def add_note_callback(call):
-    handle_add_note_callback(call)
+def handle_add_note_callback(call):
+    bot.send_message(call.message.chat.id, "Digite sua anotação para o diário:")
+    bot.register_next_step_handler(call.message, receive_note)
 
 @bot.callback_query_handler(func=lambda call: call.data == "cancel_note")
-def cancel_note_callback(call):
-    handle_cancel_note_callback(call)
+def handle_cancel_note_callback(call):
+    bot.send_message(call.message.chat.id, "Anotação cancelada.")
   
 @bot.callback_query_handler(func=lambda call: call.data.startswith('versubs_'))
 def handle_versubs_callback(call):

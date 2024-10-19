@@ -227,7 +227,57 @@ def handle_gperfil_command(message):
         else:
             bot.send_message(message.chat.id, "O nome de usuário especificado não está registrado.")
 
+        
     except mysql.connector.Error as err:
         bot.send_message(message.chat.id, f"Erro ao verificar o perfil: {err}")
     finally:
+        fechar_conexao(cursor, conn)
+
+def set_bio_command(message):
+    id_usuario = message.from_user.id
+    nome_usuario = message.from_user.first_name  # Obtém o nome do usuário
+    command_parts = message.text.split(maxsplit=1)
+    
+    if len(command_parts) == 2:
+        nova_bio = command_parts[1].strip()
+        atualizar_coluna_usuario(id_usuario, 'bio', nova_bio)
+        bot.send_message(message.chat.id, f"Bio do {nome_usuario} atualizada para: {nova_bio}")
+    else:
+        bot.send_message(message.chat.id, "Formato incorreto. Use /setbio seguido da nova bio desejada, por exemplo: /setbio Hhmm, bolo de morango.")
+
+
+def enviar_gif(message):
+    try:
+        comando = message.text.split('/setgif', 1)[1].strip().lower()
+        partes_comando = comando.split(' ')
+        id_personagem = partes_comando[0]
+        id_usuario = message.from_user.id
+
+        conn, cursor = conectar_banco_dados()
+
+        # Verificar se o usuário possui 30 unidades da carta
+        cursor.execute("SELECT quantidade FROM inventario WHERE id_usuario = %s AND id_personagem = %s", (id_usuario, id_personagem))
+        resultado = cursor.fetchone()
+        if not resultado or resultado[0] < 30:
+            bot.send_message(message.chat.id, "Você precisa ter pelo menos 30 unidades dessa carta para enviar um gif.")
+            fechar_conexao(cursor, conn)
+            return
+
+        if 'eusoqueriasernormal' not in partes_comando:
+            tempo_restante = verifica_tempo_ultimo_gif(id_usuario)
+            if tempo_restante:
+                bot.send_message(message.chat.id, f"Você já enviou um gif recentemente. Aguarde {tempo_restante} antes de enviar outro.")
+                fechar_conexao(cursor, conn)
+                return
+
+        bot.send_message(message.chat.id, "Eba! Você pode escolher um gif!\nEnvie o link do gif gerado pelo @UploadTelegraphBot:")
+        globals.links_gif[message.from_user.id] = id_personagem
+        bot.register_next_step_handler(message, receber_link_gif, id_personagem)
+
+        fechar_conexao(cursor, conn)
+
+    except IndexError:
+        bot.send_message(message.chat.id, "Por favor, forneça o ID do personagem.")
+    except Exception as e:
+        print(f"Erro ao processar o comando /setgif: {e}")
         fechar_conexao(cursor, conn)

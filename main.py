@@ -445,8 +445,64 @@ def handle_pedidovip_command(message):
     pedidovip_command(message)
 
 @bot.message_handler(commands=['criarvendinha'])
-def handle_criar_colagem(message):
-    criar_colagem(message)
+def criar_colagem(message):
+    if message.from_user.id not in allowed_user_ids:
+        bot.send_message(message.chat.id, "Você não tem permissão para usar este comando.")
+        return
+
+    try:
+        cartas_aleatorias = obter_cartas_aleatorias()
+        data_atual_str = dt_module.date.today().strftime("%Y-%m-%d") 
+        if not cartas_aleatorias:
+            bot.send_message(message.chat.id, "Não foi possível obter cartas aleatórias.")
+            return
+
+        registrar_cartas_loja(cartas_aleatorias, data_atual_str)
+        imagens = []
+        for carta in cartas_aleatorias:
+            img_url = carta.get('imagem', '')
+            try:
+                if img_url:
+                    response = requests.get(img_url)
+                    if response.status_code == 200:
+                        img = Image.open(io.BytesIO(response.content))
+                        img = img.resize((300, 400), Image.LANCZOS)
+                    else:
+                        img = Image.new('RGB', (300, 400), color='black')
+                else:
+                    img = Image.new('RGB', (300, 400), color='black')
+            except Exception as e:
+                print(f"Erro ao abrir a imagem da carta {carta['id']}: {e}")
+                img = Image.new('RGB', (300, 400), color='black')
+            imagens.append(img)
+
+        altura_total = (len(imagens) // 3) * 400
+
+        colagem = Image.new('RGB', (900, altura_total))  
+        coluna_atual = 0
+        linha_atual = 0
+
+        for img in imagens:
+            colagem.paste(img, (coluna_atual, linha_atual))
+            coluna_atual += 300
+
+            if coluna_atual >= 900:
+                coluna_atual = 0
+                linha_atual += 400
+
+        colagem.save('colagem_cartas.png')
+        
+        mensagem_loja = "🐟 Peixes na vendinha hoje:\n\n"
+        for carta in cartas_aleatorias:
+            mensagem_loja += f"{carta['emoji']}| {carta['id']} • {carta['nome']} - {carta['subcategoria']}\n"
+        mensagem_loja += "\n🥕 Acesse usando o comando /vendinha"
+
+        with open('colagem_cartas.png', 'rb') as photo:
+            bot.send_photo(message.chat.id, photo, caption=mensagem_loja, reply_to_message_id=message.message_id)
+    except Exception as e:
+        print(f"Erro ao criar colagem: {e}")
+        bot.send_message(message.chat.id, "Erro ao criar colagem.")
+
 
 @bot.message_handler(commands=['vendinha'])
 def handle_vendinha_command(message):

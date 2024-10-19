@@ -66,6 +66,7 @@ from calculos import *
 from fonte import *
 from trintadas import *
 from eu import *
+from sub import *
 from submenu import *
 from especies import *
 from config import *
@@ -1221,211 +1222,15 @@ def verificar_cesta(message):
     
 @bot.message_handler(commands=['submenus'])
 def submenus_command(message):
-    try:
-        parts = message.text.split(' ', 1)
-        conn, cursor = conectar_banco_dados()
-
-        if len(parts) == 1:
-            pagina = 1
-            submenus_por_pagina = 15
-
-            query_todos_submenus = """
-            SELECT subcategoria, submenu
-            FROM personagens
-            WHERE submenu IS NOT NULL AND submenu != ''
-            GROUP BY subcategoria, submenu
-            ORDER BY subcategoria, submenu
-            LIMIT %s OFFSET %s
-            """
-            offset = (pagina - 1) * submenus_por_pagina
-            cursor.execute(query_todos_submenus, (submenus_por_pagina, offset))
-            submenus = cursor.fetchall()
-            cursor.execute("SELECT COUNT(DISTINCT subcategoria, submenu) FROM personagens WHERE submenu IS NOT NULL AND submenu != ''")
-            total_submenus = cursor.fetchone()[0]
-            total_paginas = (total_submenus // submenus_por_pagina) + (1 if total_submenus % submenus_por_pagina > 0 else 0)
-
-            if submenus:
-                mensagem = "<b>📂 Todos os Submenus:</b>\n\n"
-                for subcategoria, submenu in submenus:
-                    mensagem += f"🍎 {subcategoria} - {submenu}\n"
-                mensagem += f"\nPágina {pagina}/{total_paginas}"
-                markup = InlineKeyboardMarkup()
-                if total_paginas > 1:
-                    markup.row(
-                        InlineKeyboardButton("⬅️", callback_data=f"navigate_submenus_{pagina - 1 if pagina > 1 else total_paginas}"),
-                        InlineKeyboardButton("➡️", callback_data=f"navigate_submenus_{pagina + 1 if pagina < total_paginas else 1}")
-                    )
-
-                bot.send_message(message.chat.id, mensagem, parse_mode="HTML", reply_to_message_id=message.message_id, reply_markup=markup)
-            else:
-                bot.send_message(message.chat.id, "Não foram encontrados submenus.", parse_mode="HTML", reply_to_message_id=message.message_id)
-
-        else:
-            subcategoria = parts[1].strip()
-            query_submenus = """
-            SELECT DISTINCT submenu
-            FROM personagens
-            WHERE subcategoria = %s AND submenu IS NOT NULL AND submenu != ''
-            """
-            cursor.execute(query_submenus, (subcategoria,))
-            submenus = [row[0] for row in cursor.fetchall()]
-
-            if submenus:
-                mensagem = f"<b>🌳 Submenus na subcategoria {subcategoria.title()}:</b>\n\n"
-                for submenu in submenus:
-                    mensagem += f"🍎 {subcategoria.title()}- {submenu}\n"
-            else:
-                mensagem = f"Não foram encontrados submenus para a subcategoria '{subcategoria.title()}'."
-
-            bot.send_message(message.chat.id, mensagem, parse_mode="HTML", reply_to_message_id=message.message_id)
-
-    except Exception as e:
-        print(f"Erro ao processar comando /submenus: {e}")
-
-    finally:
-        fechar_conexao(cursor, conn)
-
-@bot.callback_query_handler(func=lambda call: call.data.startswith('navigate_submenus_'))
-def callback_navegacao_submenus(call):
-    try:
-        data = call.data.split('_')
-        pagina_str = data[-1]
-        pagina = int(pagina_str)
-        submenus_por_pagina = 15
-
-        conn, cursor = conectar_banco_dados()
-
-        query_todos_submenus = """
-        SELECT subcategoria, submenu
-        FROM personagens
-        WHERE submenu IS NOT NULL AND submenu != ''
-        GROUP BY subcategoria, submenu
-        ORDER BY subcategoria, submenu
-        LIMIT %s OFFSET %s
-        """
-        offset = (pagina - 1) * submenus_por_pagina
-        cursor.execute(query_todos_submenus, (submenus_por_pagina, offset))
-        submenus = cursor.fetchall()
-
-        cursor.execute("SELECT COUNT(DISTINCT subcategoria, submenu) FROM personagens WHERE submenu IS NOT NULL AND submenu != ''")
-        total_submenus = cursor.fetchone()[0]
-        total_paginas = (total_submenus // submenus_por_pagina) + (1 if total_submenus % submenus_por_pagina > 0 else 0)
-
-        if submenus:
-            mensagem = "<b>🌳 Todos os Submenus: </b>\n\n"
-            for subcategoria, submenu in submenus:
-                mensagem += f"🍎 {subcategoria} - {submenu}\n"
-            mensagem += f"\nPágina {pagina}/{total_paginas}"
-
-            markup = InlineKeyboardMarkup()
-            if total_paginas > 1:
-                markup.row(
-                    InlineKeyboardButton("⬅️", callback_data=f"navigate_submenus_{pagina - 1 if pagina > 1 else total_paginas}"),
-                    InlineKeyboardButton("➡️", callback_data=f"navigate_submenus_{pagina + 1 if pagina < total_paginas else 1}")
-                )
-
-            bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text=mensagem, parse_mode="HTML", reply_markup=markup)
-
-    except Exception as e:
-        print(f"Erro ao processar callback de navegação: {e}")
-
-    finally:
-        fechar_conexao(cursor, conn)
-        
-def encontrar_submenu_proximo(submenu):
-    try:
-        conn, cursor = conectar_banco_dados()
-        query = "SELECT DISTINCT submenu FROM personagens WHERE submenu LIKE %s LIMIT 1"
-        cursor.execute(query, (f"%{submenu}%",))
-        resultado = cursor.fetchone()
-        return resultado[0] if resultado else None
-    except Exception as e:
-        print(f"Erro ao encontrar submenu mais próximo: {e}")
-        return None
-    finally:
-        fechar_conexao(cursor, conn)
+    processar_submenus_command(message)
 
 @bot.message_handler(commands=['submenu'])
 def submenu_command(message):
-    try:
-        parts = message.text.split(' ', 2)
-        if len(parts) < 3:
-            bot.reply_to(message, "Por favor, forneça o tipo ('s' ou 'f') e o nome do submenu após o comando, por exemplo: /submenu s bts")
-            return
+    processar_submenu_command(message)
 
-        tipo = parts[1].strip()
-        submenu = parts[2].strip()
-
-        submenu_proximo = encontrar_submenu_proximo(submenu)
-        if not submenu_proximo:
-            bot.reply_to(message, "Submenu não identificado. Verifique se digitou corretamente.")
-            return
-
-        id_usuario = message.from_user.id
-        nome_usuario = message.from_user.first_name
-
-        conn, cursor = conectar_banco_dados()
-
-        # Consulta para obter todos os personagens do submenu
-        query_todos = """
-        SELECT id_personagem, nome, subcategoria
-        FROM personagens
-        WHERE submenu = %s
-        """
-        cursor.execute(query_todos, (submenu_proximo,))
-        todos_personagens = {row[0]: (row[1], row[2]) for row in cursor.fetchall()}
-
-        if not todos_personagens:
-            bot.reply_to(message, f"O submenu '{submenu_proximo}' não existe.")
-            return
-
-        # Consulta para obter os personagens que o usuário possui no submenu
-        query_possui = """
-        SELECT per.id_personagem, per.nome, per.subcategoria
-        FROM inventario inv
-        JOIN personagens per ON inv.id_personagem = per.id_personagem
-        WHERE inv.id_usuario = %s AND per.submenu = %s
-        """
-        cursor.execute(query_possui, (id_usuario, submenu_proximo))
-        personagens_possui = {row[0]: (row[1], row[2]) for row in cursor.fetchall()}
-
-        subcategoria = next(iter(todos_personagens.values()), ("", ""))[1]  # Definindo subcategoria para uso na mensagem
-
-        if tipo == 's':
-            if personagens_possui:
-                mensagem = f"☀️ Peixes do submenu na cesta de {nome_usuario}!\n\n"
-                mensagem += f"🌳 | {subcategoria} \n"
-                mensagem += f"🍎 | {submenu_proximo}\n"
-                mensagem += f"🐟 | {len(personagens_possui)}/{len(todos_personagens)}\n\n"
-                for id_personagem, (nome, subcategoria) in personagens_possui.items():
-                    mensagem += f"<code>{id_personagem}</code> • {nome}\n"
-            else:
-                mensagem = f"🌧️ Você não possui nenhum personagem neste submenu."
-
-        elif tipo == 'f':
-            personagens_faltantes = {id_personagem: (nome, subcategoria) for id_personagem, (nome, subcategoria) in todos_personagens.items() if id_personagem not in personagens_possui}
-            if personagens_faltantes:
-                mensagem = f"🌧️ Faltam do submenu na cesta de {nome_usuario}:\n\n"
-                mensagem += f"🌳 | {subcategoria} \n"
-                mensagem += f"🍎 | {submenu_proximo}\n"
-                mensagem += f"🐟 | {len(personagens_faltantes)}/{len(todos_personagens)}\n\n"
-                for id_personagem, (nome, subcategoria) in personagens_faltantes.items():
-                    mensagem += f"<code>{id_personagem}</code> • {nome}\n"
-            else:
-                mensagem = f"☀️ Nada como a alegria de ter todos os peixes de {submenu_proximo} na cesta!"
-
-        else:
-            bot.reply_to(message, "Tipo inválido. Use 's' para os personagens que você possui e 'f' para os que você não possui.")
-            return
-
-        bot.send_message(message.chat.id, mensagem, parse_mode="HTML")
-
-    except Exception as e:
-        print(f"Erro ao processar comando /submenu: {e}")
-
-    finally:
-        fechar_conexao(cursor, conn)
-
+@bot.callback_query_handler(func=lambda call: call.data.startswith('navigate_submenus_'))
+def callback_navegacao_submenus(call):
+    callback_navegacao_submenus(call)
 
 @bot.message_handler(commands=['hist'])
 def command_historico(message):
@@ -1650,10 +1455,8 @@ def deletar_tag(message):
 def doacao(message):
     markup = telebot.types.InlineKeyboardMarkup()
     chave_pix = "80388add-294e-4075-8cd5-8765cc9f9be0"
-    markup = telebot.types.InlineKeyboardMarkup()
-    markup.add(telebot.types.InlineKeyboardButton(text="Link do apoia.se 🌟", url="https://apoia.se/garden"))
-    mensagem = f"👨🏻‍🌾 Oi, jardineiro! Se está vendo esta mensagem, significa que está interessado em nos ajudar, certo? A equipe MabiGarden fica muito feliz em saber que nosso trabalho o agradou e o motivou a nos ajudar! \n\nCaso deseje contribuir com PIX, a chave é: <code>{chave_pix}</code> (clique na chave para copiar automaticamente) \n\nSe preferir, pode usar a plataforma apoia-se no botão abaixo!"
-    bot.send_message(message.chat.id, mensagem, reply_markup=markup, parse_mode="HTML", reply_to_message_id=message.message_id)
+    mensagem = f"👨🏻‍🌾 Oi, jardineiro! Se está vendo esta mensagem, significa que está interessado em nos ajudar, certo? A equipe MabiGarden fica muito feliz em saber que nosso trabalho o agradou e o motivou a nos ajudar! \n\nCaso deseje contribuir com PIX, a chave é: <code>{chave_pix}</code> (clique na chave para copiar automaticamente) \n\n"
+    bot.send_message(message.chat.id, mensagem, parse_mode="HTML", reply_to_message_id=message.message_id)
 
 @bot.message_handler(commands=['gift'])
 def handle_gift_cards(message):
@@ -1710,53 +1513,6 @@ def addbanco_command(message):
         bot.send_message(message.chat.id, "Erro ao transferir cartas para o banco.")
     finally:
         fechar_conexao(cursor, conn)
-def verificar_trocas_suspeitas():
-    try:
-        conn, cursor = conectar_banco_dados()
-
-        query = """
-        SELECT 
-            hd1.id_usuario_doacao AS usuario1,
-            hd1.id_usuario_recebedor AS usuario2,
-            hd1.id_personagem_carta,
-            hd1.data_hora AS data_doacao1,
-            hd2.data_hora AS data_doacao2
-        FROM 
-            historico_doacoes hd1
-        JOIN 
-            historico_doacoes hd2 
-        ON 
-            hd1.id_usuario_recebedor = hd2.id_usuario_doacao
-            AND hd1.id_usuario_doacao = hd2.id_usuario_recebedor
-            AND hd1.id_personagem_carta = hd2.id_personagem_carta
-        WHERE 
-            hd2.data_hora <= hd1.data_hora + INTERVAL 24 HOUR
-            AND hd2.data_hora > hd1.data_hora
-        """
-
-        cursor.execute(query)
-        trocas_suspeitas = cursor.fetchall()
-
-        if trocas_suspeitas:
-            for usuario1, usuario2, id_personagem_carta, data_doacao1, data_doacao2 in trocas_suspeitas:
-                nome_usuario1 = obter_nome_usuario(usuario1, cursor)
-                nome_usuario2 = obter_nome_usuario(usuario2, cursor)
-                alerta = (f"⚠️ Alerta de troca suspeita! ⚠️\n"
-                          f"A carta {id_personagem_carta} foi doada de {nome_usuario1} para {nome_usuario2} "
-                          f"em {data_doacao1}, e devolvida em {data_doacao2}.\n"
-                          f"Essa troca ocorreu dentro de 24 horas.")
-                enviar_alerta_para_grupo(alerta)
-        else:
-            print("Nenhuma troca suspeita detectada.")
-
-    except Exception as e:
-        print(f"Erro ao verificar trocas suspeitas: {e}")
-    finally:
-        fechar_conexao(cursor, conn)
-
-def enviar_alerta_para_grupo(alerta):
-    grupo_id = -4209628464
-    bot.send_message(grupo_id, alerta)
 
 def obter_nome_usuario(id_usuario, cursor):
     query = "SELECT nome FROM usuarios WHERE id_usuario = %s"

@@ -13,20 +13,21 @@ def enviar_pergunta_cenoura(message, id_usuario, ids_personagens, bot):
     except Exception as e:
         print(f"DEBUG: Erro ao enviar pergunta de cenourar: {e}")
         traceback.print_exc()
+
 def processar_verificar_e_cenourar(message, bot):
     try:
         print("DEBUG: Iniciando o processamento de comando de cenourar...")
         conn, cursor = conectar_banco_dados()
         id_usuario = message.from_user.id
         print(f"DEBUG: ID do usuário: {id_usuario}")
-
+        print(message)
         # Verifica se o comando tem pelo menos dois argumentos (comando e IDs)
         if len(message.text.split()) < 2:
             bot.send_message(message.chat.id, "Por favor, forneça os IDs dos personagens que deseja cenourar, separados por vírgulas. Exemplo: /cenourar 12345,67890")
             return
         
-        # Remove espaços extras e divide os IDs por vírgula
-        ids_personagens_bruto = message.text.split()[1]  # Pegando apenas a parte após o comando
+        # Remove espaços extras e divide os IDs por vírgula, filtrando entradas vazias
+        ids_personagens_bruto = message.text.split()[1].strip()  # Pegando apenas a parte após o comando
         print(f"DEBUG: IDs dos personagens brutos: {ids_personagens_bruto}")
 
         ids_personagens = [id_personagem.strip() for id_personagem in ids_personagens_bruto.split(',') if id_personagem.strip()]
@@ -64,8 +65,6 @@ def processar_verificar_e_cenourar(message, bot):
             cursor.close()
         if conn:
             conn.close()
-
-
 
 def verificar_id_na_tabelabeta(user_id):
     try:

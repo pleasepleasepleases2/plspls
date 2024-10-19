@@ -613,6 +613,64 @@ def gperfil_command(message):
 def config_command(message):
     from eu import handle_config
     handle_config(message)
+@bot.message_handler(commands=['delpage'])
+def del_page(message):
+    try:
+        user_id = message.from_user.id
+        params = message.text.split(' ', 1)[1:]
+        if len(params) < 1:
+            bot.send_message(message.chat.id, "Uso: /delpage <número_da_página>")
+            return
+
+        page_number = int(params[0])
+
+        conn, cursor = conectar_banco_dados()
+
+        # Recupera a página correspondente
+        cursor.execute("SELECT data, anotacao FROM anotacoes WHERE id_usuario = %s ORDER BY data DESC", (user_id,))
+        anotacoes = cursor.fetchall()
+
+        if not anotacoes or page_number < 1 or page_number > len(anotacoes):
+            bot.send_message(message.chat.id, "Número de página inválido.")
+            return
+
+        data, anotacao = anotacoes[page_number - 1]
+
+        # Exibe a anotação com um botão para confirmar a exclusão
+        response = f"Mabigarden, dia {data.strftime('%d/%m/%Y')}\n\nQuerido diário... {anotacao}\n\nDeseja deletar esta página?"
+
+        markup = types.InlineKeyboardMarkup()
+        confirm_button = types.InlineKeyboardButton("Confirmar", callback_data=f"confirmar_delete_{page_number}")
+        markup.add(confirm_button)
+
+        bot.send_message(message.chat.id, response, reply_markup=markup)
+
+    except Exception as e:
+        bot.send_message(message.chat.id, "Erro ao processar o comando de deletar página.")
+        print(f"Erro ao deletar página: {e}")
+
+@bot.callback_query_handler(func=lambda call: call.data.startswith('confirmar_delete_'))
+def confirmar_delete(call):
+    try:
+        user_id = call.from_user.id
+        page_number = int(call.data.split('_')[-1])
+
+        conn, cursor = conectar_banco_dados()
+
+        # Recupera a página correspondente
+        cursor.execute("SELECT id FROM anotacoes WHERE id_usuario = %s ORDER BY data DESC LIMIT 1 OFFSET %s", (user_id, page_number - 1))
+        anotacao_id = cursor.fetchone()
+
+        if anotacao_id:
+            cursor.execute("DELETE FROM anotacoes WHERE id = %s", (anotacao_id[0],))
+            conn.commit()
+            bot.edit_message_text("Página deletada com sucesso.", call.message.chat.id, call.message.message_id)
+        else:
+            bot.edit_message_text("Erro ao deletar a página. Página não encontrada.", call.message.chat.id, call.message.message_id)
+
+    except Exception as e:
+        bot.send_message(call.message.chat.id, "Erro ao deletar a página.")
+        print(f"Erro ao deletar página: {e}")
 
 @bot.message_handler(commands=['editdiary'])
 def edit_diary(message):

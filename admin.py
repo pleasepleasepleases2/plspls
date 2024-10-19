@@ -225,4 +225,75 @@ def remover_beta(message):
         bot.reply_to(message, "Usuário excluido com sucesso!")
     else:
         bot.reply_to(message, "Erro ao excluir usuário à lista beta.")
+def processar_gift_cards(message):
+    conn, cursor = conectar_banco_dados()
+    try:
+        # Verifica se o usuário é autorizado
+        if message.from_user.id not in [5532809878, 1805086442]:
+            bot.reply_to(message, "Você não tem permissão para usar esse comando.")
+            return
+
+        # Tenta dividir a mensagem e converter os valores
+        _, quantity, card_id, user_id = message.text.split()
+        quantity = int(quantity)
+        card_id = int(card_id)
+        user_id = int(user_id)
+
+        # Chama a função para adicionar as cartas
+        gift_cards(quantity, card_id, user_id)
+        bot.reply_to(message, f"{quantity} cartas adicionadas com sucesso!")
+
+    except (ValueError, IndexError):
+        bot.reply_to(message, "Formato incorreto. Use o formato: /gift <quantidade> <card_id> <user_id>")
+    finally:
+        fechar_conexao(cursor, conn)
+
+
+def processar_addbanco(message):
+    try:
+        conn, cursor = conectar_banco_dados()
+        partes_comando = message.text.split()
+
+        if len(partes_comando) != 2:
+            bot.send_message(message.chat.id, "Uso correto: /addbanco <id_usuario>")
+            return
+
+        id_usuario = int(partes_comando[1])
+
+        # Obter as cartas do inventário do usuário
+        cursor.execute("SELECT id_personagem, quantidade FROM inventario WHERE id_usuario = %s", (id_usuario,))
+        cartas_usuario = cursor.fetchall()
+
+        if not cartas_usuario:
+            bot.send_message(message.chat.id, "Usuário não possui cartas.")
+            return
+
+        # Transferir as cartas para o banco
+        for id_personagem, quantidade in cartas_usuario:
+            cursor.execute("SELECT COUNT(*) FROM banco_inventario WHERE id_personagem = %s", (id_personagem,))
+            existe = cursor.fetchone()[0]
+
+            if existe:
+                cursor.execute("UPDATE banco_inventario SET quantidade = quantidade + %s WHERE id_personagem = %s", (quantidade, id_personagem))
+            else:
+                cursor.execute("INSERT INTO banco_inventario (id_personagem, quantidade) VALUES (%s, %s)", (id_personagem, quantidade))
+
+        # Remover cartas do usuário
+        cursor.execute("DELETE FROM inventario WHERE id_usuario = %s", (id_usuario,))
+        conn.commit()
+
+        bot.send_message(message.chat.id, f"Cartas do usuário {id_usuario} transferidas para o banco com sucesso.")
+
+    except Exception as e:
+        print(f"Erro ao transferir cartas para o banco: {e}")
+        bot.send_message(message.chat.id, "Erro ao transferir cartas para o banco.")
+    finally:
+        fechar_conexao(cursor, conn)
+
+
+def obter_nome_usuario(id_usuario, cursor):
+    query = "SELECT nome FROM usuarios WHERE id_usuario = %s"
+    cursor.execute(query, (id_usuario,))
+    resultado = cursor.fetchone()
+    return resultado[0] if resultado else "Usuário Desconhecido"
 

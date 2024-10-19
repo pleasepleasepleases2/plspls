@@ -1040,9 +1040,27 @@ def handle_cancelar_doacao(call):
 def callback_submenus_handler(call):
     callback_submenus(call)
         
-@bot.callback_query_handler(func=lambda call: call.data.startswith("especies_"))
-def callback_especies_handler(call):
-    callback_especies(call)
+@bot.callback_query_handler(func=lambda call: call.data.startswith('especies_'))
+def callback_especies(call):
+    try:
+        # Extrair a página e a categoria do callback_data
+        _, pagina_str, categoria = call.data.split('_')
+        pagina_atual = int(pagina_str)
+
+        # Obter o número total de páginas
+        conn, cursor = conectar_banco_dados()
+        query_total = "SELECT COUNT(DISTINCT subcategoria) FROM personagens WHERE categoria = %s"
+        cursor.execute(query_total, (categoria,))
+        total_registros = cursor.fetchone()[0]
+        total_paginas = (total_registros // 15) + (1 if total_registros % 15 > 0 else 0)
+
+        # Editar a mensagem com os novos dados da página
+        editar_mensagem_especies(call, categoria, pagina_atual, total_paginas)
+
+    except Exception as e:
+        print(f"Erro ao processar o callback de espécies: {e}")
+        bot.reply_to(call.message, "Ocorreu um erro ao processar sua solicitação.")
+
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith('poço_dos_desejos'))
 def handle_poco_dos_desejos_handler(call):

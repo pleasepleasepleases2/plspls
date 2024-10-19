@@ -332,6 +332,17 @@ def setuser_comando(message):
     finally:
         fechar_conexao(cursor, conn)
 
+def handle_config(message):
+    markup = types.InlineKeyboardMarkup()
+    btn1 = types.InlineKeyboardButton('Pronomes', callback_data='bpronomes_')
+    btn2 = types.InlineKeyboardButton('Privacidade', callback_data='privacy')
+    btn3 = types.InlineKeyboardButton('Lembretes', callback_data='lembretes')
+    btn_cancelar = types.InlineKeyboardButton('❌ Cancelar', callback_data='pcancelar')
+    
+    markup.add(btn1, btn2)
+    markup.add(btn3, btn_cancelar)
+    
+    bot.send_message(message.chat.id, "Escolha uma opção:", reply_markup=markup)
 
 def remove_fav_command(message):
     id_usuario = message.from_user.id

@@ -38,43 +38,58 @@ def diary_command(message):
     conn, cursor = conectar_banco_dados()
 
     try:
+        # Verifica se o usuário é VIP
         cursor.execute("SELECT COUNT(*) FROM vips WHERE id_usuario = %s", (user_id,))
         is_vip = cursor.fetchone()[0] > 0
 
+        # Recupera o registro do diário do usuário
         cursor.execute("SELECT ultimo_diario, dias_consecutivos FROM diario WHERE id_usuario = %s", (user_id,))
         result = cursor.fetchone()
 
         if result:
             ultimo_diario, dias_consecutivos = result
 
+            # Verifica se o usuário já fez o diário hoje
             if ultimo_diario == today:
                 bot.send_message(message.chat.id, "Você já recebeu suas cenouras hoje. Volte amanhã!")
                 return
 
+            # Se fez ontem, aumenta o streak
             if ultimo_diario == today - timedelta(days=1):
                 dias_consecutivos += 1
             elif is_vip and ultimo_diario == today - timedelta(days=2):
+                # Se VIP, permite recuperar um dia perdido
                 dias_consecutivos += 1
             else:
+                # Caso contrário, reseta o streak
                 dias_consecutivos = 1
 
+            # Calcula as cenouras baseadas no streak
             cenouras = min(dias_consecutivos * 10, 100)
 
-            cursor.execute("UPDATE diario SET ultimo_diario = %s, dias_consecutivos = %s WHERE id_usuario = %s", (today, dias_consecutivos, user_id))
-            cursor.execute("UPDATE usuarios SET cenouras = cenouras + %s WHERE id_usuario = %s", (cenouras, user_id))
+            # Atualiza o diário e o saldo de cenouras do usuário
+            cursor.execute("UPDATE diario SET ultimo_diario = %s, dias_consecutivos = %s WHERE id_usuario = %s", 
+                           (today, dias_consecutivos, user_id))
+            cursor.execute("UPDATE usuarios SET cenouras = cenouras + %s WHERE id_usuario = %s", 
+                           (cenouras, user_id))
             conn.commit()
 
         else:
+            # Se for a primeira vez que o usuário registra no diário
             cenouras = 10
             dias_consecutivos = 1
-            cursor.execute("INSERT INTO diario (id_usuario, ultimo_diario, dias_consecutivos) VALUES (%s, %s, %s)", (user_id, today, dias_consecutivos))
-            cursor.execute("UPDATE usuarios SET cenouras = cenouras + %s WHERE id_usuario = %s", (cenouras, user_id))
+            cursor.execute("INSERT INTO diario (id_usuario, ultimo_diario, dias_consecutivos) VALUES (%s, %s, %s)", 
+                           (user_id, today, dias_consecutivos))
+            cursor.execute("UPDATE usuarios SET cenouras = cenouras + %s WHERE id_usuario = %s", 
+                           (cenouras, user_id))
             conn.commit()
 
+        # Envia a mensagem de confirmação ao usuário
         phrase = random.choice(phrases)
         fortune = random.choice(fortunes)
         bot.send_message(message.chat.id, f"<i>{phrase}</i>\n\n<b>{fortune}</b>\n\nVocê recebeu <i>{cenouras} cenouras</i>!\n\n<b>Dias consecutivos:</b> <i>{dias_consecutivos}</i>\n\n", parse_mode="HTML")
 
+        # Pergunta se o usuário deseja adicionar uma anotação ao diário
         markup = telebot.types.InlineKeyboardMarkup()
         markup.add(telebot.types.InlineKeyboardButton(text="Sim", callback_data="add_note"))
         markup.add(telebot.types.InlineKeyboardButton(text="Não", callback_data="cancel_note"))

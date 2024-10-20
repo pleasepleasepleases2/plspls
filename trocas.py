@@ -116,6 +116,16 @@ def realizar_troca(message, eu, voce, minhacarta, suacarta, chat_id, qntminha_an
     else:
         print("DEBUG: Falha ao realizar a troca após várias tentativas.")
         bot.edit_message_caption(chat_id=message.chat.id, caption="Falha ao realizar a troca após várias tentativas. Tente novamente mais tarde.")
+def verifica_inventario_troca(id_usuario, id_personagem):
+    try:
+        conn, cursor = conectar_banco_dados()
+        cursor.execute("SELECT quantidade FROM inventario WHERE id_usuario = %s AND id_personagem = %s", (id_usuario, id_personagem))
+        quantidade = cursor.fetchone()
+        return quantidade[0] if quantidade else 0
+    except Exception as e:
+        print(f"Erro ao verificar inventário: {e}")
+    finally:
+        fechar_conexao(cursor, conn)
 
 def troca_callback(call):
     try:

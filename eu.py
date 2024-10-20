@@ -149,7 +149,7 @@ def handle_me_command(message):
                 # Criar botões de votação
                 doces, fantasmas = contar_votos(id_usuario)  # Função que conta votos
                 markup = InlineKeyboardMarkup()
-                botao_doce = InlineKeyboardButton(text=f"🍬 {doces}", callback_data=f"votar_doce_{id_usuario}")
+                botao_doce = InlineKeyboardButton(text=f"🍭 {doces}", callback_data=f"votar_doce_{id_usuario}")
                 botao_fantasma = InlineKeyboardButton(text=f"👻 {fantasmas}", callback_data=f"votar_fantasma_{id_usuario}")
                 markup.add(botao_doce, botao_fantasma)
 

@@ -136,30 +136,51 @@ def votar_usuario(call):
     markup.row(botao_doce, botao_fantasma)
 
     bot.edit_message_reply_markup(call.message.chat.id, call.message.message_id, reply_markup=markup)
-import random
-from telebot import types
+# Lista de emojis de gostosuras
+emojis_gostosura = [
+    "🍬", "🍪", "🍭", "🍩", "🧁", "🧇", "🍫", "🎂", "🍡", "🍨",
+    "🍰", "🍯", "🥞", "🍦", "🍮", "🍧"
+]
+# Lista de emojis de travessuras
+emojis_travessura = [
+    "🎃", "👻", "🕸️", "🕷️", "🧟‍♀️", "🐈‍⬛", "🦇", "⚰️", "💀", 
+    "🕯️", "☠️", "🌕", "👿", "😈"
+]
 
-# URL da imagem a ser enviada
-url_imagem = "https://pub-6f23ef52e8614212a14d24b0cf55ae4a.r2.dev/AgACAgIAAxkBAAIcNmcUl8AOkautHBtQtj2fSmLXdMWhAAJv4jEbUvbwStTjvhI3wcU_AQADAgADdwADNgQ.jpg"
-
-# Definir algumas funções de gostosura e travessura
+# Função para tratar gostosuras
 def gostosura(message):
+    user = message.from_user.id
     funcoes_gostosura = [
-        "🍬 Gostosura! Você ganhou 50 cenouras!",
-        "🍬 Gostosura! Parabéns, uma carta especial foi adicionada ao seu inventário.",
-        "🍬 Gostosura! Surpresa! Você ganhou uma música nova no perfil.",
+        f"{random.choice(emojis_gostosura)} Você encontrou um saco de doces! Parabéns, recebeu {random.randint(50, 100)} cenouras!",
+        f"{random.choice(emojis_gostosura)} Gostosura! Você ganhou 50 cenouras!",
+        f"{random.choice(emojis_gostosura)} Gostosura! Parabéns, uma carta especial foi adicionada ao seu inventário.",
+        f"{random.choice(emojis_gostosura)} Gostosura! Surpresa! Você ganhou uma música nova no perfil.",
     ]
+    
+    # Escolhe uma gostosura aleatória
     resultado = random.choice(funcoes_gostosura)
+    
+    # Caso a gostosura inclua cenouras, aumentar no banco de dados
+    if "cenouras" in resultado:
+        if "saco de doces" in resultado:
+            cenouras = random.randint(50, 100)
+        else:
+            cenouras = 50
+        aumentar_cenouras(user, cenouras)  # Chama a função para adicionar cenouras
+
+    # Enviar a mensagem de gostosura com a imagem
     bot.send_photo(message.chat.id, url_imagem, caption=resultado)
 
 def travessura(message):
     funcoes_travessura = [
-        "👻 Travessura! Ah não, você perdeu 20 cenouras.",
-        "👻 Travessura! Oops, uma carta foi removida do seu inventário.",
-        "👻 Travessura! Que pena, sua próxima jogada será bloqueada por 10 minutos.",
+        f"{random.choice(emojis_travessura)} Travessura! Ah não, você perdeu 20 cenouras.",
+        f"{random.choice(emojis_travessura)} Travessura! Oops, uma carta foi removida do seu inventário.",
+        f"{random.choice(emojis_travessura)} Travessura! Que pena, sua próxima jogada será bloqueada por 10 minutos.",
+        f"{random.choice(emojis_travessura)} Travessura! A sorte não está ao seu lado, você perdeu 30 cenouras!",
     ]
     resultado = random.choice(funcoes_travessura)
     bot.send_photo(message.chat.id, url_imagem, caption=resultado)
+
 
 # Comando /halloween
 @bot.message_handler(commands=['halloween'])

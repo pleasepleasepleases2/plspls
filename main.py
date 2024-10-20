@@ -114,6 +114,28 @@ def set_webhook():
 def index():
     return 'Server is running.'
 
+@bot.callback_query_handler(func=lambda call: call.data.startswith('votar_'))
+def votar_usuario(call):
+    id_usuario_avaliador = call.from_user.id
+    data_parts = call.data.split('_')
+    tipo_voto = data_parts[1]  # 'doce' ou 'fantasma'
+    id_usuario_avaliado = int(data_parts[2])
+
+    voto = 1 if tipo_voto == 'doce' else 0
+
+    # Registrar o voto
+    registrar_voto(id_usuario_avaliado, id_usuario_avaliador, voto)
+
+    # Atualizar a contagem de votos
+    doces, fantasmas = contar_votos(id_usuario_avaliado)
+
+    # Atualizar os botões com a nova contagem
+    markup = InlineKeyboardMarkup()
+    botao_doce = InlineKeyboardButton(text=f"🍬  {doces}", callback_data=f"votar_doce_{id_usuario_avaliado}")
+    botao_fantasma = InlineKeyboardButton(text=f"👻  {fantasmas}", callback_data=f"votar_fantasma_{id_usuario_avaliado}")
+    markup.row(botao_doce, botao_fantasma)
+
+    bot.edit_message_reply_markup(call.message.chat.id, call.message.message_id, reply_markup=markup)
 
 @bot.message_handler(commands=['jogodavelha'])
 def handle_jogo_da_velha(message):

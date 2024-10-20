@@ -136,6 +136,10 @@ def votar_usuario(call):
     markup.row(botao_doce, botao_fantasma)
 
     bot.edit_message_reply_markup(call.message.chat.id, call.message.message_id, reply_markup=markup)
+
+# URL da imagem a ser enviada
+url_imagem = "https://pub-6f23ef52e8614212a14d24b0cf55ae4a.r2.dev/AgACAgIAAxkBAAIcNmcUl8AOkautHBtQtj2fSmLXdMWhAAJv4jEbUvbwStTjvhI3wcU_AQADAgADdwADNgQ.jpg"
+
 # Lista de emojis de gostosuras
 emojis_gostosura = [
     "🍬", "🍪", "🍭", "🍩", "🧁", "🧇", "🍫", "🎂", "🍡", "🍨",

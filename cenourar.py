@@ -108,7 +108,9 @@ def cenourar_carta(call, id_usuario, ids_personagens):
 
                 # Atualiza o número de cenouras do usuário
                 cursor.execute("SELECT cenouras FROM usuarios WHERE id_usuario = %s", (id_usuario,))
-                cenouras = cursor.fetchone()[0]
+                cenouras = cursor.fetchone()
+                if cenouras is not None:
+                    cenouras = cenouras[0]
                 print(f"DEBUG: Quantidade atual de cenouras do usuário {id_usuario}: {cenouras}")
                 
                 novas_cenouras = cenouras + 1
@@ -138,6 +140,9 @@ def cenourar_carta(call, id_usuario, ids_personagens):
                 cartas_nao_encontradas.append(id_personagem)
                 print(f"DEBUG: Carta {id_personagem} não encontrada ou quantidade insuficiente no inventário")
 
+            # Certifique-se de consumir todos os resultados antes de continuar para o próximo loop
+            cursor.fetchall()  # Consumir resultados restantes para evitar erros de "Unread result found"
+
         # Mensagens de confirmação
         if cartas_cenouradas:
             mensagem_final = f"🥕 Cartas cenouradas com sucesso:\n\n{', '.join(cartas_cenouradas)}"
@@ -155,8 +160,6 @@ def cenourar_carta(call, id_usuario, ids_personagens):
         # Fechando o cursor e conexão adequadamente
         try:
             if cursor:
-                # Consumir quaisquer resultados não lidos antes de fechar
-                cursor.fetchall()  
                 cursor.close()
                 print(f"DEBUG: Cursor fechado com sucesso")
             if conn:

@@ -4,6 +4,7 @@ from bd import *
 from gif import *
 import globals
 from botoes import *
+from halloween import *
 import random
 import spotipy
 from spotipy.oauth2 import SpotifyClientCredentials

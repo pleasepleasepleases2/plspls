@@ -90,17 +90,17 @@ def cenourar_carta(call, id_usuario, ids_personagens):
         for id_personagem in ids_personagens:
             print(f"DEBUG: Verificando quantidade no inventário da carta {id_personagem} para o usuário {id_usuario}")
 
-            # Verifica se o personagem está no inventário
+            # Verifica se o personagem está no inventário do usuário
             cursor.execute("SELECT quantidade FROM inventario WHERE id_usuario = %s AND id_personagem = %s", (id_usuario, id_personagem))
             quantidade_atual = cursor.fetchone()
             print(f"DEBUG: Quantidade atual da carta {id_personagem}: {quantidade_atual}")
 
-            # Certifique-se de que a quantidade seja válida
+            # Se a quantidade for válida e maior que 0, podemos cenourar
             if quantidade_atual and quantidade_atual[0] > 0:
                 nova_quantidade = quantidade_atual[0] - 1
                 print(f"DEBUG: Nova quantidade da carta {id_personagem} será {nova_quantidade}")
 
-                # Atualiza a quantidade da carta no inventário
+                # Atualiza a quantidade da carta no inventário do usuário
                 cursor.execute("UPDATE inventario SET quantidade = %s WHERE id_usuario = %s AND id_personagem = %s", 
                                (nova_quantidade, id_usuario, id_personagem))
                 conn.commit()
@@ -108,9 +108,7 @@ def cenourar_carta(call, id_usuario, ids_personagens):
 
                 # Atualiza o número de cenouras do usuário
                 cursor.execute("SELECT cenouras FROM usuarios WHERE id_usuario = %s", (id_usuario,))
-                cenouras = cursor.fetchone()
-                if cenouras is not None:
-                    cenouras = cenouras[0]
+                cenouras = cursor.fetchone()[0]  # Pegando a quantidade de cenouras
                 print(f"DEBUG: Quantidade atual de cenouras do usuário {id_usuario}: {cenouras}")
                 
                 novas_cenouras = cenouras + 1
@@ -118,30 +116,10 @@ def cenourar_carta(call, id_usuario, ids_personagens):
                 conn.commit()
                 print(f"DEBUG: Cenouras atualizadas para o usuário {id_usuario}: {novas_cenouras}")
 
-                # Verifica se a carta já está no banco de inventário
-                cursor.execute("SELECT quantidade FROM banco_inventario WHERE id_personagem = %s", (id_personagem,))
-                quantidade_banco = cursor.fetchone()
-                print(f"DEBUG: Quantidade atual da carta {id_personagem} no banco de inventário: {quantidade_banco}")
-
-                # Atualiza ou insere a carta no banco de inventário
-                if quantidade_banco:
-                    nova_quantidade_banco = quantidade_banco[0] + 1
-                    cursor.execute("UPDATE banco_inventario SET quantidade = %s WHERE id_personagem = %s", 
-                                   (nova_quantidade_banco, id_personagem))
-                    print(f"DEBUG: Atualizada quantidade no banco de inventário para a carta {id_personagem}: {nova_quantidade_banco}")
-                else:
-                    cursor.execute("INSERT INTO banco_inventario (id_personagem, quantidade) VALUES (%s, %s)", 
-                                   (id_personagem, 1))
-                    print(f"DEBUG: Inserida nova carta no banco de inventário: {id_personagem}")
-
-                conn.commit()
                 cartas_cenouradas.append(id_personagem)
             else:
                 cartas_nao_encontradas.append(id_personagem)
                 print(f"DEBUG: Carta {id_personagem} não encontrada ou quantidade insuficiente no inventário")
-
-            # Certifique-se de consumir todos os resultados antes de continuar para o próximo loop
-            cursor.fetchall()  # Consumir resultados restantes para evitar erros de "Unread result found"
 
         # Mensagens de confirmação
         if cartas_cenouradas:
@@ -167,6 +145,7 @@ def cenourar_carta(call, id_usuario, ids_personagens):
                 print(f"DEBUG: Conexão fechada com sucesso")
         except Exception as e:
             print(f"DEBUG: Erro ao fechar conexão ou cursor: {e}")
+
 
 def verificar_id_na_tabelabeta(user_id):
     try:

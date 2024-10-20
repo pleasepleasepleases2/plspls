@@ -139,26 +139,27 @@ def votar_usuario(call):
 import random
 from telebot import types
 
+# URL da imagem a ser enviada
+url_imagem = "https://pub-6f23ef52e8614212a14d24b0cf55ae4a.r2.dev/AgACAgIAAxkBAAIcNmcUl8AOkautHBtQtj2fSmLXdMWhAAJv4jEbUvbwStTjvhI3wcU_AQADAgADdwADNgQ.jpg"
+
 # Definir algumas funções de gostosura e travessura
 def gostosura(message):
-    # Funções diferentes para gostosura
     funcoes_gostosura = [
-        "Você ganhou 50 cenouras!",
-        "Parabéns! Uma carta especial foi adicionada ao seu inventário.",
-        "Surpresa! Você ganhou uma música nova no perfil.",
+        "🍬 Gostosura! Você ganhou 50 cenouras!",
+        "🍬 Gostosura! Parabéns, uma carta especial foi adicionada ao seu inventário.",
+        "🍬 Gostosura! Surpresa! Você ganhou uma música nova no perfil.",
     ]
     resultado = random.choice(funcoes_gostosura)
-    bot.send_message(message.chat.id, f"🍬 Gostosura! {resultado}")
+    bot.send_photo(message.chat.id, url_imagem, caption=resultado)
 
 def travessura(message):
-    # Funções diferentes para travessura
     funcoes_travessura = [
-        "Ah não! Você perdeu 20 cenouras.",
-        "Oops! Uma carta foi removida do seu inventário.",
-        "Que pena! Sua próxima jogada será bloqueada por 10 minutos.",
+        "👻 Travessura! Ah não, você perdeu 20 cenouras.",
+        "👻 Travessura! Oops, uma carta foi removida do seu inventário.",
+        "👻 Travessura! Que pena, sua próxima jogada será bloqueada por 10 minutos.",
     ]
     resultado = random.choice(funcoes_travessura)
-    bot.send_message(message.chat.id, f"👻 Travessura! {resultado}")
+    bot.send_photo(message.chat.id, url_imagem, caption=resultado)
 
 # Comando /halloween
 @bot.message_handler(commands=['halloween'])
@@ -168,6 +169,7 @@ def handle_halloween(message):
         gostosura(message)  # Executa uma das funções de gostosura
     else:
         travessura(message)  # Executa uma das funções de travessura
+
 
 @bot.message_handler(commands=['jogodavelha'])
 def handle_jogo_da_velha(message):

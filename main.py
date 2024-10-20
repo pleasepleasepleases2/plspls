@@ -1199,7 +1199,7 @@ def callback_cenourar(call):
             ids_personagens = data_parts[3].split(",")  # IDs das cartas
             cenourar_carta(call, id_usuario, ids_personagens)
         elif acao == "nao":
-            bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text="Operação de cenoura cancelada.")
+            bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text="🍂 Ufa! As cartas escaparam de serem cenouradas por pouco!")
     except Exception as e:
         print(f"Erro ao processar callback de cenoura: {e}")
         traceback.print_exc()

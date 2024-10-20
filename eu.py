@@ -116,31 +116,31 @@ def handle_me_command(message):
             if perfil:
                 nome, nome_usuario, fav, adm, qntcartas, cenouras, iscas, bio, musica, pronome, privado, user, beta, nome_fav, imagem_fav = perfil
                 resposta = f"<b>Perfil de {nome}</b>\n\n" \
-                           f"✨ Fav: {fav} — {nome_fav}\n\n"
+                           f"⚡ Fav: {fav} — {nome_fav}\n\n"
 
                 if is_vip:
-                    resposta += "<i>🍃 Agricultor do Garden</i>\n\n"
+                    resposta += "<i>🐺 Agricultor do Garden</i>\n\n"
 
                 # Mostrar estado de casamento
                 if casamento:
                     parceiro_id, parceiro_nome = casamento
-                    resposta += f"💍 Casado(a) com {parceiro_nome}\n\n"
+                    resposta += f"🫀 Casado(a) com {parceiro_nome}\n\n"
 
                 if adm:
                     resposta += f"🌈 Adm: {adm.capitalize()}\n\n"
                 if beta:
                     resposta += f"🍀 Usuario Beta\n\n"
 
-                resposta += f"‍🧑‍🌾 Camponês: {user}\n" \
-                            f"🐟 Peixes: {qntcartas}\n" \
-                            f"🥕 Cenouras: {cenouras}\n" \
-                            f"🪝 Iscas: {iscas}\n"
+                resposta += f"‍🧟 Camponês: {user}\n" \
+                            f"🖤 Peixes: {qntcartas}\n" \
+                            f"🦇 Cenouras: {cenouras}\n" \
+                            f"🗡️ Iscas: {iscas}\n"
 
                 if pronome:
-                    resposta += f"🌺 Pronomes: {pronome}\n\n"
+                    resposta += f"🥀 Pronomes: {pronome}\n\n"
 
-                resposta += f"✍ {bio}\n\n" \
-                            f"🎧: {musica}"
+                resposta += f"🕯️: {bio}\n\n" \
+                            f"🪦: {musica}"
 
                 # Enviar a resposta do perfil
                 enviar_perfil(message.chat.id, resposta, imagem_fav, fav, id_usuario, message)

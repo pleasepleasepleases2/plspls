@@ -136,6 +136,38 @@ def votar_usuario(call):
     markup.row(botao_doce, botao_fantasma)
 
     bot.edit_message_reply_markup(call.message.chat.id, call.message.message_id, reply_markup=markup)
+import random
+from telebot import types
+
+# Definir algumas funções de gostosura e travessura
+def gostosura(message):
+    # Funções diferentes para gostosura
+    funcoes_gostosura = [
+        "Você ganhou 50 cenouras!",
+        "Parabéns! Uma carta especial foi adicionada ao seu inventário.",
+        "Surpresa! Você ganhou uma música nova no perfil.",
+    ]
+    resultado = random.choice(funcoes_gostosura)
+    bot.send_message(message.chat.id, f"🍬 Gostosura! {resultado}")
+
+def travessura(message):
+    # Funções diferentes para travessura
+    funcoes_travessura = [
+        "Ah não! Você perdeu 20 cenouras.",
+        "Oops! Uma carta foi removida do seu inventário.",
+        "Que pena! Sua próxima jogada será bloqueada por 10 minutos.",
+    ]
+    resultado = random.choice(funcoes_travessura)
+    bot.send_message(message.chat.id, f"👻 Travessura! {resultado}")
+
+# Comando /halloween
+@bot.message_handler(commands=['halloween'])
+def handle_halloween(message):
+    chance = random.random()  # Gera um número entre 0 e 1
+    if chance < 0.5:
+        gostosura(message)  # Executa uma das funções de gostosura
+    else:
+        travessura(message)  # Executa uma das funções de travessura
 
 @bot.message_handler(commands=['jogodavelha'])
 def handle_jogo_da_velha(message):

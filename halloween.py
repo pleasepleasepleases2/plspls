@@ -571,3 +571,49 @@ def tentar_termo(message):
     else:
         bot.send_message(message.chat.id, f"{historico_texto}\n\n💀 Suas tentativas acabaram! A palavra era '{palavra_secreta}'.")
         del globals.jogos_termo[id_usuario]  # Remover o jogo após terminar as tentativas
+
+def registrar_voto(id_usuario_avaliado, id_usuario_avaliador, voto):
+    try:
+        conn, cursor = conectar_banco_dados()
+
+        # Verificar se já existe um voto do avaliador
+        cursor.execute("SELECT voto FROM votos WHERE id_usuario_avaliado = %s AND id_usuario_avaliador = %s", 
+                       (id_usuario_avaliado, id_usuario_avaliador))
+        voto_existente = cursor.fetchone()
+
+        if voto_existente:
+            # Atualizar o voto existente
+            cursor.execute("UPDATE votos SET voto = %s WHERE id_usuario_avaliado = %s AND id_usuario_avaliador = %s", 
+                           (voto, id_usuario_avaliado, id_usuario_avaliador))
+        else:
+            # Inserir um novo voto
+            cursor.execute("INSERT INTO votos (id_usuario_avaliado, id_usuario_avaliador, voto) VALUES (%s, %s, %s)", 
+                           (id_usuario_avaliado, id_usuario_avaliador, voto))
+
+        conn.commit()
+
+    except Exception as e:
+        print(f"Erro ao registrar voto: {e}")
+    finally:
+        fechar_conexao(cursor, conn)
+
+def contar_votos(id_usuario_avaliado):
+    try:
+        conn, cursor = conectar_banco_dados()
+
+        # Contar os votos doces
+        cursor.execute("SELECT COUNT(*) FROM votos WHERE id_usuario_avaliado = %s AND voto = 1", (id_usuario_avaliado,))
+        doces = cursor.fetchone()[0]
+
+        # Contar os votos fantasmas
+        cursor.execute("SELECT COUNT(*) FROM votos WHERE id_usuario_avaliado = %s AND voto = 0", (id_usuario_avaliado,))
+        fantasmas = cursor.fetchone()[0]
+
+        return doces, fantasmas
+
+    except Exception as e:
+        print(f"Erro ao contar votos: {e}")
+        return 0, 0
+    finally:
+        fechar_conexao(cursor, conn)
+

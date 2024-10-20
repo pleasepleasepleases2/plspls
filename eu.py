@@ -72,6 +72,8 @@ def handle_obter_username(message):
         bot.reply_to(message, "Formato incorreto. Use /usuario seguido do user desejado, por exemplo: /usuario manoela")
 
 
+from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
+
 def handle_me_command(message):
     id_usuario = message.from_user.id
     query_verificar_usuario = "SELECT COUNT(*) FROM usuarios WHERE id_usuario = %s"
@@ -145,14 +147,17 @@ def handle_me_command(message):
                             f"🪦: {musica}"
 
                 # Criar botões de votação
-                doces, fantasmas = contar_votos(id_usuario)  # Implementar função para contar votos
+                doces, fantasmas = contar_votos(id_usuario)  # Função que conta votos
                 markup = InlineKeyboardMarkup()
                 botao_doce = InlineKeyboardButton(text=f"🍬 {doces}", callback_data=f"votar_doce_{id_usuario}")
                 botao_fantasma = InlineKeyboardButton(text=f"👻 {fantasmas}", callback_data=f"votar_fantasma_{id_usuario}")
                 markup.add(botao_doce, botao_fantasma)
 
-                # Enviar a resposta do perfil com botões de votação
-                bot.send_message(message.chat.id, resposta, reply_markup=markup, parse_mode="HTML")
+                # Enviar a resposta do perfil com botões de votação e a imagem favorita
+                if imagem_fav:
+                    bot.send_photo(message.chat.id, imagem_fav, caption=resposta, reply_markup=markup, parse_mode="HTML")
+                else:
+                    bot.send_message(message.chat.id, resposta, reply_markup=markup, parse_mode="HTML")
 
         else:
             bot.send_message(message.chat.id, "Você ainda não iniciou o bot. Use /start para começar.", reply_to_message_id=message.message_id)
@@ -163,6 +168,7 @@ def handle_me_command(message):
 
     finally:
         fechar_conexao(cursor, conn)
+
 def handle_gperfil_command(message):
     if len(message.text.split()) != 2:
         bot.send_message(message.chat.id, "Formato incorreto. Use /gperfil seguido do nome de usuário desejado.")

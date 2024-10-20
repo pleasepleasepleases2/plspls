@@ -3,22 +3,33 @@ import traceback
 from credentials import *
 from bd import *
 bot = telebot.TeleBot(API_TOKEN)
-def enviar_pergunta_cenoura(message, id_usuario, cartas_a_cenourar, bot):
+def enviar_pergunta_cenoura(message, id_usuario, ids_personagens, bot):
     try:
-        # Preparando os dados para o callback
-        ids_personagens = ','.join(cartas_a_cenourar)  # Concatenar IDs em uma string separada por vírgula
-        texto_pergunta = f"Você deseja cenourar as cartas: {ids_personagens}?"
-        
-        # Criando botões de confirmação
-        keyboard = telebot.types.InlineKeyboardMarkup()
-        sim_button = telebot.types.InlineKeyboardButton(text="Sim", callback_data=f"cenourar_sim_{id_usuario}_{ids_personagens}")
-        nao_button = telebot.types.InlineKeyboardButton(text="Não", callback_data=f"cenourar_nao_{id_usuario}_{ids_personagens}")
-        keyboard.row(sim_button, nao_button)
+        conn, cursor = conectar_banco_dados()
 
-        # Enviando a pergunta com os botões
+        # Recupera os nomes das cartas e formata a pergunta
+        cartas_formatadas = []
+        for id_personagem in ids_personagens:
+            cursor.execute("SELECT nome FROM personagens WHERE id_personagem = %s", (id_personagem,))
+            nome_carta = cursor.fetchone()[0]  # Pega o nome da carta
+            cartas_formatadas.append(f"{id_personagem} - {nome_carta}")
+
+        # Formata a pergunta com os nomes das cartas
+        texto_pergunta = f"Você deseja mesmo cenourar as cartas:\n\n" + "\n".join(cartas_formatadas)
+        keyboard = telebot.types.InlineKeyboardMarkup()
+        sim_button = telebot.types.InlineKeyboardButton(text="Sim", callback_data=f"cenourar_sim_{id_usuario}_{'_'.join(ids_personagens)}")
+        nao_button = telebot.types.InlineKeyboardButton(text="Não", callback_data=f"cenourar_nao_{id_usuario}")
+        keyboard.row(sim_button, nao_button)
         bot.send_message(message.chat.id, texto_pergunta, reply_markup=keyboard)
+    
     except Exception as e:
         print(f"Erro ao enviar pergunta de cenourar: {e}")
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+
 
 def processar_verificar_e_cenourar(message, bot):
     try:

@@ -155,6 +155,8 @@ def cenourar_carta(call, id_usuario, ids_personagens):
         # Fechando o cursor e conexão adequadamente
         try:
             if cursor:
+                # Consumir quaisquer resultados não lidos antes de fechar
+                cursor.fetchall()  
                 cursor.close()
                 print(f"DEBUG: Cursor fechado com sucesso")
             if conn:
@@ -162,7 +164,6 @@ def cenourar_carta(call, id_usuario, ids_personagens):
                 print(f"DEBUG: Conexão fechada com sucesso")
         except Exception as e:
             print(f"DEBUG: Erro ao fechar conexão ou cursor: {e}")
-
 
 def verificar_id_na_tabelabeta(user_id):
     try:

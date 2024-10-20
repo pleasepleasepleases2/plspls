@@ -13,50 +13,71 @@ def realizar_troca(message, eu, voce, minhacarta, suacarta, chat_id, qntminha_an
     retries = 0
     while retries < MAX_RETRIES:
         try:
+            print("DEBUG: Iniciando a conexão com o banco de dados...")
             conn, cursor = conectar_banco_dados()
 
+            print(f"DEBUG: Verificando quantidade da carta {minhacarta} para o usuário {eu}...")
             cursor.execute("SELECT quantidade FROM inventario WHERE id_usuario = %s AND id_personagem = %s", (eu, minhacarta))
             qntminha = cursor.fetchone()
+            
+            print(f"DEBUG: Verificando quantidade da carta {suacarta} para o usuário {voce}...")
             cursor.execute("SELECT quantidade FROM inventario WHERE id_usuario = %s AND id_personagem = %s", (voce, suacarta))
             qntsua = cursor.fetchone()
 
             qntminha = qntminha[0] if qntminha else 0
             qntsua = qntsua[0] if qntsua else 0
 
-            print(f"Quantidade antes da troca: qntminha={qntminha}, qntsua={qntsua}")
+            print(f"DEBUG: Quantidade antes da troca - qntminha={qntminha}, qntsua={qntsua}")
 
             if qntminha > 0 and qntsua > 0:
+                print(f"DEBUG: Quantidades válidas. Realizando atualização das quantidades...")
+
                 cursor.execute("UPDATE inventario SET quantidade = quantidade - 1 WHERE id_usuario = %s AND id_personagem = %s", (eu, minhacarta))
                 cursor.execute("UPDATE inventario SET quantidade = quantidade - 1 WHERE id_usuario = %s AND id_personagem = %s", (voce, suacarta))
 
+                print(f"DEBUG: Verificando inventário de {voce} para adicionar a carta {minhacarta}...")
                 cursor.execute("SELECT quantidade FROM inventario WHERE id_usuario = %s AND id_personagem = %s", (voce, minhacarta))
                 qnt_voce_minhacarta = cursor.fetchone()
 
                 if qnt_voce_minhacarta:
+                    print(f"DEBUG: Carta {minhacarta} já existe no inventário de {voce}, atualizando quantidade...")
                     cursor.execute("UPDATE inventario SET quantidade = quantidade + 1 WHERE id_usuario = %s AND id_personagem = %s", (voce, minhacarta))
                 else:
+                    print(f"DEBUG: Carta {minhacarta} não existe no inventário de {voce}, inserindo nova entrada...")
                     cursor.execute("INSERT INTO inventario (id_usuario, id_personagem, quantidade) VALUES (%s, %s, 1)", (voce, minhacarta,))
 
+                print(f"DEBUG: Verificando inventário de {eu} para adicionar a carta {suacarta}...")
                 cursor.execute("SELECT quantidade FROM inventario WHERE id_usuario = %s AND id_personagem = %s", (eu, suacarta))
                 qnt_eu_suacarta = cursor.fetchone()
 
                 if qnt_eu_suacarta:
+                    print(f"DEBUG: Carta {suacarta} já existe no inventário de {eu}, atualizando quantidade...")
                     cursor.execute("UPDATE inventario SET quantidade = quantidade + 1 WHERE id_usuario = %s AND id_personagem = %s", (eu, suacarta))
                 else:
+                    print(f"DEBUG: Carta {suacarta} não existe no inventário de {eu}, inserindo nova entrada...")
                     cursor.execute("INSERT INTO inventario (id_usuario, id_personagem, quantidade) VALUES (%s, %s, 1)", (eu, suacarta,))
 
                 conn.commit()
 
+                print("DEBUG: Comitando as mudanças no banco de dados...")
+
                 qntminha_depois = verifica_inventario_troca(eu, minhacarta)
                 qntsua_depois = verifica_inventario_troca(voce, suacarta)
 
-                print(f"Quantidade depois da troca: qntminha_depois={qntminha_depois}, qntsua_depois={qntsua_depois}")
+                print(f"DEBUG: Quantidade após a troca - qntminha_depois={qntminha_depois}, qntsua_depois={qntsua_depois}")
 
-                sql_insert = "INSERT INTO historico_trocas (id_usuario1, id_usuario2, quantidade_cartas_antes_usuario1, quantidade_cartas_depois_usuario1, quantidade_cartas_antes_usuario2, quantidade_cartas_depois_usuario2, id_carta_usuario1, id_carta_usuario2, aceita) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)"
+                sql_insert = """
+                    INSERT INTO historico_trocas 
+                    (id_usuario1, id_usuario2, quantidade_cartas_antes_usuario1, quantidade_cartas_depois_usuario1, 
+                    quantidade_cartas_antes_usuario2, quantidade_cartas_depois_usuario2, id_carta_usuario1, id_carta_usuario2, aceita) 
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                """
                 val = (eu, voce, qntminha_antes, qntminha_depois, qntsua_antes, qntsua_depois, minhacarta, suacarta, True)
                 cursor.execute(sql_insert, val)
 
                 conn.commit()
+
+                print("DEBUG: Inserido histórico de troca com sucesso.")
 
                 image_url = "https://telegra.ph/file/8672c8f91c8e77bcdad45.jpg"
                 bot.edit_message_media(
@@ -66,12 +87,12 @@ def realizar_troca(message, eu, voce, minhacarta, suacarta, chat_id, qntminha_an
                 )
                 break  # Sai do loop se a troca for realizada com sucesso
             else:
-                print(f"Troca inválida: qntminha={qntminha}, qntsua={qntsua}")
+                print(f"DEBUG: Troca inválida: qntminha={qntminha}, qntsua={qntsua}")
                 bot.edit_message_caption(chat_id=message.chat.id, message_id=message.message_id, caption="Troca inválida devido a quantidades insuficientes.")
                 break
         except mysql.connector.errors.InternalError as err:
             if err.errno == 1213:  # Deadlock
-                print(f"Deadlock detectado, tentando novamente... (tentativa {retries + 1})")
+                print(f"DEBUG: Deadlock detectado, tentando novamente... (tentativa {retries + 1})")
                 retries += 1
                 time.sleep(RETRY_DELAY)
                 continue  # Tenta novamente
@@ -90,8 +111,10 @@ def realizar_troca(message, eu, voce, minhacarta, suacarta, chat_id, qntminha_an
             bot.edit_message_caption(chat_id=message.chat.id, caption="Houve um problema com a troca, tente novamente!")
             break
         finally:
+            print("DEBUG: Fechando conexão com o banco de dados.")
             fechar_conexao(cursor, conn)
     else:
+        print("DEBUG: Falha ao realizar a troca após várias tentativas.")
         bot.edit_message_caption(chat_id=message.chat.id, caption="Falha ao realizar a troca após várias tentativas. Tente novamente mais tarde.")
 
 def troca_callback(call):

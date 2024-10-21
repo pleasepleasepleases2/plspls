@@ -211,7 +211,7 @@ def travessura(message):
 def handle_halloween(message):
     chance = random.random()  # Gera um número entre 0 e 1
     if chance < 0.5:
-        gostosura(message)  # Executa uma das funções de gostosura
+        realizar_halloween_gostosura(messsage.user_id)  # Executa uma das funções de gostosura
     else:
         travessura(message)  # Executa uma das funções de travessura
 

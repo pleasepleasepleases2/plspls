@@ -205,16 +205,15 @@ def travessura(message):
     resultado = random.choice(funcoes_travessura)
     bot.send_photo(message.chat.id, url_imagem, caption=resultado)
 
-
 # Comando /halloween
 @bot.message_handler(commands=['halloween'])
 def handle_halloween(message):
+    user_id = message.from_user.id  # Obtém o ID do usuário
     chance = random.random()  # Gera um número entre 0 e 1
     if chance < 0.5:
-        realizar_halloween_gostosura(message.user_id)  # Executa uma das funções de gostosura
+        realizar_halloween_gostosura(user_id)  # Executa uma das funções de gostosura
     else:
         travessura(message)  # Executa uma das funções de travessura
-
 @bot.callback_query_handler(func=lambda call: call.data.startswith("descartar_caixa_"))
 def callback_descartar_caixa(call):
     user_id = call.from_user.id

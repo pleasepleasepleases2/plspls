@@ -150,6 +150,34 @@ emojis_travessura = [
     "🎃", "👻", "🕸️", "🕷️", "🧟‍♀️", "🐈‍⬛", "🦇", "⚰️", "💀", 
     "🕯️", "☠️", "🌕", "👿", "😈"
 ]
+@bot.message_handler(func=lambda message: message.text and message.text.startswith('+100vip'))
+def handle_100vip(message):
+    try:
+        user_id = message.from_user.id
+        conn, cursor = conectar_banco_dados()
+
+        # Verificar se o usuário é VIP
+        query_verificar_vip = "SELECT COUNT(*) FROM vips WHERE id_usuario = %s"
+        cursor.execute(query_verificar_vip, (user_id,))
+        is_vip = cursor.fetchone()[0] > 0
+
+        if is_vip:
+            # Adicionar 100 pétalas ao usuário
+            query_adicionar_petalas = "UPDATE usuarios SET petalas = petalas + 100 WHERE id_usuario = %s"
+            cursor.execute(query_adicionar_petalas, (user_id,))
+            conn.commit()
+
+            bot.send_message(message.chat.id, "🎉 Parabéns! Você recebeu 100 pétalas por ser VIP! 🌸")
+
+        else:
+            bot.send_message(message.chat.id, "Você não é VIP e não pode receber esse bônus.")
+
+    except Exception as e:
+        print(f"Erro ao processar o comando +100vip: {e}")
+        bot.send_message(message.chat.id, "Ocorreu um erro ao processar sua solicitação.")
+
+    finally:
+        fechar_conexao(cursor, conn)
 
 # Função que realiza uma gostosura aleatória
 def realizar_halloween_gostosura(user_id):

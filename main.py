@@ -243,20 +243,23 @@ def adicionar_protecao_temporaria(user_id):
     finally:
         fechar_conexao(cursor, conn)
 
-def realizar_combo_gostosura(user_id):
+def realizar_combo_gostosura(user_id, chat_id):
     try:
         conn, cursor = conectar_banco_dados()
+        mensagem_combo = "Uma senhora te deu um combo como gostosura:\n\n"
 
         # Parte 1: Ganhar até 100 cenouras
         cenouras_ganhas = random.randint(50, 100)
         aumentar_cenouras(user_id, cenouras_ganhas)
-        bot.send_message(user_id, f"🍬 Parabéns, você recebeu {cenouras_ganhas} cenouras no Combo!")
+        mensagem_combo += f"🍬 {cenouras_ganhas} cenouras no Combo!\n\n"
 
         # Parte 2: Receber de 1 a 3 cartas faltantes do evento Halloween
         num_cartas = random.randint(1, 3)
-        for _ in range(num_cartas):
-            adicionar_carta_faltante_halloween(user_id)
-        bot.send_message(user_id, f"🎃 Você também ganhou {num_cartas} carta(s) faltante(s) do evento Halloween!")
+        cartas_ganhas = adicionar_carta_faltante_halloween(user_id, num_cartas)
+        if cartas_ganhas:
+            mensagem_combo += f"🎃 {num_cartas} carta(s) faltante(s) do evento Halloween!\n\n"
+        else:
+            mensagem_combo += f"🎃 Parabéns! Mas você já tem todas as cartas do evento Halloween.\n\n"
 
         # Parte 3: Escolher um efeito bônus
         efeitos_bonus = [
@@ -269,23 +272,28 @@ def realizar_combo_gostosura(user_id):
 
         if efeito_escolhido == "dobro de cenouras ao cenourar":
             ativar_dobro_cenouras(user_id)
-            bot.send_message(user_id, "🥕 Bônus ativado: Você receberá o dobro de cenouras quando cenourar!")
+            mensagem_combo += "🥕 Bônus ativado: Você receberá o dobro de cenouras quando cenourar!\n"
         
         elif efeito_escolhido == "peixes em dobro na pesca":
             ativar_peixes_em_dobro(user_id)
-            bot.send_message(user_id, "🐟 Bônus ativado: Você receberá peixes em dobro ao pescar!")
+            mensagem_combo += "🐟 Bônus ativado: Você receberá peixes em dobro ao pescar!\n"
 
         elif efeito_escolhido == "proteção contra travessuras":
             adicionar_protecao_temporaria(user_id)
-        
+            mensagem_combo += "🛡️ Bônus ativado: Você está protegido contra travessuras!\n"
+
         elif efeito_escolhido == "VIP de 1 dia":
             adicionar_vip_temporario(user_id, GRUPO_SUGESTAO, dias=1)
-            bot.send_message(user_id, "⚡ Bônus ativado: Você recebeu VIP por 1 dia!")
+            mensagem_combo += "⚡ Bônus ativado: Você recebeu VIP por 1 dia!\n"
+
+        # Enviar a mensagem final com todas as informações
+        bot.send_message(chat_id, mensagem_combo)
 
     except Exception as e:
         print(f"Erro ao realizar combo de gostosuras: {e}")
     finally:
         fechar_conexao(cursor, conn)
+
 
 
 def ativar_dobro_cenouras(user_id):
@@ -723,7 +731,7 @@ def realizar_halloween_gostosura(user_id, chat_id):
 
         elif chance == 5:
             print(f"DEBUG: Realizando combo de gostosura para o usuário {user_id}")
-            realizar_combo_gostosura(user_id)
+            realizar_combo_gostosura(user_id, chat_id)
 
         elif chance == 6:
             print(f"DEBUG: Encontrando abóbora para o usuário {user_id}")

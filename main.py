@@ -665,12 +665,25 @@ def handle_100vip(message):
         is_vip = cursor.fetchone()[0] > 0
 
         if is_vip:
-            # Adicionar 100 pétalas ao usuário
-            query_adicionar_petalas = "UPDATE usuarios SET petalas = petalas + 100 WHERE id_usuario = %s"
-            cursor.execute(query_adicionar_petalas, (user_id,))
-            conn.commit()
+            # Verificar se o usuário já usou o comando +100vip
+            query_verificar_uso = "SELECT COUNT(*) FROM usuarios_100vip WHERE id_usuario = %s"
+            cursor.execute(query_verificar_uso, (user_id,))
+            ja_usou = cursor.fetchone()[0] > 0
 
-            bot.send_message(message.chat.id, "🎉 Parabéns! Você recebeu 100 pétalas por ser VIP! 🌸")
+            if ja_usou:
+                bot.send_message(message.chat.id, "Você já usou o código +100vip e não pode utilizá-lo novamente.")
+            else:
+                # Adicionar 100 pétalas ao usuário
+                query_adicionar_petalas = "UPDATE usuarios SET petalas = petalas + 100 WHERE id_usuario = %s"
+                cursor.execute(query_adicionar_petalas, (user_id,))
+
+                # Registrar que o usuário usou o comando +100vip
+                query_registrar_uso = "INSERT INTO usuarios_100vip (id_usuario) VALUES (%s)"
+                cursor.execute(query_registrar_uso, (user_id,))
+                
+                conn.commit()
+
+                bot.send_message(message.chat.id, "🎉 Parabéns! Você recebeu 100 pétalas por ser VIP! 🌸")
 
         else:
             bot.send_message(message.chat.id, "Você não é VIP e não pode receber esse bônus.")
@@ -681,6 +694,7 @@ def handle_100vip(message):
 
     finally:
         fechar_conexao(cursor, conn)
+
 
 # Função que realiza uma gostosura aleatória
 def realizar_halloween_gostosura(user_id):

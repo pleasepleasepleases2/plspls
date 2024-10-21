@@ -178,9 +178,6 @@ def adicionar_carta_faltante_halloween(user_id):
         cursor.execute("INSERT INTO inventario (id_usuario, id_personagem, quantidade) VALUES (%s, %s, 1)", (user_id, id_carta_faltante))
         conn.commit()
 
-        # Enviar a mensagem informando a carta recebida
-        bot.send_message(user_id, f"🎃 Parabéns! Você encontrou uma carta do evento Halloween: {nome_carta_faltante} foi adicionada ao seu inventário.")
-
     except Exception as e:
         print(f"Erro ao adicionar carta de Halloween faltante: {e}")
     finally:
@@ -694,14 +691,10 @@ def handle_100vip(message):
 
     finally:
         fechar_conexao(cursor, conn)
-
-
-import random
-import traceback
-
+        
 url_imagem = "https://pub-6f23ef52e8614212a14d24b0cf55ae4a.r2.dev/BQACAgEAAxkBAAIcfGcVeT6gaLXd0DKA7aihUQJfV62hAAJMBQACSV6xRD2puYHoSyajNgQ.jpg"
 
-def realizar_halloween_gostosura(user_id):
+def realizar_halloween_gostosura(user_id, chat_id):
     try:
         print(f"DEBUG: Iniciando gostosura para o usuário {user_id}")
         chance = random.randint(1, 12)  # 12 tipos de gostosuras diferentes
@@ -711,12 +704,14 @@ def realizar_halloween_gostosura(user_id):
             cenouras_ganhas = random.randint(50, 100)
             aumentar_cenouras(user_id, cenouras_ganhas)
             emoji = random.choice(emojis_gostosura)
-            bot.send_message(user_id, f"{emoji} Você encontrou um saco de doces! Parabéns, recebeu {cenouras_ganhas} cenouras!")
+            bot.send_message(chat_id, f"{emoji} Você encontrou um saco de doces! Parabéns, recebeu {cenouras_ganhas} cenouras!")
             print(f"DEBUG: {cenouras_ganhas} cenouras enviadas ao usuário {user_id}")
 
         elif chance == 2:
             print(f"DEBUG: Adicionando carta faltante de Halloween para o usuário {user_id}")
             adicionar_carta_faltante_halloween(user_id)
+            # Enviar a mensagem informando a carta recebida
+            bot.send_message(chat_id, f"🎃 Parabéns! Você encontrou uma carta do evento Halloween: {nome_carta_faltante} foi adicionada ao seu inventário.")
 
         elif chance == 3:
             print(f"DEBUG: Adicionando VIP temporário para o usuário {user_id}")
@@ -787,12 +782,13 @@ def travessura(message):
 def handle_halloween(message):
     print(f"DEBUG: Comando /halloween acionado pelo usuário {message.from_user.id}")
     user_id = message.from_user.id  # Obtém o ID do usuário
+    chat_id = message.chat.id
     chance = random.random()  # Gera um número entre 0 e 1
     print(f"DEBUG: Chance sorteada para gostosura ou travessura: {chance}")
 
     if chance < 0.5:
         print(f"DEBUG: Executando gostosura para o usuário {user_id}")
-        realizar_halloween_gostosura(user_id)  # Executa uma das funções de gostosura
+        realizar_halloween_gostosura(user_id,chat_id)  # Executa uma das funções de gostosura
     else:
         print(f"DEBUG: Executando travessura para o usuário {user_id}")
         travessura(message)  # Executa uma das funções de travessura

@@ -151,51 +151,70 @@ emojis_travessura = [
     "🕯️", "☠️", "🌕", "👿", "😈"
 ]
 
+# Função que realiza uma gostosura aleatória
 def realizar_halloween_gostosura(user_id):
+    print(f"DEBUG: Iniciando gostosura para o usuário {user_id}")
     chance = random.randint(1, 12)  # 12 tipos de gostosuras diferentes
+    print(f"DEBUG: Chance sorteada: {chance}")
 
     if chance == 1:
         cenouras_ganhas = random.randint(50, 100)
+        print(f"DEBUG: Cenouras ganhas: {cenouras_ganhas}")
         aumentar_cenouras(user_id, cenouras_ganhas)
         emoji = random.choice(["🍬", "🍪", "🍭", "🍩", "🧁", "🧇", "🍫", "🎂", "🍡", "🍨", "🍰", "🍯", "🥞", "🍦", "🍮", "🍧"])
         bot.send_message(user_id, f"{emoji} Você encontrou um saco de doces! Parabéns, recebeu {cenouras_ganhas} cenouras!")
 
     elif chance == 2:
+        print("DEBUG: Adicionando carta faltante de Halloween")
         adicionar_carta_faltante_halloween(user_id)
 
     elif chance == 3:
+        print("DEBUG: Adicionando VIP temporário")
         adicionar_vip_temporario(user_id, GRUPO_SUGESTAO)
 
     elif chance == 4:
+        print("DEBUG: Adicionando proteção temporária")
         adicionar_protecao_temporaria(user_id)
 
     elif chance == 5:
+        print("DEBUG: Realizando combo de gostosura")
         realizar_combo_gostosura(user_id)
 
     elif chance == 6:
+        print("DEBUG: Encontrando abóbora")
         encontrar_abobora(user_id)
 
     elif chance == 7:
+        print("DEBUG: Adicionando caixa misteriosa")
         adicionar_caixa_misteriosa(user_id)
 
     elif chance == 8:
+        print("DEBUG: Realizando escolha surpresa")
         realizar_escolha_surpresa(user_id)
 
     elif chance == 9:
+        print("DEBUG: Ativando fonte extra")
         ativar_fonte_extra(user_id)
 
     elif chance == 10:
+        print("DEBUG: Adicionando chance de inverter travessura")
         adicionar_inverter_travessura(user_id)
 
     elif chance == 11:
+        print("DEBUG: Adicionando super boost de cenouras")
         adicionar_super_boost_cenouras(user_id, multiplicador=2, duracao_horas=6)
 
     elif chance == 12:
+        print("DEBUG: Compartilhando gostosura")
         compartilhar_gostosura(user_id)
 
 
-
+# Função que realiza uma travessura aleatória
 def travessura(message):
+    print(f"DEBUG: Iniciando travessura para o usuário {message.from_user.id}")
+    emojis_travessura = ["🎃", "👻", "🕸️", "🕷️", "🧟‍♀️", "🐈‍⬛", "⚰️", "💀", "🕯️"]
+    url_imagem = "https://link-da-imagem.jpg"  # Troque pelo link correto da imagem
+
     funcoes_travessura = [
         f"{random.choice(emojis_travessura)} Travessura! Ah não, você perdeu 20 cenouras.",
         f"{random.choice(emojis_travessura)} Travessura! Oops, uma carta foi removida do seu inventário.",
@@ -203,17 +222,25 @@ def travessura(message):
         f"{random.choice(emojis_travessura)} Travessura! A sorte não está ao seu lado, você perdeu 30 cenouras!",
     ]
     resultado = random.choice(funcoes_travessura)
+    print(f"DEBUG: Resultado da travessura: {resultado}")
     bot.send_photo(message.chat.id, url_imagem, caption=resultado)
+
 
 # Comando /halloween
 @bot.message_handler(commands=['halloween'])
 def handle_halloween(message):
+    print(f"DEBUG: Comando /halloween acionado pelo usuário {message.from_user.id}")
     user_id = message.from_user.id  # Obtém o ID do usuário
     chance = random.random()  # Gera um número entre 0 e 1
+    print(f"DEBUG: Chance sorteada para gostosura ou travessura: {chance}")
+
     if chance < 0.5:
+        print(f"DEBUG: Executando gostosura para o usuário {user_id}")
         realizar_halloween_gostosura(user_id)  # Executa uma das funções de gostosura
     else:
+        print(f"DEBUG: Executando travessura para o usuário {user_id}")
         travessura(message)  # Executa uma das funções de travessura
+
 @bot.callback_query_handler(func=lambda call: call.data.startswith("descartar_caixa_"))
 def callback_descartar_caixa(call):
     user_id = call.from_user.id

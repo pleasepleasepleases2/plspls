@@ -151,29 +151,49 @@ emojis_travessura = [
     "🕯️", "☠️", "🌕", "👿", "😈"
 ]
 
-# Função para tratar gostosuras
-def gostosura(message):
-    user = message.from_user.id
-    funcoes_gostosura = [
-        f"{random.choice(emojis_gostosura)} Você encontrou um saco de doces! Parabéns, recebeu {random.randint(50, 100)} cenouras!",
-        f"{random.choice(emojis_gostosura)} Gostosura! Você ganhou 50 cenouras!",
-        f"{random.choice(emojis_gostosura)} Gostosura! Parabéns, uma carta especial foi adicionada ao seu inventário.",
-        f"{random.choice(emojis_gostosura)} Gostosura! Surpresa! Você ganhou uma música nova no perfil.",
-    ]
-    
-    # Escolhe uma gostosura aleatória
-    resultado = random.choice(funcoes_gostosura)
-    
-    # Caso a gostosura inclua cenouras, aumentar no banco de dados
-    if "cenouras" in resultado:
-        if "saco de doces" in resultado:
-            cenouras = random.randint(50, 100)
-        else:
-            cenouras = 50
-        aumentar_cenouras(user, cenouras)  # Chama a função para adicionar cenouras
+def realizar_halloween_gostosura(user_id):
+    chance = random.randint(1, 12)  # 12 tipos de gostosuras diferentes
 
-    # Enviar a mensagem de gostosura com a imagem
-    bot.send_photo(message.chat.id, url_imagem, caption=resultado)
+    if chance == 1:
+        cenouras_ganhas = random.randint(50, 100)
+        aumentar_cenouras(user_id, cenouras_ganhas)
+        emoji = random.choice(["🍬", "🍪", "🍭", "🍩", "🧁", "🧇", "🍫", "🎂", "🍡", "🍨", "🍰", "🍯", "🥞", "🍦", "🍮", "🍧"])
+        bot.send_message(user_id, f"{emoji} Você encontrou um saco de doces! Parabéns, recebeu {cenouras_ganhas} cenouras!")
+
+    elif chance == 2:
+        adicionar_carta_faltante_halloween(user_id)
+
+    elif chance == 3:
+        adicionar_vip_temporario(user_id, GRUPO_SUGESTAO)
+
+    elif chance == 4:
+        adicionar_protecao_temporaria(user_id)
+
+    elif chance == 5:
+        realizar_combo_gostosura(user_id)
+
+    elif chance == 6:
+        encontrar_abobora(user_id)
+
+    elif chance == 7:
+        adicionar_caixa_misteriosa(user_id)
+
+    elif chance == 8:
+        realizar_escolha_surpresa(user_id)
+
+    elif chance == 9:
+        ativar_fonte_extra(user_id)
+
+    elif chance == 10:
+        adicionar_inverter_travessura(user_id)
+
+    elif chance == 11:
+        adicionar_super_boost_cenouras(user_id, multiplicador=2, duracao_horas=6)
+
+    elif chance == 12:
+        compartilhar_gostosura(user_id)
+
+
 
 def travessura(message):
     funcoes_travessura = [
@@ -195,6 +215,33 @@ def handle_halloween(message):
     else:
         travessura(message)  # Executa uma das funções de travessura
 
+@bot.callback_query_handler(func=lambda call: call.data.startswith("descartar_caixa_"))
+def callback_descartar_caixa(call):
+    user_id = call.from_user.id
+    numero_caixa = int(call.data.split("_")[-1])
+
+    descartar_caixa_misteriosa(user_id, numero_caixa)
+@bot.callback_query_handler(func=lambda call: call.data.startswith("escolha_porta_"))
+def callback_escolha_porta(call):
+    user_id = int(call.data.split("_")[-1])
+    porta_escolhida = call.data.split("_")[2]
+
+    # Recuperar os prêmios salvos para esse jogador
+    premios = recuperar_premios_escolha(user_id)
+
+    # Identificar qual prêmio foi escolhido
+    if porta_escolhida == "1":
+        premio = premios[0]
+    elif porta_escolhida == "2":
+        premio = premios[1]
+    elif porta_escolhida == "3":
+        premio = premios[2]
+
+    # Enviar a recompensa para o jogador
+    bot.send_message(user_id, f"🎉 Parabéns! Você escolheu a {porta_escolhida} e ganhou: {premio}")
+
+    # Processar o prêmio (cenouras, VIP, cartas etc.)
+    processar_premio(user_id, premio)
 
 @bot.message_handler(commands=['jogodavelha'])
 def handle_jogo_da_velha(message):

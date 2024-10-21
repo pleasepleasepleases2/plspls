@@ -696,62 +696,73 @@ def handle_100vip(message):
         fechar_conexao(cursor, conn)
 
 
-# Função que realiza uma gostosura aleatória
+import random
+import traceback
+
+url_imagem = "https://pub-6f23ef52e8614212a14d24b0cf55ae4a.r2.dev/BQACAgEAAxkBAAIcfGcVeT6gaLXd0DKA7aihUQJfV62hAAJMBQACSV6xRD2puYHoSyajNgQ.jpg"
+
 def realizar_halloween_gostosura(user_id):
-    print(f"DEBUG: Iniciando gostosura para o usuário {user_id}")
-    chance = random.randint(1, 12)  # 12 tipos de gostosuras diferentes
-    print(f"DEBUG: Chance sorteada: {chance}")
+    try:
+        print(f"DEBUG: Iniciando gostosura para o usuário {user_id}")
+        chance = random.randint(1, 12)  # 12 tipos de gostosuras diferentes
+        print(f"DEBUG: Chance sorteada: {chance}")
 
-    if chance == 1:
-        cenouras_ganhas = random.randint(50, 100)
-        print(f"DEBUG: Cenouras ganhas: {cenouras_ganhas}")
-        aumentar_cenouras(user_id, cenouras_ganhas)
-        emoji = random.choice(["🍬", "🍪", "🍭", "🍩", "🧁", "🧇", "🍫", "🎂", "🍡", "🍨", "🍰", "🍯", "🥞", "🍦", "🍮", "🍧"])
-        bot.send_message(user_id, f"{emoji} Você encontrou um saco de doces! Parabéns, recebeu {cenouras_ganhas} cenouras!")
+        if chance == 1:
+            cenouras_ganhas = random.randint(50, 100)
+            aumentar_cenouras(user_id, cenouras_ganhas)
+            emoji = random.choice(emojis_gostosura)
+            bot.send_message(user_id, f"{emoji} Você encontrou um saco de doces! Parabéns, recebeu {cenouras_ganhas} cenouras!")
+            print(f"DEBUG: {cenouras_ganhas} cenouras enviadas ao usuário {user_id}")
 
-    elif chance == 2:
-        print("DEBUG: Adicionando carta faltante de Halloween")
-        adicionar_carta_faltante_halloween(user_id)
+        elif chance == 2:
+            print(f"DEBUG: Adicionando carta faltante de Halloween para o usuário {user_id}")
+            adicionar_carta_faltante_halloween(user_id)
 
-    elif chance == 3:
-        print("DEBUG: Adicionando VIP temporário")
-        adicionar_vip_temporario(user_id, GRUPO_SUGESTAO)
+        elif chance == 3:
+            print(f"DEBUG: Adicionando VIP temporário para o usuário {user_id}")
+            adicionar_vip_temporario(user_id, GRUPO_SUGESTAO)
 
-    elif chance == 4:
-        print("DEBUG: Adicionando proteção temporária")
-        adicionar_protecao_temporaria(user_id)
+        elif chance == 4:
+            print(f"DEBUG: Adicionando proteção temporária para o usuário {user_id}")
+            adicionar_protecao_temporaria(user_id)
 
-    elif chance == 5:
-        print("DEBUG: Realizando combo de gostosura")
-        realizar_combo_gostosura(user_id)
+        elif chance == 5:
+            print(f"DEBUG: Realizando combo de gostosura para o usuário {user_id}")
+            realizar_combo_gostosura(user_id)
 
-    elif chance == 6:
-        print("DEBUG: Encontrando abóbora")
-        encontrar_abobora(user_id)
+        elif chance == 6:
+            print(f"DEBUG: Encontrando abóbora para o usuário {user_id}")
+            encontrar_abobora(user_id)
 
-    elif chance == 7:
-        print("DEBUG: Adicionando caixa misteriosa")
-        adicionar_caixa_misteriosa(user_id)
+        elif chance == 7:
+            print(f"DEBUG: Ganhando caixa misteriosa para o usuário {user_id}")
+            ganhar_caixa_misteriosa(user_id)
 
-    elif chance == 8:
-        print("DEBUG: Realizando escolha surpresa")
-        realizar_escolha_surpresa(user_id)
+        elif chance == 8:
+            print(f"DEBUG: Mostrando portas de escolha para o usuário {user_id}")
+            mostrar_portas_escolha(user_id)
 
-    elif chance == 9:
-        print("DEBUG: Ativando fonte extra")
-        ativar_fonte_extra(user_id)
+        elif chance == 9:
+            print(f"DEBUG: Ativando fonte extra para o usuário {user_id}")
+            ativar_fonte_extra(user_id)
 
-    elif chance == 10:
-        print("DEBUG: Adicionando chance de inverter travessura")
-        adicionar_inverter_travessura(user_id)
+        elif chance == 10:
+            print(f"DEBUG: Adicionando inversão de travessura para o usuário {user_id}")
+            adicionar_inverter_travessura(user_id)
 
-    elif chance == 11:
-        print("DEBUG: Adicionando super boost de cenouras")
-        adicionar_super_boost_cenouras(user_id, multiplicador=2, duracao_horas=6)
+        elif chance == 11:
+            print(f"DEBUG: Adicionando super boost de cenouras para o usuário {user_id}")
+            adicionar_super_boost_cenouras(user_id, multiplicador=2, duracao_horas=6)
 
-    elif chance == 12:
-        print("DEBUG: Compartilhando gostosura")
-        compartilhar_gostosura(user_id)
+        elif chance == 12:
+            print(f"DEBUG: Iniciando compartilhamento de gostosura para o usuário {user_id}")
+            iniciar_compartilhamento(user_id)
+
+    except Exception as e:
+        print(f"DEBUG: Erro ao realizar gostosura para o usuário {user_id}: {e}")
+        traceback.print_exc()
+        bot.send_message(user_id, "Ocorreu um erro ao realizar a gostosura.")
+
 
 
 # Função que realiza uma travessura aleatória

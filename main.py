@@ -139,18 +139,6 @@ def votar_usuario(call):
 
 # URL da imagem a ser enviada
 url_imagem = "https://pub-6f23ef52e8614212a14d24b0cf55ae4a.r2.dev/BQACAgEAAxkBAAIcfGcVeT6gaLXd0DKA7aihUQJfV62hAAJMBQACSV6xRD2puYHoSyajNgQ.jpg"
-def realizar_halloween_gostosura(user_id):
-    chance = random.randint(1, 100)
-
-    if chance <= 50:
-        # Cenouras como gostosura
-        cenouras_ganhas = random.randint(50, 100)
-        aumentar_cenouras(user_id, cenouras_ganhas)
-        emoji = random.choice(["🍬", "🍪", "🍭", "🍩", "🧁", "🧇", "🍫", "🎂", "🍡", "🍨", "🍰", "🍯", "🥞", "🍦", "🍮", "🍧"])
-        bot.send_message(user_id, f"{emoji} Você encontrou um saco de doces! Parabéns, recebeu {cenouras_ganhas} cenouras!")
-    else:
-        # Adicionar carta faltante do evento como gostosura
-        adicionar_carta_faltante_evento(user_id)
 
 def adicionar_carta_faltante_halloween(user_id,num_cartas):
     try:
@@ -182,10 +170,8 @@ def adicionar_carta_faltante_halloween(user_id,num_cartas):
         print(f"Erro ao adicionar carta de Halloween faltante: {e}")
     finally:
         fechar_conexao(cursor, conn)
-import random
-from datetime import timedelta, datetime
 
-def adicionar_vip_temporario(user_id, grupo_sugestao):
+def adicionar_vip_temporario(user_id, grupo_sugestao,chat_id):
     try:
         conn, cursor = conectar_banco_dados()
 
@@ -195,7 +181,7 @@ def adicionar_vip_temporario(user_id, grupo_sugestao):
 
         if ja_vip:
             # Se já for VIP, realiza outra gostosura
-            realizar_halloween_gostosura(user_id)
+            realizar_halloween_gostosura(user_id, chat_id)
         else:
             # Se não for VIP, dar VIP por um período aleatório de 1 a 7 dias
             dias_vip = random.randint(1, 7)
@@ -212,7 +198,7 @@ def adicionar_vip_temporario(user_id, grupo_sugestao):
             bot.send_message(grupo_sugestao, f"🎉 O usuário {user_id} ganhou VIP por {dias_vip} dias!")
 
             # Informar o usuário que ganhou VIP
-            bot.send_message(user_id, f"🎁 Parabéns! Você ganhou VIP por {dias_vip} dias. Aproveite!")
+            bot.send_message(chat_id, f"🎁 Parabéns! Você ganhou VIP por {dias_vip} dias. Aproveite!")
 
     except Exception as e:
         print(f"Erro ao adicionar VIP temporário: {e}")
@@ -283,7 +269,7 @@ def realizar_combo_gostosura(user_id, chat_id):
             mensagem_combo += "🛡️ Bônus ativado: Você está protegido contra travessuras!\n"
 
         elif efeito_escolhido == "VIP de 1 dia":
-            adicionar_vip_temporario(user_id, GRUPO_SUGESTAO, dias=1)
+            adicionar_vip_temporario(user_id, GRUPO_SUGESTAO, dias=1,chat_id)
             mensagem_combo += "⚡ Bônus ativado: Você recebeu VIP por 1 dia!\n"
 
         # Enviar a mensagem final com todas as informações
@@ -825,7 +811,7 @@ def realizar_halloween_gostosura(user_id, chat_id):
 
         elif chance == 3:
             print(f"DEBUG: Adicionando VIP temporário para o usuário {user_id}")
-            adicionar_vip_temporario(user_id, GRUPO_SUGESTAO)
+            adicionar_vip_temporario(user_id, GRUPO_SUGESTAO,chat_id)
 
         elif chance == 4:
             print(f"DEBUG: Adicionando proteção temporária para o usuário {user_id}")

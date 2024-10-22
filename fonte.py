@@ -102,8 +102,11 @@ def comando_sorte(message):
 
         cursor.execute("INSERT INTO sorte_log (id_usuario, quantidade_ganha, timestamp) VALUES (%s, %s, %s)", (user_id, sorteio, datetime.now()))
         conn.commit()
-
-        bot.send_message(message.chat.id, f"<i>A sorte está ao seu favor!</i> \nVocê comprou uma raspadinha e ganhou <b>{sorteio}</b> cenouras!", parse_mode="HTML")
+        texto=f"<i>A sorte está ao seu favor!</i> \nVocê comprou uma raspadinha e ganhou <b>{sorteio}</b> cenouras!"
+        if verificar_travessura_embaralhamento(user_id):
+            texto = embaralhar_mensagem(texto)  # Embaralha a mensagem se a travessura estiver ativa
+    
+        bot.send_message(message.chat.id, text=texto, parse_mode="HTML")
     except Exception as e:
         bot.send_message(message.chat.id, f"Ocorreu um erro ao processar o comando /raspadinha: {e}")
     finally:
@@ -138,6 +141,9 @@ def handle_fazer_pedido(call):
         caption = ("<b>⛲: Para pedir os seus peixes é simples!</b> \n\nMe envie até <b>5 IDs</b> dos peixes e a quantidade de cenouras que você quer doar "
                    "\n(eu aceito qualquer quantidade entre 10 e 20 cenouras...) \n\n<i>exemplo: ID1 ID2 ID3 ID4 ID5 cenouras</i>")
         media = InputMediaPhoto(image_url, caption=caption, parse_mode="HTML")
+        if verificar_travessura_embaralhamento(user_id):
+            caption = embaralhar_mensagem(caption)  # Embaralha a mensagem se a travessura estiver ativa
+    
         bot.edit_message_media(media, chat_id=call.message.chat.id, message_id=call.message.message_id)
         
         bot.register_next_step_handler(call.message, process_wish)
@@ -156,15 +162,5 @@ def processar_pedido_peixes(call):
     except Exception as e:
         print(f"Erro ao processar o pedido de peixes: {e}")
 
-def handle_poco_dos_desejos(call):
-    usuario = call.from_user.first_name
-    image_url = "https://telegra.ph/file/94c9c66af4ca4d6f0a3e5.jpg"
-    caption = (f"<i>Enquanto os demais camponeses estavam distraídos com suas pescas, {usuario} caminhava para um lugar mais distante, até que encontrou uma floresta mágica.\n\n</i>"
-               "<i>Já havia escutado seus colegas falando da mesma mas sempre duvidou que era real.</i>\n\n"
-               "⛲: <i><b>Oh! Olá camponês, imagino que a dona do jardim tenha te mandado pra cá, certo?</b></i>\n\n"
-               "<i>Apesar da confusão com a voz repentina, perguntou a fonte o que aquilo significava.\n\n</i>"
-               "⛲: <i><b>Sou uma fonte dos desejos! você tem direito a fazer um pedido, em troca eu peço apenas algumas cenouras. Se os peixes que você deseja estiverem disponíveis e a sorte ao seu favor eles irão aparecer no seu armazém. Se não, volte mais tarde com outras cenouras.</b></i>")
-    media = InputMediaPhoto(image_url, caption=caption, parse_mode="HTML")
-    bot.edit_message_media(media, chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=create_wish_buttons())
 
 

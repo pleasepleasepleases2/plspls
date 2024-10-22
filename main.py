@@ -847,6 +847,7 @@ def realizar_halloween_gostosura(user_id, chat_id):
 
         elif chance == 8:
             print(f"DEBUG: Mostrando portas de escolha para o usuário {user_id}")
+            bot.send_message(chat_id, f"🎃 Parabéns! 3 portas foram enviadas para o seu privado, escolha com sabedoria!")
             mostrar_portas_escolha(user_id)
 
         elif chance == 9:

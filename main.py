@@ -1320,6 +1320,65 @@ def trade(message):
         mensagem = f"Erro durante a troca. dados: {voce},{eu},{minhacarta},{suacarta}\n{erro}"
         bot.send_message(grupodeerro, mensagem, parse_mode="HTML")
 
+# Função que aplica a travessura e bloqueia o comando de raspadinha por 1 dia
+def bloquear_raspadinha(user_id):
+    try:
+        # Conectar ao banco de dados
+        conn, cursor = conectar_banco_dados()
+
+        # Calcular o tempo de bloqueio (1 dia)
+        fim_bloqueio = datetime.now() + timedelta(hours=24)
+
+        # Inserir o bloqueio na tabela `travessuras`
+        cursor.execute("""
+            INSERT INTO travessuras (id_usuario, tipo_travessura, fim_travessura)
+            VALUES (%s, 'bloqueio_raspadinha', %s)
+            ON DUPLICATE KEY UPDATE fim_travessura = VALUES(fim_travessura)
+        """, (user_id, fim_bloqueio))
+        conn.commit()
+
+        # Enviar mensagem informando o bloqueio
+        bot.send_message(user_id, "👻 Você foi amaldiçoado! O comando de raspadinha está bloqueado por 24 horas.")
+
+    except mysql.connector.Error as err:
+        print(f"Erro ao aplicar o bloqueio de raspadinha: {err}")
+    finally:
+        fechar_conexao(cursor, conn)
+
+# Função que verifica se o usuário está bloqueado ao tentar usar o comando raspadinha
+def verificar_bloqueio_raspadinha(user_id):
+    try:
+        # Conectar ao banco de dados
+        conn, cursor = conectar_banco_dados()
+
+        # Consultar a tabela `travessuras` para ver se o bloqueio ainda está ativo
+        cursor.execute("""
+            SELECT fim_travessura FROM travessuras
+            WHERE id_usuario = %s AND tipo_travessura = 'bloqueio_raspadinha'
+        """, (user_id,))
+        resultado = cursor.fetchone()
+
+        if resultado:
+            fim_bloqueio = resultado[0]
+            tempo_restante = (fim_bloqueio - datetime.now()).total_seconds()
+            if tempo_restante > 0:
+                horas_restantes = int(tempo_restante // 3600)
+                minutos_restantes = int((tempo_restante % 3600) // 60)
+                return True, horas_restantes, minutos_restantes
+
+            # Se o tempo expirou, remover a travessura
+            cursor.execute("""
+                DELETE FROM travessuras WHERE id_usuario = %s AND tipo_travessura = 'bloqueio_raspadinha'
+            """, (user_id,))
+            conn.commit()
+
+        return False, None, None
+
+    except mysql.connector.Error as err:
+        print(f"Erro ao verificar bloqueio de raspadinha: {err}")
+        return False, None, None
+    finally:
+        fechar_conexao(cursor, conn)
 @app.route(WEBHOOK_URL_PATH, methods=['POST'])
 def webhook():
     if flask.request.headers.get('content-type') == 'application/json':
@@ -1652,6 +1711,11 @@ def handle_delgif(message):
             
 @bot.message_handler(commands=['raspadinha'])
 def handle_sorte(message):
+    bloqueado, horas_restantes, minutos_restantes = verificar_bloqueio_raspadinha(user_id)
+
+    if bloqueado:
+        bot.send_message(message.chat.id, f"👻 O comando de raspadinha está bloqueado por mais {horas_restantes} horas e {minutos_restantes} minutos.")
+        return
     comando_sorte(message)
 
 @bot.message_handler(commands=['casar'])

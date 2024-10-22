@@ -983,6 +983,113 @@ def verificar_bloqueio_comandos(user_id):
         return False, 0
     finally:
         fechar_conexao(cursor, conn)
+from datetime import datetime, timedelta
+# Função para aplicar uma travessura aleatória, exceto a praga
+def aplicar_travessura(user_id, chat_id):
+    try:
+        print(f"DEBUG: Aplicando travessura para o usuário {user_id}")
+        # Lista de travessuras exceto a praga
+        travessuras = [
+            "perder_cenouras",            # 1. Perde uma quantidade de cenouras
+            "mudar_nome_engracado",       # 2. Nome do jogador é alterado para algo engraçado
+            "mudar_musica_ze_felipe",     # 3. Música do perfil é alterada para uma das músicas do Zé Felipe
+            "mudar_bio_engracada",        # 4. Bio do jogador é alterada para algo engraçado
+            "mudar_fav_aleatorio",        # 5. O favorito do jogador é alterado para uma carta aleatória
+            "bloqueio_pesca",             # 6. Bloqueio de pescar por alguns minutos
+            "bloqueio_comandos",          # 7. Bloqueio de enviar comandos (invisível)
+            "mensagens_embaralhadas",     # 8. Mensagens do bot são embaralhadas
+            "apagar_carta_aleatoria"      # 22. Apaga uma carta aleatória do inventário
+        ]
+        
+        # Escolher uma travessura aleatória (exceto a praga)
+        travessura_escolhida = random.choice(travessuras)
+        print(f"DEBUG: Travessura escolhida: {travessura_escolhida}")
+
+        # Aplicar a travessura escolhida
+        if travessura_escolhida == "perder_cenouras":
+            perder_cenouras(user_id, chat_id)
+        elif travessura_escolhida == "mudar_nome_engracado":
+            mudar_nome_engracado(user_id, chat_id)
+        elif travessura_escolhida == "mudar_musica_ze_felipe":
+            mudar_musica_ze_felipe(user_id, chat_id)
+        elif travessura_escolhida == "mudar_bio_engracada":
+            mudar_bio_engracada(user_id, chat_id)
+        elif travessura_escolhida == "mudar_fav_aleatorio":
+            mudar_fav_aleatorio(user_id, chat_id)
+        elif travessura_escolhida == "bloqueio_pesca":
+            bloquear_pesca(user_id, chat_id)
+        elif travessura_escolhida == "bloqueio_comandos":
+            bloquear_comandos(user_id, chat_id)
+        elif travessura_escolhida == "mensagens_embaralhadas":
+            embaralhar_mensagens(user_id, chat_id)
+        elif travessura_escolhida == "apagar_carta_aleatoria":
+            apagar_carta_aleatoria(user_id, chat_id)
+
+    except Exception as e:
+        print(f"Erro ao aplicar a travessura: {e}")
+        bot.send_message(chat_id, f"Ocorreu um erro ao aplicar a travessura.")
+
+# Função de contagem regressiva para a praga
+def contagem_regressiva_praga(user_id, chat_id):
+    try:
+        # Espera por 10 minutos
+        time.sleep(600)  # 600 segundos = 10 minutos
+
+        # Se o usuário ainda estiver com a praga, aplica uma travessura aleatória
+        if jogo_praga.get('user_id') == user_id:
+            aplicar_travessura(user_id, chat_id)  # Aplica uma travessura aleatória
+            bot.send_message(chat_id, "💀 Você não passou a praga a tempo. A travessura foi aplicada!")
+            jogo_praga.clear()  # Limpar a praga
+
+    except Exception as e:
+        bot.send_message(chat_id, f"Erro ao executar a contagem regressiva da praga: {e}")
+# Dicionário para armazenar quem tem a praga e o horário
+jogo_praga = {}
+
+# Função para iniciar a travessura de pega-pega
+def iniciar_travessura_praga(user_id, chat_id):
+    try:
+        # Inicia a praga para o usuário
+        bot.send_message(chat_id, f"👻 Você foi amaldiçoado com uma praga! Passe a praga para outra pessoa usando +praga em até 10 minutos, ou será afetado pela travessura!")
+        
+        # Salvar a praga e o horário inicial
+        jogo_praga['user_id'] = user_id
+        jogo_praga['start_time'] = time.time()
+
+        # Iniciar contagem regressiva de 10 minutos
+        threading.Thread(target=contagem_regressiva_praga, args=(user_id, chat_id,)).start()
+
+    except Exception as e:
+        bot.send_message(chat_id, f"Erro ao iniciar a travessura de praga: {e}")
+
+# Função para o comando +praga (responder a uma mensagem de outro usuário)
+@bot.message_handler(func=lambda message: message.text.startswith('+praga'))
+def passar_praga(message):
+    try:
+        # O usuário deve responder à mensagem de outro usuário
+        if not message.reply_to_message:
+            bot.send_message(message.chat.id, "👻 Você precisa responder a uma mensagem de outro usuário para passar a praga!")
+            return
+
+        user_id = message.from_user.id
+        target_user_id = message.reply_to_message.from_user.id
+        chat_id = message.chat.id
+
+        # Verificar se o usuário tem a praga
+        if jogo_praga.get('user_id') != user_id:
+            bot.send_message(chat_id, "👻 Você não tem a praga para passar!")
+            return
+
+        # Transferir a praga para o outro usuário
+        jogo_praga['user_id'] = target_user_id
+        jogo_praga['start_time'] = time.time()
+
+        # Informar o alvo que ele recebeu a praga
+        bot.send_message(chat_id, f"👻 {message.reply_to_message.from_user.first_name}, você recebeu a praga! Passe para outra pessoa ou sofrerá a travessura!")
+        bot.send_message(user_id, "🎃 Você passou a praga para outro usuário com sucesso!")
+
+    except Exception as e:
+        bot.send_message(message.chat.id, f"Erro ao passar a praga: {e}")
 
 def realizar_halloween_travessura(user_id, chat_id):
     try:

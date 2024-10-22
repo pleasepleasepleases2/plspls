@@ -903,7 +903,7 @@ def realizar_halloween_gostosura(user_id, chat_id):
 
         elif chance == 12:
             print(f"DEBUG: Iniciando compartilhamento de gostosura para o usuário {user_id}")
-            iniciar_compartilhamento(user_id)
+            iniciar_compartilhamento(user_id,chat_id)
 
     except Exception as e:
         print(f"DEBUG: Erro ao realizar gostosura para o usuário {user_id}: {e}")

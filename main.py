@@ -399,6 +399,40 @@ def compartilhar_cenouras(user_id, target_user_id):
     
     finally:
         fechar_conexao(cursor, conn)
+@bot.callback_query_handler(func=lambda call: call.data.startswith("descartar_caixa") or call.data == "recusar_caixa")
+def callback_descartar_ou_recusar_caixa(call):
+    user_id = call.from_user.id
+    chat_id = call.message.chat.id
+
+    if call.data == "recusar_caixa":
+        # O usuário decidiu não descartar nenhuma caixa e recusar a nova
+        bot.send_message(chat_id, "Você decidiu recusar a nova Caixa Misteriosa.")
+        return
+
+    # Caso contrário, o usuário decidiu descartar uma caixa
+    numero_caixa = int(call.data.split("_")[-1])
+
+    try:
+        conn, cursor = conectar_banco_dados()
+
+        # Remover a caixa escolhida do inventário
+        cursor.execute("DELETE FROM caixas_misteriosas WHERE id_usuario = %s AND numero_caixa = %s", (user_id, numero_caixa))
+        conn.commit()
+
+        bot.send_message(chat_id, f"🎁 Você jogou fora a Caixa Misteriosa número {numero_caixa}.")
+
+        # Atribuir uma nova caixa misteriosa
+        novo_numero_caixa = random.randint(1, 10000)
+        cursor.execute("INSERT INTO caixas_misteriosas (id_usuario, numero_caixa) VALUES (%s, %s)", (user_id, novo_numero_caixa))
+        conn.commit()
+
+        bot.send_message(chat_id, f"🎁 Você ganhou uma nova Caixa Misteriosa! Número da nova caixa: {novo_numero_caixa}.")
+
+    except Exception as e:
+        print(f"Erro ao descartar a Caixa Misteriosa: {e}")
+
+    finally:
+        fechar_conexao(cursor, conn)
 
 def encontrar_abobora(user_id,chat_id):
     try:
@@ -442,33 +476,39 @@ def encontrar_abobora(user_id,chat_id):
     finally:
         fechar_conexao(cursor, conn)
 
-def ganhar_caixa_misteriosa(user_id,chat_id):
+def ganhar_caixa_misteriosa(user_id, chat_id):
     try:
         conn, cursor = conectar_banco_dados()
 
         # Verificar quantas caixas o usuário já tem
-        cursor.execute("SELECT COUNT(*) FROM caixas_misteriosas WHERE id_usuario = %s", (user_id,))
-        quantidade_caixas = cursor.fetchone()[0]
+        cursor.execute("SELECT numero_caixa FROM caixas_misteriosas WHERE id_usuario = %s", (user_id,))
+        caixas = cursor.fetchall()
 
-        if quantidade_caixas >= 3:
-            bot.send_message(user_id, "🎁 Você já tem 3 Caixas Misteriosas no estoque. Deseja jogar uma fora para ganhar uma nova?")
-            # Implementar a lógica de escolha para jogar fora uma caixa ou recusar
+        if len(caixas) >= 3:
+            # O usuário tem 3 caixas, perguntar se quer descartar uma
+            markup = InlineKeyboardMarkup()
+            for caixa in caixas:
+                numero_caixa = caixa[0]
+                markup.add(InlineKeyboardButton(text=f"Jogar fora Caixa {numero_caixa}", callback_data=f"descartar_caixa_{numero_caixa}"))
+            markup.add(InlineKeyboardButton(text="Recusar nova caixa", callback_data="recusar_caixa"))
+            bot.send_message(chat_id, "🎁 Você já tem 3 Caixas Misteriosas. Deseja jogar fora uma delas para ganhar uma nova?", reply_markup=markup)
             return
 
-        # Atribuir um número de caixa misteriosa aleatório (único para esse jogador)
-        numero_caixa = random.randint(1, 10000)  # Número de exemplo, ajustável conforme necessidade
+        # Se o usuário tiver menos de 3 caixas, atribuir uma nova
+        numero_caixa = random.randint(1, 10000)
 
         # Registrar a nova caixa no estoque do jogador
         cursor.execute("INSERT INTO caixas_misteriosas (id_usuario, numero_caixa) VALUES (%s, %s)", (user_id, numero_caixa))
         conn.commit()
 
-        bot.send_message(user_id, f"🎁 Você ganhou uma Caixa Misteriosa! Ela será revelada no último dia do evento. Número da caixa: {numero_caixa}")
+        bot.send_message(chat_id, f"🎁 Você ganhou uma Caixa Misteriosa! Ela será revelada no último dia do evento. Número da caixa: {numero_caixa}")
 
     except Exception as e:
         print(f"Erro ao ganhar Caixa Misteriosa: {e}")
     
     finally:
         fechar_conexao(cursor, conn)
+
 def descartar_caixa_misteriosa(user_id, numero_caixa):
     try:
         conn, cursor = conectar_banco_dados()

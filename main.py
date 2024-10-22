@@ -199,41 +199,55 @@ def adicionar_carta_faltante_halloween(user_id, chat_id, num_cartas):
     finally:
         fechar_conexao(cursor, conn)
 
-# Variável global para armazenar o status da praga
-jogo_praga = {
-    'user_id': None,       # ID do usuário que tem a praga
-    'start_time': None     # Hora em que a praga começou
-}
-        # O usuário deve responder à mensagem de outro usuário
-        if not message.reply_to_message:
-            bot.send_message(message.chat.id, "Você precisa responder a uma mensagem de outro usuário para passar a praga!")
-            return
-
-        user_id = message.from_user.id
-        target_user_id = message.reply_to_message.from_user.id
-        chat_id = message.chat.id
-
-        # Verificar se o usuário tem a praga
-        if not verificar_praga(user_id):
-            bot.send_message(chat_id, "👻 Você não tem a praga para passar!")
-            return
-
-        # Transferir a praga para o outro usuário
-        aplicar_praga(target_user_id)
-
-        # Remover a praga do usuário original
+def aplicar_praga(user_id):
+    try:
         conn, cursor = conectar_banco_dados()
-        cursor.execute("DELETE FROM travessuras WHERE id_usuario = %s AND tipo_travessura = 'praga'", (user_id,))
+
+        # Definir o tempo de duração da praga (exemplo: 10 minutos)
+        fim_travessura = datetime.now() + timedelta(minutes=10)
+
+        # Inserir a praga na tabela 'travessuras' para o usuário
+        cursor.execute("""
+            INSERT INTO travessuras (id_usuario, tipo_travessura, fim_travessura)
+            VALUES (%s, 'praga', %s)
+            ON DUPLICATE KEY UPDATE fim_travessura = %s
+        """, (user_id, fim_travessura, fim_travessura))
+
         conn.commit()
 
-        # Informar o alvo e o usuário original
-        bot.send_message(chat_id, f"👻 {message.reply_to_message.from_user.first_name}, você recebeu a praga! Passe para outra pessoa ou sofrerá a travessura!")
-        bot.send_message(user_id, "Você passou a praga para outro usuário!")
+        # Informar o usuário que ele foi amaldiçoado
+        bot.send_message(user_id, "👹 Travessura! Você foi amaldiçoado, use +praga para passar a praga para outra pessoa.")
 
     except Exception as e:
-        bot.send_message(message.chat.id, f"Erro ao passar a praga: {e}")
+        print(f"Erro ao aplicar praga: {e}")
     finally:
         fechar_conexao(cursor, conn)
+
+def verificar_praga(user_id):
+    try:
+        conn, cursor = conectar_banco_dados()
+
+        # Verificar se o usuário tem a praga ativa
+        cursor.execute("""
+            SELECT fim_travessura FROM travessuras
+            WHERE id_usuario = %s AND tipo_travessura = 'praga'
+        """, (user_id,))
+        resultado = cursor.fetchone()
+
+        if resultado:
+            fim_travessura = resultado[0]
+            # Se a praga ainda está ativa (tempo atual é menor que o fim da travessura)
+            if datetime.now() < fim_travessura:
+                return True
+
+        return False  # Não tem praga ativa
+    
+    except Exception as e:
+        print(f"Erro ao verificar praga: {e}")
+        return False
+    finally:
+        fechar_conexao(cursor, conn)
+
 def iniciar_praga(user_id):
     """
     Inicia a praga para um usuário.
@@ -241,33 +255,6 @@ def iniciar_praga(user_id):
     jogo_praga['user_id'] = user_id
     jogo_praga['start_time'] = time.time()
     bot.send_message(user_id, "👻 Você foi amaldiçoado com a praga! Passe a praga para outro usuário rapidamente, ou sofrerá uma travessura!")
-
-import threading
-def verificar_status_praga():
-    """
-    Verifica o status da praga e aplica a travessura se o tempo limite for atingido.
-    """
-    if jogo_praga['user_id']:
-        tempo_passado = time.time() - jogo_praga['start_time']
-        if tempo_passado >= 600:  # 10 minutos
-            aplicar_travessura_praga()
-def aplicar_travessura_praga():
-    """
-    Aplica a travessura da praga ao último usuário que ficou com ela após o tempo limite.
-    """
-    if jogo_praga['user_id'] and jogo_praga['start_time']:
-        # Verificar se já passou o tempo limite (ex.: 10 minutos)
-        tempo_passado = time.time() - jogo_praga['start_time']
-        if tempo_passado >= 600:  # 600 segundos = 10 minutos
-            user_id = jogo_praga['user_id']
-            bot.send_message(user_id, "👻 O tempo acabou! Você não conseguiu passar a praga e agora será amaldiçoado com uma travessura!")
-
-            # Aplicar uma travessura aleatória ao usuário
-            aplicar_travessura(user_id)
-
-            # Resetar a praga
-            jogo_praga['user_id'] = None
-            jogo_praga['start_time'] = None
 
 def ativar_sombra_rouba_cenouras(user_id):
     try:

@@ -113,6 +113,15 @@ def set_webhook():
 @app.route('/', methods=['GET', 'HEAD'])
 def index():
     return 'Server is running.'
+@bot.message_handler(func=lambda message: True)  # Captura todos os comandos
+def todos_comandos(message):
+    user_id = message.from_user.id
+
+    # Verificar se o usuário está bloqueado de enviar comandos
+    bloqueado, minutos_restantes = verificar_bloqueio_comandos(user_id)
+    if bloqueado:
+        bot.send_message(message.chat.id, f"👻 Você está invisível e seus comandos serão ignorados por mais {minutos_restantes} minutos.")
+        return
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith('votar_'))
 def votar_usuario(call):
@@ -909,6 +918,125 @@ def realizar_halloween_gostosura(user_id, chat_id):
         traceback.print_exc()
         bot.send_message(user_id, "Ocorreu um erro ao realizar a gostosura.")
 
+def mudar_favorito_usuario(user_id):
+    try:
+        conn, cursor = conectar_banco_dados()
+
+        # Selecionar uma carta aleatória do inventário do usuário
+        query = """
+            SELECT id_personagem FROM inventario
+            WHERE id_usuario = %s
+            ORDER BY RAND() LIMIT 1
+        """
+        cursor.execute(query, (user_id,))
+        resultado = cursor.fetchone()
+
+        if resultado:
+            novo_favorito = resultado[0]
+            # Atualizar o favorito na tabela `usuarios`
+            alterar_usuario(user_id, "fav", novo_favorito)
+            bot.send_message(user_id, f"👻 Travessura! Seu favorito agora é a carta ID {novo_favorito}!")
+        else:
+            bot.send_message(user_id, "Parece que você não tem cartas no inventário para fazer essa travessura.")
+
+    except Exception as e:
+        print(f"Erro ao mudar favorito para o usuário {user_id}: {e}")
+        traceback.print_exc()
+    finally:
+        fechar_conexao(cursor, conn)
+def verificar_bloqueio_pesca(user_id):
+    try:
+        conn, cursor = conectar_banco_dados()
+
+        # Verificar se o usuário está bloqueado
+        query = "SELECT fim_bloqueio FROM bloqueios_pesca WHERE id_usuario = %s"
+        cursor.execute(query, (user_id,))
+        resultado = cursor.fetchone()
+
+        if resultado:
+            fim_bloqueio = resultado[0]
+            if datetime.now() < fim_bloqueio:
+                # Se ainda estiver dentro do período de bloqueio, retorna True
+                return True, (fim_bloqueio - datetime.now()).seconds // 60
+        return False, 0
+
+    except Exception as e:
+        print(f"Erro ao verificar bloqueio de pesca para o usuário {user_id}: {e}")
+        traceback.print_exc()
+        return False, 0
+    finally:
+        fechar_conexao(cursor, conn)
+
+def bloquear_pesca_usuario(user_id, duracao_minutos):
+    try:
+        conn, cursor = conectar_banco_dados()
+
+        # Calcular o tempo de término do bloqueio
+        fim_bloqueio = datetime.now() + timedelta(minutes=duracao_minutos)
+
+        # Inserir ou atualizar o tempo de bloqueio na tabela `bloqueios_pesca`
+        query = """
+            INSERT INTO bloqueios_pesca (id_usuario, fim_bloqueio)
+            VALUES (%s, %s)
+            ON DUPLICATE KEY UPDATE fim_bloqueio = %s
+        """
+        cursor.execute(query, (user_id, fim_bloqueio, fim_bloqueio))
+        conn.commit()
+
+        # Enviar mensagem informando sobre o bloqueio
+        bot.send_message(user_id, f"👻 Travessura! Você está bloqueado de pescar pelos próximos {duracao_minutos} minutos!")
+
+    except Exception as e:
+        print(f"Erro ao bloquear pesca para o usuário {user_id}: {e}")
+        traceback.print_exc()
+    finally:
+        fechar_conexao(cursor, conn)
+def bloquear_comandos_usuario(user_id, duracao_minutos):
+    try:
+        conn, cursor = conectar_banco_dados()
+
+        # Calcular o tempo de término do bloqueio
+        fim_bloqueio = datetime.now() + timedelta(minutes=duracao_minutos)
+
+        # Inserir ou atualizar o tempo de bloqueio na tabela `bloqueios_comandos`
+        query = """
+            INSERT INTO bloqueios_comandos (id_usuario, fim_bloqueio)
+            VALUES (%s, %s)
+            ON DUPLICATE KEY UPDATE fim_bloqueio = %s
+        """
+        cursor.execute(query, (user_id, fim_bloqueio, fim_bloqueio))
+        conn.commit()
+
+        # Enviar mensagem informando sobre o bloqueio
+        bot.send_message(user_id, f"👻 Travessura! Você está invisível por {duracao_minutos} minutos. Nenhum comando será processado!")
+
+    except Exception as e:
+        print(f"Erro ao bloquear comandos para o usuário {user_id}: {e}")
+        traceback.print_exc()
+    finally:
+        fechar_conexao(cursor, conn)
+def verificar_bloqueio_comandos(user_id):
+    try:
+        conn, cursor = conectar_banco_dados()
+
+        # Verificar se o usuário está bloqueado
+        query = "SELECT fim_bloqueio FROM bloqueios_comandos WHERE id_usuario = %s"
+        cursor.execute(query, (user_id,))
+        resultado = cursor.fetchone()
+
+        if resultado:
+            fim_bloqueio = resultado[0]
+            if datetime.now() < fim_bloqueio:
+                # Se ainda estiver dentro do período de bloqueio, retorna True
+                return True, (fim_bloqueio - datetime.now()).seconds // 60
+        return False, 0
+
+    except Exception as e:
+        print(f"Erro ao verificar bloqueio de comandos para o usuário {user_id}: {e}")
+        traceback.print_exc()
+        return False, 0
+    finally:
+        fechar_conexao(cursor, conn)
 
 def realizar_halloween_travessura(user_id, chat_id):
     try:
@@ -926,37 +1054,31 @@ def realizar_halloween_travessura(user_id, chat_id):
             # Mudar o nome para algo engraçado
             nome_novo = random.choice(["Zé Bobo", "Palhaço Triste", "Mestre das Travessuras"])
             mudar_nome_usuario(user_id, nome_novo)
-            bot.send_message(chat_id, f"😂 Que travessura! Seu nome agora é {nome_novo}!")
 
         elif chance == 3:
             # Mudar a música para Zé Felipe
             nova_musica = random.choice(["Rap do Zé Felipe", "Bandido - Zé Felipe", "Malvada - Zé Felipe"])
             mudar_musica_usuario(user_id, nova_musica)
-            bot.send_message(chat_id, f"🎶 Travessura! Sua música agora é: {nova_musica}.")
 
         elif chance == 4:
             # Mudar a bio para uma bio engraçada
             bio_nova = random.choice(["Eu adoro travessuras!", "Perdi no jogo da vida.", "Me salva, Halloween!"])
             mudar_bio_usuario(user_id, bio_nova)
-            bot.send_message(chat_id, f"😂 Travessura! Sua bio agora é: {bio_nova}.")
 
         elif chance == 5:
             # Mudar o favorito para outra carta aleatória
-            carta_aleatoria = escolher_carta_aleatoria()
-            mudar_favorito(user_id, carta_aleatoria)
-            bot.send_message(chat_id, f"🎃 Travessura! Seu favorito foi alterado para {carta_aleatoria['nome']}.")
+            mudar_favorito_usuario(user_id)
 
         elif chance == 6:
-            # Bloquear de pescar por X minutos
-            minutos_bloqueio = random.randint(10, 60)
-            bloquear_acao(user_id, "pescar", minutos_bloqueio)
-            bot.send_message(chat_id, f"🎣 Travessura! Você está bloqueado de pescar por {minutos_bloqueio} minutos.")
+            # Bloquear pesca por um tempo aleatório entre 5 e 30 minutos
+            duracao_bloqueio = random.randint(5, 30)
+            bloquear_pesca_usuario(user_id, duracao_bloqueio)
 
         elif chance == 7:
-            # Bloquear de enviar comandos (usuário fica invisível)
-            bloquear_acao(user_id, "todos_comandos", 30)
-            bot.send_message(chat_id, "👻 Travessura! Você está invisível e não pode enviar comandos por 30 minutos.")
-
+            # Bloquear o envio de comandos por um tempo aleatório entre 5 e 30 minutos
+            duracao_bloqueio_comandos = random.randint(5, 30)
+            bloquear_comandos_usuario(user_id, duracao_bloqueio_comandos)
+            
         elif chance == 8:
             # Embaralhar as mensagens
             bot.send_message(chat_id, embaralhar_mensagem("🐯 Olá! Você tem disponível: X iscas. Boa pesca!"))

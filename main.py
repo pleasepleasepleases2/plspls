@@ -141,14 +141,14 @@ def votar_usuario(call):
 # URL da imagem a ser enviada
 url_imagem = "https://pub-6f23ef52e8614212a14d24b0cf55ae4a.r2.dev/BQACAgEAAxkBAAIcfGcVeT6gaLXd0DKA7aihUQJfV62hAAJMBQACSV6xRD2puYHoSyajNgQ.jpg"
 def mudar_bio_usuario(user_id, bio_nova):
-    alterar_usuario(user_id, "bio", bio_nova)
-    bot.send_message(user_id, f"😂 Travessura! Sua bio agora é: {bio_nova}.")
+    alterar_usuario(user_id, "bio", bio_nova,chat_id)
+    bot.send_message(chat_id, f"😂 Travessura! Sua bio agora é: {bio_nova}.")
 def mudar_musica_usuario(user_id, musica_nova):
-    alterar_usuario(user_id, "musica", musica_nova)
-    bot.send_message(user_id, f"🎶 Travessura! Sua música agora é: {musica_nova}.")
+    alterar_usuario(user_id, "musica", musica_nova,chat_id)
+    bot.send_message(chat_id, f"🎶 Travessura! Sua música agora é: {musica_nova}.")
 def mudar_nome_usuario(user_id, nome_novo):
-    alterar_usuario(user_id, "nome", nome_novo)
-    bot.send_message(user_id, f"😂 Travessura! Seu nome agora é {nome_novo}!")
+    alterar_usuario(user_id, "nome", nome_novo,chat_id)
+    bot.send_message(chat_id, f"😂 Travessura! Seu nome agora é {nome_novo}!")
 
 def adicionar_carta_faltante_halloween(user_id, chat_id, num_cartas):
     try:
@@ -1376,12 +1376,12 @@ def realizar_halloween_travessura(user_id, chat_id):
         elif chance == 2:
             # Mudar o nome para algo engraçado
             nome_novo = random.choice(["Zé Bobo", "Palhaço Triste", "Mestre das Travessuras"])
-            mudar_nome_usuario(user_id, nome_novo)
+            mudar_nome_usuario(user_id, nome_novo,chat_id)
 
         elif chance == 3:
             # Mudar a música para Zé Felipe
             nova_musica = random.choice(["Rap do Zé Felipe", "Bandido - Zé Felipe", "Malvada - Zé Felipe"])
-            mudar_musica_usuario(user_id, nova_musica)
+            mudar_musica_usuario(user_id, nova_musica,chat_id)
 
         elif chance == 4:
             # Mudar a bio para uma bio engraçada
@@ -1390,7 +1390,7 @@ def realizar_halloween_travessura(user_id, chat_id):
 
         elif chance == 5:
             # Mudar o favorito para outra carta aleatória
-            mudar_favorito_usuario(user_id)
+            mudar_favorito_usuario(user_id,chat_id)
 
         elif chance == 6:
             # Bloquear pesca por um tempo aleatório entre 5 e 30 minutos

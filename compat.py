@@ -117,13 +117,17 @@ def youcompat_command(message):
 
         diferenca = set(personagens_usuario_1.keys()) - set(personagens_usuario_2.keys())
         mensagem = f"<b>🎀 COMPATIBILIDADE 🎀 \n\n</b>🍎 | <b><i>{subcategoria_titulo}</i></b>\n🧺 |<b> Cesta de:</b> {nome_usuario_1} \n⛈️ | <b>Faltantes de:</b> {nome_usuario_2} \n\n"
-
+        # Verificar se a travessura está ativa e embaralhar, se necessário
+        if verificar_travessura_embaralhamento(message.from_user.id):
+            mensagem = embaralhar_mensagem(texto)
         if diferenca:
             for id_personagem in diferenca:
                 mensagem += f"<code>{id_personagem}</code> - {personagens_usuario_1.get(id_personagem)}\n"
         else:
             mensagem = "Parece que não temos um match. Tente outra espécie!"
-
+            # Verificar se a travessura está ativa e embaralhar, se necessário
+            if verificar_travessura_embaralhamento(message.from_user.id):
+                texto = embaralhar_mensagem(texto)
         bot.send_message(message.chat.id, mensagem, parse_mode="HTML", reply_to_message_id=message.id)
 
     except Exception as e:
@@ -167,13 +171,17 @@ def mecompat_command(message):
 
         diferenca = set(personagens_usuario_2.keys()) - set(personagens_usuario_1.keys())
         mensagem = f"<b>🎀 COMPATIBILIDADE 🎀 \n\n</b>🍎 | <b><i>{subcategoria_titulo}</i></b>\n🧺 |<b> Cesta de:</b> {nome_usuario_2} \n⛈️ | <b>Faltantes de:</b> {nome_usuario_1} \n\n"
-
+        # Verificar se a travessura está ativa e embaralhar, se necessário
+        if verificar_travessura_embaralhamento(message.from_user.id):
+            mensagem = embaralhar_mensagem(texto)
         if diferenca:
             for id_personagem in diferenca:
                 mensagem += f"<code>{id_personagem}</code> - {personagens_usuario_2.get(id_personagem)}\n"
         else:
             mensagem = "Parece que não temos um match."
-
+                # Verificar se a travessura está ativa e embaralhar, se necessário
+            if verificar_travessura_embaralhamento(message.from_user.id):
+                texto = embaralhar_mensagem(texto)
         bot.send_message(message.chat.id, mensagem, parse_mode="HTML", reply_to_message_id=message.id)
 
     except Exception as e:

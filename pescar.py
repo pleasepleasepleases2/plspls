@@ -598,3 +598,25 @@ def bloquear_pesca_usuario(user_id, duracao_minutos):
         traceback.print_exc()
     finally:
         fechar_conexao(cursor, conn)
+def verificar_bloqueio_comandos(user_id):
+    try:
+        conn, cursor = conectar_banco_dados()
+
+        # Verificar se o usuário está bloqueado
+        query = "SELECT fim_bloqueio FROM bloqueios_comandos WHERE id_usuario = %s"
+        cursor.execute(query, (user_id,))
+        resultado = cursor.fetchone()
+
+        if resultado:
+            fim_bloqueio = resultado[0]
+            if datetime.now() < fim_bloqueio:
+                # Se ainda estiver dentro do período de bloqueio, retorna True
+                return True, (fim_bloqueio - datetime.now()).seconds // 60
+        return False, 0
+
+    except Exception as e:
+        print(f"Erro ao verificar bloqueio de comandos para o usuário {user_id}: {e}")
+        traceback.print_exc()
+        return False, 0
+    finally:
+        fechar_conexao(cursor, conn)

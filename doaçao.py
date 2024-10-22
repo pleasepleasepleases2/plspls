@@ -191,7 +191,7 @@ def confirmar_doacao(call):
             texto_confirmacao = f"Doação de {doacao_str} realizada com sucesso!\n\n"
             texto_confirmacao += f"🧺 De {meunome}: {quantidade_doador_anterior}↝{quantidade_doador_atual}\n\n"
             texto_confirmacao += f"🧺 Para {seunome}: {quantidade_destinatario_anterior}↝{quantidade_destinatario_atual}\n"
-            if verificar_travessura_embaralhamento(user_id):
+            if verificar_travessura_embaralhamento(eu):
                 texto_confirmacao = embaralhar_mensagem(texto_confirmacao)  # Embaralha a mensagem se a travessura estiver ativa
     
             bot.edit_message_text(texto_confirmacao, chat_id=call.message.chat.id, message_id=call.message.message_id)

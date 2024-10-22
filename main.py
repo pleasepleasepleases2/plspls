@@ -760,7 +760,7 @@ def handle_100vip(message):
     finally:
         fechar_conexao(cursor, conn)
 # Função para iniciar a Fonte Extra
-def ativar_fonte_extra(user_id):
+def ativar_fonte_extra(user_id,chat_id):
     # Envia a mensagem pedindo os IDs dos peixes
     bot.send_message(user_id, "Você ativou uma Fonte Extra! Por favor, me envie até 5 IDs dos peixes que você quer usar separados por espaço.")
     
@@ -852,6 +852,7 @@ def realizar_halloween_gostosura(user_id, chat_id):
 
         elif chance == 9:
             print(f"DEBUG: Ativando fonte extra para o usuário {user_id}")
+            bot.send_message(chat_id, f"🎃 Parabéns! A fonte fez uma breve aparição no seu privado, corra antes que ela suma!")
             ativar_fonte_extra(user_id, chat_id)
 
         elif chance == 10:

@@ -1225,6 +1225,34 @@ def verificar_bloqueio_comandos(user_id):
         return False, 0
     finally:
         fechar_conexao(cursor, conn)
+def apagar_carta_aleatoria(user_id, chat_id):
+    try:
+        conn, cursor = conectar_banco_dados()
+
+        # Verificar se o jogador tem cartas no inventário
+        cursor.execute("SELECT id_personagem, nome FROM inventario WHERE id_usuario = %s", (user_id,))
+        cartas = cursor.fetchall()
+
+        if not cartas:
+            bot.send_message(chat_id, "👻 O demônio tentou, mas você não tem cartas no inventário para serem apagadas.")
+            return
+
+        # Selecionar uma carta aleatória para apagar
+        carta_apagada = random.choice(cartas)
+        id_carta, nome_carta = carta_apagada
+
+        # Remover a carta do inventário
+        cursor.execute("DELETE FROM inventario WHERE id_usuario = %s AND id_personagem = %s", (user_id, id_carta))
+        conn.commit()
+
+        # Informar o jogador sobre a carta apagada
+        bot.send_message(chat_id, f"👻 O demônio apagou a carta '{nome_carta}' do seu inventário!")
+
+    except Exception as e:
+        print(f"Erro ao apagar carta: {e}")
+        bot.send_message(chat_id, "Ocorreu um erro ao tentar apagar sua carta.")
+    finally:
+        fechar_conexao(cursor, conn)
 
 def aplicar_travessura(user_id, chat_id):
     try:
@@ -1265,7 +1293,8 @@ def aplicar_travessura(user_id, chat_id):
             embaralhar_mensagens(user_id, chat_id)
         elif travessura_escolhida == "apagar_carta_aleatoria":
             apagar_carta_aleatoria(user_id, chat_id)
-
+        elif tipo_travessura == 'apagar_carta':
+            apagar_carta_aleatoria(user_id, chat_id)
     except Exception as e:
         print(f"Erro ao aplicar a travessura: {e}")
         bot.send_message(chat_id, f"Ocorreu um erro ao aplicar a travessura.")
@@ -2169,13 +2198,100 @@ def handle_gnome(message):
         print(f"Erro: {e}")
     finally:
         fechar_conexao(cursor, conn)
+def verificar_categoria_errada(user_id):
+    try:
+        conn, cursor = conectar_banco_dados()
 
+        # Verificar se a travessura está ativa para o usuário
+        cursor.execute("""
+            SELECT fim_travessura FROM travessuras
+            WHERE id_usuario = %s AND tipo_travessura = 'categoria_errada'
+        """, (user_id,))
+        resultado = cursor.fetchone()
+
+        if resultado:
+            fim_travessura = resultado[0]
+            if datetime.now() < fim_travessura:  # Travessura ainda ativa
+                return True
+        
+        return False
+    
+    except Exception as e:
+        print(f"Erro ao verificar categoria errada: {e}")
+        return False
+    finally:
+        fechar_conexao(cursor, conn)
+def roubar_carta(user_id, chat_id):
+    try:
+        conn, cursor = conectar_banco_dados()
+
+        # Verificar se o jogador tem cartas no inventário
+        cursor.execute("SELECT id_personagem, nome FROM inventario WHERE id_usuario = %s", (user_id,))
+        cartas = cursor.fetchall()
+
+        if not cartas:
+            bot.send_message(chat_id, "👻 Você não tem cartas no inventário para serem roubadas.")
+            return
+
+        # Selecionar uma carta aleatória para roubar
+        carta_roubada = random.choice(cartas)
+        id_carta, nome_carta = carta_roubada
+
+        # Gerar a palavra que o jogador deve digitar
+        palavra_gerada = gerar_palavra_aleatoria()
+
+        # Avisar o jogador e dar a chance de impedir o roubo
+        bot.send_message(chat_id, f"⚠️ Um demônio está tentando roubar a carta '{nome_carta}'! Escreva a palavra '{palavra_gerada}' em 10 segundos para impedir o roubo!")
+
+        # Configurar o temporizador de 10 segundos
+        bot.register_next_step_handler_by_chat_id(chat_id, processar_resposta_palavra, user_id, id_carta, palavra_gerada, nome_carta)
+        bot.send_message(chat_id, "Você tem 10 segundos para responder...")
+
+    except Exception as e:
+        print(f"Erro ao tentar roubar carta: {e}")
+    finally:
+        fechar_conexao(cursor, conn)
+import time
+import random
+import string
+
+def gerar_palavra_aleatoria(tamanho=8):
+    letras = string.ascii_lowercase  # Gera uma palavra usando letras minúsculas
+    return ''.join(random.choice(letras) for i in range(tamanho))
+
+def processar_resposta_palavra(message, user_id, id_carta, palavra_gerada, nome_carta):
+    resposta = message.text.lower().strip()
+    chat_id = message.chat.id
+
+    # Verificar se a palavra digitada é a correta
+    if resposta == palavra_gerada:
+        bot.send_message(chat_id, f"🎉 Parabéns! Você impediu o demônio de roubar a carta '{nome_carta}'!")
+    else:
+        # Caso a resposta esteja errada ou o tempo limite seja excedido, remover a carta
+        try:
+            conn, cursor = conectar_banco_dados()
+            cursor.execute("DELETE FROM inventario WHERE id_usuario = %s AND id_personagem = %s", (user_id, id_carta))
+            conn.commit()
+            bot.send_message(chat_id, f"👻 O demônio roubou a carta '{nome_carta}' do seu inventário!")
+        except Exception as e:
+            print(f"Erro ao remover a carta roubada: {e}")
+        finally:
+            fechar_conexao(cursor, conn)
 
 def enviar_primeira_carta(chat_id, user_id, resultados_personagens, index):
     id_personagem, nome, subcategoria, categoria, quantidade_usuario, imagem_url = resultados_personagens[index]
 
+    # Verificar se a travessura de categoria errada está ativa
+    if verificar_categoria_errada(user_id):
+        # Selecionar uma categoria incorreta aleatoriamente
+        conn, cursor = conectar_banco_dados()
+        cursor.execute("SELECT subcategoria FROM personagens ORDER BY RAND() LIMIT 1")
+        categoria_errada = cursor.fetchone()[0]
+        fechar_conexao(cursor, conn)
+        categoria = categoria_errada  # Substituir a categoria correta pela errada
+
     # Criação da mensagem para a carta
-    mensagem = f"💌 | Personagem:\n\n<code>{id_personagem}</code> • {nome}\nde {subcategoria}\n"
+    mensagem = f"💌 | Personagem:\n\n<code>{id_personagem}</code> • {nome}\nde {subcategoria}\nCategoria: {categoria}\n"
     if quantidade_usuario > 0:
         mensagem += f"☀ | {quantidade_usuario}⤫"
     else:
@@ -2193,7 +2309,7 @@ def enviar_primeira_carta(chat_id, user_id, resultados_personagens, index):
     if gif_url:
         imagem_url = gif_url
 
-    # Enviar a primeira mensagem
+    # Enviar a mensagem com a carta
     try:
         if imagem_url.lower().endswith(".gif"):
             bot.send_animation(chat_id, imagem_url, caption=mensagem, parse_mode="HTML", reply_markup=keyboard)
@@ -2342,12 +2458,22 @@ def obter_id_e_enviar_info_com_imagem(message):
         fechar_conexao(cursor, conn)
 
 
-def enviar_mensagem_personagem(chat_id, resultado_personagem, message_id):
+def enviar_mensagem_personagem(chat_id, resultado_personagem, message_id, user_id):
     id_personagem, nome, subcategoria, quantidade_usuario, imagem_url = resultado_personagem[:5]
     cr = resultado_personagem[5] if len(resultado_personagem) > 5 else None
 
+    # Verificar se a travessura de categoria errada está ativa
+    if verificar_categoria_errada(user_id):
+        conn, cursor = conectar_banco_dados()
+        cursor.execute("SELECT subcategoria FROM personagens ORDER BY RAND() LIMIT 1")
+        categoria_errada = cursor.fetchone()[0]
+        fechar_conexao(cursor, conn)
+        categoria = categoria_errada
+    else:
+        categoria = subcategoria  # Usar a categoria correta se a travessura não estiver ativa
+
     # Montar a mensagem
-    mensagem = f"💌 | Personagem:\n\n<code>{id_personagem}</code> • {nome}\nde {subcategoria}"
+    mensagem = f"💌 | Personagem:\n\n<code>{id_personagem}</code> • {nome}\nde {categoria}"
     if quantidade_usuario > 0:
         mensagem += f"\n\n☀ | {quantidade_usuario}⤫"
     else:

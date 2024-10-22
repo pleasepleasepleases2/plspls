@@ -719,31 +719,50 @@ def handle_100vip(message):
 
     finally:
         fechar_conexao(cursor, conn)
-def ativar_fonte_extra(user_id, chat_id):
+# Função para iniciar a Fonte Extra
+def ativar_fonte_extra(user_id):
+    # Envia a mensagem pedindo os IDs dos peixes
+    bot.send_message(user_id, "Você ativou uma Fonte Extra! Por favor, me envie até 5 IDs dos peixes que você quer usar separados por espaço.")
+    
+    # Registra o próximo passo para aguardar os IDs
+    bot.register_next_step_handler_by_chat_id(user_id, processar_fonte_extra)
+
+# Função para processar a resposta com os IDs
+def processar_fonte_extra(message):
     try:
-        # Configuração padrão de cenouras para o pedido
-        quantidade_cenouras = random.randint(10, 20)
+        chat_id = message.chat.id
+        user_id = message.from_user.id
+        command_parts = message.text.split()  # Separar os IDs recebidos na resposta
+        id_cartas = list(map(int, command_parts))[:5]  # Pega até 5 IDs
+
+        # Verificar se foram fornecidos IDs válidos
+        if not id_cartas or len(id_cartas) == 0:
+            bot.send_message(chat_id, "Você não forneceu IDs válidos. Por favor, tente novamente.")
+            return
         
-        # IDs de cartas fictícias que o usuário pode ganhar
-        id_cartas = [random.randint(10000, 10100) for _ in range(5)]  # Exemplo de IDs de peixes/carta
-
+        # Realizar a lógica da fonte
+        quantidade_cenouras = random.randint(10, 20)  # Você pode modificar isso conforme necessário
         diminuir_cenouras(user_id, quantidade_cenouras)
-        adicionar_cenouras_banco(quantidade_cenouras)  # Adiciona as cenouras ao banco da cidade
 
+        # Simula o processo da fonte com base nos IDs fornecidos
         results = []
         for id_carta in id_cartas:
             chance = random.randint(1, 100)
-            if chance <= 15:  # 15% de chance de ganhar
+            if chance <= 15:  # 15% de chance de sucesso, você pode ajustar
                 results.append(id_carta)
                 update_inventory(user_id, id_carta)
 
+        # Enviar a resposta baseada nos resultados
         if results:
-            bot.send_message(chat_id, f"<i>As águas da fonte extra começam a circular em uma velocidade assustadora. Aparecem na sua cesta os seguintes peixes: <b>{', '.join(map(str, results))}</b>.</i>\n\nA fonte então desaparece.")
+            bot.send_message(chat_id, f"🎉 As águas da fonte revelaram os seguintes peixes: {', '.join(map(str, results))}")
         else:
-            bot.send_message(chat_id, "<i>A fonte extra nem se move ao receber suas cenouras, elas apenas desaparecem na água. Talvez você deva tentar novamente mais tarde...</i>")
-    
+            bot.send_message(chat_id, "A fonte se manteve tranquila e nada foi revelado desta vez. Tente novamente mais tarde!")
+
     except Exception as e:
-        bot.send_message(chat_id, f"Ocorreu um erro ao ativar a fonte extra: {e}")
+        print(f"Erro ao processar a Fonte Extra: {e}")
+        bot.send_message(message.chat.id, "Ocorreu um erro ao processar a sua Fonte Extra. Tente novamente.")
+
+
         
 url_imagem = "https://pub-6f23ef52e8614212a14d24b0cf55ae4a.r2.dev/BQACAgEAAxkBAAIcfGcVeT6gaLXd0DKA7aihUQJfV62hAAJMBQACSV6xRD2puYHoSyajNgQ.jpg"
 

@@ -269,7 +269,7 @@ def realizar_combo_gostosura(user_id, chat_id):
             mensagem_combo += "🛡️ Bônus ativado: Você está protegido contra travessuras!\n"
 
         elif efeito_escolhido == "VIP de 1 dia":
-            adicionar_vip_temporario(user_id, GRUPO_SUGESTAO, dias=1,chat_id)
+            adicionar_vip_temporario(user_id, chat_id, GRUPO_SUGESTAO, dias=1)
             mensagem_combo += "⚡ Bônus ativado: Você recebeu VIP por 1 dia!\n"
 
         # Enviar a mensagem final com todas as informações

@@ -178,7 +178,7 @@ def handle_me_command(message):
                 botao_doce = InlineKeyboardButton(text=f"🍭 {doces}", callback_data=f"votar_doce_{id_usuario}")
                 botao_fantasma = InlineKeyboardButton(text=f"👻 {fantasmas}", callback_data=f"votar_fantasma_{id_usuario}")
                 markup.add(botao_doce, botao_fantasma)
-                if verificar_travessura_embaralhamento(user_id):
+                if verificar_travessura_embaralhamento(id_usuario):
                     resposta = embaralhar_mensagem(resposta)  # Embaralha a mensagem se a travessura estiver ativa
                     
                 # Enviar a resposta do perfil com botões de votação e a imagem favorita

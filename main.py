@@ -595,25 +595,47 @@ def adicionar_inverter_travessura(user_id):
         print(f"Erro ao adicionar a chance de inverter a travessura: {e}")
     finally:
         fechar_conexao(cursor, conn)
+def adicionar_inverter_travessura(user_id):
+    try:
+        conn, cursor = conectar_banco_dados()
 
-# Função que será chamada quando o jogador for alvo de uma travessura
+        # Inserir ou atualizar a habilidade de inverter travessura
+        cursor.execute("""
+            INSERT INTO inverter_travessuras (id_usuario, pode_inverter)
+            VALUES (%s, %s)
+            ON DUPLICATE KEY UPDATE pode_inverter = VALUES(pode_inverter)
+        """, (user_id, True))
+        conn.commit()
+
+        bot.send_message(user_id, "🎃 Você ganhou a habilidade de inverter uma travessura! Quando for alvo, poderá reverter o efeito.")
+    except Exception as e:
+        print(f"Erro ao adicionar a chance de inverter a travessura: {e}")
+    finally:
+        fechar_conexao(cursor, conn)
+
 def verificar_inverter_travessura(user_id, atacante_id):
     try:
         conn, cursor = conectar_banco_dados()
-        cursor.execute("SELECT pode_inverter_travessura FROM usuarios WHERE id_usuario = %s", (user_id,))
+
+        # Verificar se o usuário tem a habilidade de inverter travessura
+        cursor.execute("SELECT pode_inverter FROM inverter_travessuras WHERE id_usuario = %s", (user_id,))
         resultado = cursor.fetchone()
-        if resultado and resultado[0]:  # Se o jogador tiver a habilidade de inverter
-            # Inverte a travessura
-            cursor.execute("UPDATE usuarios SET pode_inverter_travessura = %s WHERE id_usuario = %s", (False, user_id))
+
+        if resultado and resultado[0]:  # Se o usuário tem a habilidade
+            # Remove a habilidade após usá-la
+            cursor.execute("UPDATE inverter_travessuras SET pode_inverter = %s WHERE id_usuario = %s", (False, user_id))
             conn.commit()
+
+            # Notifica o atacante e o alvo
             bot.send_message(atacante_id, "👻 A travessura foi invertida e agora o efeito recai sobre você!")
             bot.send_message(user_id, "🎃 Você usou sua habilidade e inverteu a travessura!")
         else:
-            bot.send_message(user_id, "Você não possui a habilidade de inverter a travessura no momento.")
+            bot.send_message(user_id, "Você não possui a habilidade de inverter travessuras no momento.")
     except Exception as e:
         print(f"Erro ao verificar e inverter a travessura: {e}")
     finally:
         fechar_conexao(cursor, conn)
+
 def adicionar_super_boost_cenouras(user_id, multiplicador, duracao_horas,chat_id):
     try:
         conn, cursor = conectar_banco_dados()

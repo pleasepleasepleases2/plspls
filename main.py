@@ -98,7 +98,7 @@ song_cooldown_cache = TTLCache(maxsize=1000, ttl=15)
 cache = dc.Cache('./cache')
 task_queue = Queue()
 conn, cursor = conectar_banco_dados()
-
+GRUPO_SUGESTAO = -4546359573
 @app.route("/")
 def set_webhook():
 

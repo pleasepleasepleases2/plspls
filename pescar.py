@@ -552,7 +552,9 @@ def pescar(message):
         newrelic.agent.record_exception()    
         bot.send_message(message.chat.id, "Você foi banido permanentemente do garden. Entre em contato com o suporte caso haja dúvidas.", reply_to_message_id=message.message_id)
     except Exception as e:
-        print(f"Erro inesperado: {e}")
+        error_details = traceback.format_exc()  # Captura toda a stack trace
+        print(f"Erro inesperado: {error_details}")  # Log mais detalhado
+        
         bot.send_message(message.chat.id, "Ocorreu um erro inesperado ao tentar pescar.", reply_to_message_id=message.message_id)
 
 def verificar_bloqueio_pesca(user_id):

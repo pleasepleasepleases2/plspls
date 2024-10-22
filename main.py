@@ -331,10 +331,8 @@ def ativar_peixes_em_dobro(user_id):
         print(f"Erro ao ativar bônus de peixes em dobro: {e}")
     finally:
         fechar_conexao(cursor, conn)
-import random
-from datetime import datetime, timedelta
 
-def iniciar_compartilhamento(user_id):
+def iniciar_compartilhamento(user_id,chat_id):
     try:
         conn, cursor = conectar_banco_dados()
 
@@ -358,13 +356,34 @@ def iniciar_compartilhamento(user_id):
         conn.commit()
 
         # Enviar a mensagem informando sobre o compartilhamento
-        bot.send_message(user_id, f"🎃 Você ganhou {cenouras_ganhas} cenouras! Agora escolha alguém para compartilhar usando o comando +compartilhar <id do jogador>.")
+        bot.send_message(chat_id, f"🎃 Você ganhou {cenouras_ganhas} cenouras! Agora escolha alguém para compartilhar usando o comando +compartilhar <id do jogador>.")
     
     except Exception as e:
         print(f"Erro ao iniciar o compartilhamento: {e}")
     
     finally:
         fechar_conexao(cursor, conn)
+
+@bot.message_handler(func=lambda message: message.text and message.text.startswith('+compartilhar'))
+def handle_compartilhar(message):
+    user_id = message.from_user.id
+
+    # Verificar se a mensagem é uma resposta
+    if not message.reply_to_message:
+        bot.send_message(user_id, "👻 Você deve responder a uma mensagem da pessoa com quem deseja compartilhar as cenouras.")
+        return
+    
+    # Obter o ID da pessoa alvo (a pessoa que recebeu a mensagem)
+    target_user_id = message.reply_to_message.from_user.id
+
+    # Não pode compartilhar com você mesmo
+    if target_user_id == user_id:
+        bot.send_message(user_id, "👻 Você não pode compartilhar cenouras com você mesmo.")
+        return
+
+    # Chamar a função para compartilhar as cenouras
+    compartilhar_cenouras(user_id, target_user_id)
+
 def compartilhar_cenouras(user_id, target_user_id):
     try:
         conn, cursor = conectar_banco_dados()
@@ -396,7 +415,6 @@ def compartilhar_cenouras(user_id, target_user_id):
     
     finally:
         fechar_conexao(cursor, conn)
-
 
 def encontrar_abobora(user_id,chat_id):
     try:

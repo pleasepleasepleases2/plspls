@@ -204,9 +204,6 @@ jogo_praga = {
     'user_id': None,       # ID do usuário que tem a praga
     'start_time': None     # Hora em que a praga começou
 }
-@bot.message_handler(func=lambda message: message.text == "+praga")
-def passar_praga(message):
-    try:
         # O usuário deve responder à mensagem de outro usuário
         if not message.reply_to_message:
             bot.send_message(message.chat.id, "Você precisa responder a uma mensagem de outro usuário para passar a praga!")
@@ -217,20 +214,26 @@ def passar_praga(message):
         chat_id = message.chat.id
 
         # Verificar se o usuário tem a praga
-        if jogo_praga.get('user_id') != user_id:
+        if not verificar_praga(user_id):
             bot.send_message(chat_id, "👻 Você não tem a praga para passar!")
             return
 
         # Transferir a praga para o outro usuário
-        jogo_praga['user_id'] = target_user_id
-        jogo_praga['start_time'] = time.time()
+        aplicar_praga(target_user_id)
 
-        # Informar o alvo que ele recebeu a praga
+        # Remover a praga do usuário original
+        conn, cursor = conectar_banco_dados()
+        cursor.execute("DELETE FROM travessuras WHERE id_usuario = %s AND tipo_travessura = 'praga'", (user_id,))
+        conn.commit()
+
+        # Informar o alvo e o usuário original
         bot.send_message(chat_id, f"👻 {message.reply_to_message.from_user.first_name}, você recebeu a praga! Passe para outra pessoa ou sofrerá a travessura!")
         bot.send_message(user_id, "Você passou a praga para outro usuário!")
 
     except Exception as e:
         bot.send_message(message.chat.id, f"Erro ao passar a praga: {e}")
+    finally:
+        fechar_conexao(cursor, conn)
 def iniciar_praga(user_id):
     """
     Inicia a praga para um usuário.

@@ -1128,3 +1128,47 @@ def aplicar_boost_cenouras(user_id, cenouras_ganhas):
         print(f"Erro ao aplicar boost de cenouras: {e}")
     finally:
         fechar_conexao(cursor, conn)
+def ativar_travessura_embaralhamento(user_id, duracao_minutos):
+    try:
+        conn, cursor = conectar_banco_dados()
+
+        fim_travessura = datetime.now() + timedelta(minutes=duracao_minutos)
+
+        # Inserir ou atualizar a travessura no banco
+        cursor.execute("""
+            INSERT INTO travessuras (id_usuario, tipo_travessura, fim_travessura)
+            VALUES (%s, %s, %s)
+            ON DUPLICATE KEY UPDATE tipo_travessura = VALUES(tipo_travessura), fim_travessura = VALUES(fim_travessura)
+        """, (user_id, 'embaralhamento', fim_travessura))
+        conn.commit()
+
+        bot.send_message(user_id, f"🎃 Você foi atingido por uma travessura! Suas mensagens serão embaralhadas pelos próximos {duracao_minutos} minutos.")
+    
+    except Exception as e:
+        print(f"Erro ao ativar a travessura de embaralhamento: {e}")
+    finally:
+        fechar_conexao(cursor, conn)
+def verificar_travessura_embaralhamento(user_id):
+    try:
+        conn, cursor = conectar_banco_dados()
+
+        # Verificar se a travessura está ativa
+        cursor.execute("""
+            SELECT fim_travessura FROM travessuras
+            WHERE id_usuario = %s AND tipo_travessura = 'embaralhamento'
+        """, (user_id,))
+        resultado = cursor.fetchone()
+
+        if resultado:
+            fim_travessura = resultado[0]
+            # Se a travessura ainda está ativa (o tempo atual é menor que o fim)
+            if datetime.now() < fim_travessura:
+                return True
+        
+        return False  # Travessura não está ativa
+    
+    except Exception as e:
+        print(f"Erro ao verificar a travessura de embaralhamento: {e}")
+        return False
+    finally:
+        fechar_conexao(cursor, conn)

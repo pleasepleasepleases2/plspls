@@ -98,7 +98,7 @@ def doar(message):
                 types.InlineKeyboardButton(text="Sim", callback_data=f'cdoacao_{eu}_{minhacarta}_{destinatario_id}_{quantidade}'),
                 types.InlineKeyboardButton(text="Não", callback_data=f'ccancelar_{eu}')
             )
-            if verificar_travessura_embaralhamento(user_id):
+            if verificar_travessura_embaralhamento(eu):
                 texto = embaralhar_mensagem(texto)  # Embaralha a mensagem se a travessura estiver ativa
     
             bot.send_message(chat_id, texto, reply_markup=keyboard)

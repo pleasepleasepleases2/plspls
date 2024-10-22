@@ -152,7 +152,7 @@ def realizar_halloween_gostosura(user_id):
         # Adicionar carta faltante do evento como gostosura
         adicionar_carta_faltante_evento(user_id)
 
-def adicionar_carta_faltante_halloween(user_id):
+def adicionar_carta_faltante_halloween(user_id,num_cartas):
     try:
         conn, cursor = conectar_banco_dados()
 
@@ -447,7 +447,7 @@ def encontrar_abobora(user_id,chat_id):
             aumentar_cenouras(user_id, quantidade)
             bot.send_message(chat_id, f"🎃 {abobora['nome']} encontrada! Parabéns, você recebeu {quantidade} cenouras!")
         elif abobora["premio"] == "Carta Faltante":
-            adicionar_carta_faltante_halloween(user_id)
+            adicionar_carta_faltante_halloween(user_id,num_cartas)
             bot.send_message(chat_id, f"🎃 {abobora['nome']} encontrada! Parabéns, você recebeu uma carta faltante do evento!")
         
         # Adicione outras possíveis premiações aqui
@@ -821,7 +821,7 @@ def realizar_halloween_gostosura(user_id, chat_id):
 
         elif chance == 2:
             print(f"DEBUG: Adicionando carta faltante de Halloween para o usuário {user_id}")
-            adicionar_carta_faltante_halloween(user_id)
+            adicionar_carta_faltante_halloween(user_id,num_cartas)
             # Enviar a mensagem informando a carta recebida
             bot.send_message(chat_id, f"🎃 Parabéns! Você encontrou uma carta do evento Halloween: {nome_carta_faltante} foi adicionada ao seu inventário.")
 

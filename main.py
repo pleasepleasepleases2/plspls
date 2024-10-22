@@ -184,7 +184,7 @@ def adicionar_vip_temporario(user_id, grupo_sugestao,chat_id):
             realizar_halloween_gostosura(user_id, chat_id)
         else:
             # Se não for VIP, dar VIP por um período aleatório de 1 a 7 dias
-            dias_vip = random.randint(1, 7)
+            dias_vip = random.randint(1, 3)
             data_fim_vip = datetime.now() + timedelta(days=dias_vip)
 
             # Inserir na tabela de VIPs
@@ -210,7 +210,7 @@ def adicionar_protecao_temporaria(user_id):
         conn, cursor = conectar_banco_dados()
 
         # Definir o período de proteção entre 3 e 12 horas
-        horas_protecao = random.randint(3, 12)
+        horas_protecao = random.randint(1, 6)
         fim_protecao = datetime.now() + timedelta(hours=horas_protecao)
 
         # Atualizar ou inserir a proteção na tabela de usuários
@@ -586,18 +586,8 @@ def processar_premio(user_id, premio):
     elif "carta faltante" in premio:
         # Dar uma carta faltante do evento
         dar_carta_faltante(user_id, "Halloween")
-def adicionar_inverter_travessura(user_id):
-    try:
-        conn, cursor = conectar_banco_dados()
-        # Atualiza o banco de dados para adicionar a habilidade ao jogador
-        cursor.execute("UPDATE usuarios SET pode_inverter_travessura = %s WHERE id_usuario = %s", (True, user_id))
-        conn.commit()
-        bot.send_message(user_id, "🎃 Você ganhou a habilidade de inverter uma travessura! Quando for alvo, poderá reverter o efeito.")
-    except Exception as e:
-        print(f"Erro ao adicionar a chance de inverter a travessura: {e}")
-    finally:
-        fechar_conexao(cursor, conn)
-def adicionar_inverter_travessura(user_id):
+
+def adicionar_inverter_travessura(user_id,chat_id):
     try:
         conn, cursor = conectar_banco_dados()
 
@@ -827,6 +817,7 @@ def realizar_halloween_gostosura(user_id, chat_id):
 
         elif chance == 7:
             print(f"DEBUG: Ganhando caixa misteriosa para o usuário {user_id}")
+            bot.send_message(chat_id, f"🎃 Uma caixa miseriosa foi enviada para seu endereço!")
             ganhar_caixa_misteriosa(user_id,chat_id)
 
         elif chance == 8:
@@ -841,7 +832,7 @@ def realizar_halloween_gostosura(user_id, chat_id):
 
         elif chance == 10:
             print(f"DEBUG: Adicionando inversão de travessura para o usuário {user_id}")
-            adicionar_inverter_travessura(user_id)
+            adicionar_inverter_travessura(user_id,chat_id)
 
         elif chance == 11:
             print(f"DEBUG: Adicionando super boost de cenouras para o usuário {user_id}")

@@ -499,11 +499,6 @@ def pescar(message):
         user_id = message.from_user.id
 
 
-        # Verificar se o usuário está bloqueado de pescar
-        bloqueado, minutos_restantes = verificar_bloqueio_pesca(user_id)
-        if bloqueado:
-            bot.send_message(message.chat.id, f"👻 Você está bloqueado de pescar por mais {minutos_restantes} minutos.")
-            return
         # Verificar a quantidade de iscas disponíveis
         qtd_iscas = verificar_giros(user_id)
         if qtd_iscas == 0:

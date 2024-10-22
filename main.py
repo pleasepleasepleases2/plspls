@@ -2434,7 +2434,7 @@ def obter_id_e_enviar_info_com_imagem(message):
                 resultado_evento = cursor.fetchone()
 
                 if resultado_evento:
-                    enviar_mensagem_personagem(chat_id, resultado_evento, message.message_id)
+                    enviar_mensagem_personagem(chat_id, resultado_evento, message.message_id,, user_id)
                 else:
                     bot.send_message(chat_id, f"Nenhum resultado encontrado para o ID '{id_pesquisa}'.", reply_to_message_id=message.message_id)
 
@@ -2458,7 +2458,7 @@ def obter_id_e_enviar_info_com_imagem(message):
                 resultado_normal = cursor.fetchone()
 
                 if resultado_normal:
-                    enviar_mensagem_personagem(chat_id, resultado_normal, message.message_id)
+                    enviar_mensagem_personagem(chat_id, resultado_normal, message.message_id,, user_id)
                 else:
                     bot.send_message(chat_id, f"Nenhum resultado encontrado para o ID '{id_pesquisa}'.", reply_to_message_id=message.message_id)
         else:

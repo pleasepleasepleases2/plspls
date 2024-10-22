@@ -198,7 +198,167 @@ def adicionar_carta_faltante_halloween(user_id, chat_id, num_cartas):
         print(f"Erro ao adicionar carta de Halloween: {e}")
     finally:
         fechar_conexao(cursor, conn)
+import threading
 
+def ativar_sombra_rouba_cenouras(user_id):
+    try:
+        conn, cursor = conectar_banco_dados()
+
+        # Definir a duração da travessura (pode durar, por exemplo, 5 minutos)
+        fim_travessura = datetime.now() + timedelta(minutes=5)
+
+        # Inserir a travessura na tabela `travessuras`
+        cursor.execute("""
+            INSERT INTO travessuras (id_usuario, tipo_travessura, fim_travessura)
+            VALUES (%s, 'sombra_rouba_cenouras', %s)
+            ON DUPLICATE KEY UPDATE fim_travessura = VALUES(fim_travessura)
+        """, (user_id, fim_travessura))
+        conn.commit()
+
+        # Enviar mensagem informando que a sombra foi ativada
+        bot.send_message(user_id, "👻 Uma sombra começou a roubar suas cenouras! Use +exorcizar para parar a travessura.")
+        
+        # Iniciar o roubo de cenouras a cada 10 segundos
+        threading.Thread(target=roubar_cenouras_periodicamente, args=(user_id, fim_travessura)).start()
+
+    except Exception as e:
+        print(f"Erro ao ativar a sombra: {e}")
+    finally:
+        fechar_conexao(cursor, conn)
+import time
+
+def roubar_cenouras_periodicamente(user_id, fim_travessura):
+    try:
+        conn, cursor = conectar_banco_dados()
+
+        while datetime.now() < fim_travessura:
+            # Verificar se a travessura ainda está ativa
+            cursor.execute("""
+                SELECT fim_travessura FROM travessuras
+                WHERE id_usuario = %s AND tipo_travessura = 'sombra_rouba_cenouras'
+            """, (user_id,))
+            resultado = cursor.fetchone()
+
+            if resultado and datetime.now() < resultado[0]:
+                # Roubar uma cenoura
+                cursor.execute("UPDATE usuarios SET cenouras = cenouras - 1 WHERE id_usuario = %s", (user_id,))
+                conn.commit()
+
+                # Notificar o usuário que uma cenoura foi roubada
+                bot.send_message(user_id, "👻 Uma sombra roubou uma de suas cenouras!")
+                
+                # Esperar 10 segundos antes de roubar novamente
+                time.sleep(10)
+            else:
+                break
+
+    except Exception as e:
+        print(f"Erro ao roubar cenouras: {e}")
+    finally:
+        fechar_conexao(cursor, conn)
+
+def aplicar_travessura(id_usuario, tipo_travessura):
+    """
+    Aplica a travessura ao usuário com base no tipo de travessura.
+    """
+    try:
+        if tipo_travessura == 'alucinacao':
+            # Exemplo de aplicação da travessura de alucinação (embaralhar texto)
+            print(f"Aplicando travessura de alucinação para o usuário {id_usuario}")
+            if texto:
+                return embaralhar_mensagem(texto)  # Função para embaralhar texto
+            else:
+                return "Mensagem embaralhada!"
+
+        elif tipo_travessura == 'bloqueio_pesca':
+            # Exemplo de bloqueio para impedir o comando de pesca
+            print(f"Aplicando bloqueio de pesca para o usuário {id_usuario}")
+            bot.send_message(id_usuario, "Você está bloqueado de pescar por algum tempo!")
+
+        elif tipo_travessura == 'mudar_nome':
+            # Exemplo de mudança de nome
+            print(f"Aplicando mudança de nome para o usuário {id_usuario}")
+            novo_nome = "Zé Praga"  # Nome de exemplo
+            alterar_nome_usuario(id_usuario, novo_nome)
+            bot.send_message(id_usuario, f"Seu nome foi alterado para {novo_nome}!")
+
+        # Adicione outras travessuras aqui conforme necessário
+
+    except Exception as e:
+        print(f"Erro ao aplicar a travessura: {e}")
+
+def verificar_travessuras(id_usuario):
+    """
+    Verifica todas as travessuras ativas para o usuário, incluindo a travessura de embaralhamento.
+    Retorna uma lista com os tipos de travessuras ativas e um indicador se a travessura de embaralhamento está ativa.
+    """
+    conn, cursor = conectar_banco_dados()
+    try:
+        # Verificar todas as travessuras ativas
+        cursor.execute("""
+            SELECT tipo_travessura, fim_travessura
+            FROM travessuras
+            WHERE id_usuario = %s AND fim_travessura > NOW()
+        """, (id_usuario,))
+        travessuras_ativas = cursor.fetchall()
+
+        # Verificar se a travessura de embaralhamento está ativa
+        embaralhamento_ativo = False
+        for travessura, fim_travessura in travessuras_ativas:
+            if travessura == 'embaralhamento' and datetime.now() < fim_travessura:
+                embaralhamento_ativo = True
+        
+        # Retornar todas as travessuras ativas e o status do embaralhamento
+        return {
+            "travessuras": [row[0] for row in travessuras_ativas],
+            "embaralhamento_ativo": embaralhamento_ativo
+        }
+
+    except Exception as e:
+        print(f"Erro ao verificar travessuras: {e}")
+        return {"travessuras": [], "embaralhamento_ativo": False}
+    
+    finally:
+        fechar_conexao(cursor, conn)
+
+
+@bot.message_handler(commands=['exorcizar'])
+def exorcizar_sombra(message):
+    user_id = message.from_user.id
+
+    try:
+        conn, cursor = conectar_banco_dados()
+
+        # Verificar se a travessura da sombra está ativa
+        cursor.execute("""
+            SELECT fim_travessura FROM travessuras
+            WHERE id_usuario = %s AND tipo_travessura = 'sombra_rouba_cenouras'
+        """, (user_id,))
+        resultado = cursor.fetchone()
+
+        if resultado:
+            # Definir uma chance de sucesso (exemplo: 30% de chance de sucesso)
+            chance_sucesso = random.randint(1, 100)
+
+            if chance_sucesso <= 30:  # Sucesso em 30% das tentativas
+                # Exorcismo bem-sucedido: remover a travessura
+                cursor.execute("""
+                    DELETE FROM travessuras WHERE id_usuario = %s AND tipo_travessura = 'sombra_rouba_cenouras'
+                """, (user_id,))
+                conn.commit()
+
+                # Informar o usuário que ele exorcizou a sombra
+                bot.send_message(message.chat.id, "🕯️ Você exorcizou a sombra! As suas cenouras estão seguras.")
+            else:
+                # Exorcismo falhou
+                bot.send_message(message.chat.id, "👻 O exorcismo falhou! A sombra continua a roubar suas cenouras. Tente novamente!")
+        else:
+            bot.send_message(message.chat.id, "👻 Não há nenhuma sombra para exorcizar.")
+
+    except Exception as e:
+        bot.send_message(message.chat.id, f"Erro ao exorcizar a sombra: {e}")
+    finally:
+        fechar_conexao(cursor, conn)
 def adicionar_vip_temporario(user_id, grupo_sugestao,chat_id):
     try:
         conn, cursor = conectar_banco_dados()

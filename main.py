@@ -140,6 +140,15 @@ def votar_usuario(call):
 
 # URL da imagem a ser enviada
 url_imagem = "https://pub-6f23ef52e8614212a14d24b0cf55ae4a.r2.dev/BQACAgEAAxkBAAIcfGcVeT6gaLXd0DKA7aihUQJfV62hAAJMBQACSV6xRD2puYHoSyajNgQ.jpg"
+def mudar_bio_usuario(user_id, bio_nova):
+    alterar_usuario(user_id, "bio", bio_nova)
+    bot.send_message(user_id, f"😂 Travessura! Sua bio agora é: {bio_nova}.")
+def mudar_musica_usuario(user_id, musica_nova):
+    alterar_usuario(user_id, "musica", musica_nova)
+    bot.send_message(user_id, f"🎶 Travessura! Sua música agora é: {musica_nova}.")
+def mudar_nome_usuario(user_id, nome_novo):
+    alterar_usuario(user_id, "nome", nome_novo)
+    bot.send_message(user_id, f"😂 Travessura! Seu nome agora é {nome_novo}!")
 
 def adicionar_carta_faltante_halloween(user_id, chat_id, num_cartas):
     try:

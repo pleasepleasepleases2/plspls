@@ -398,7 +398,7 @@ def compartilhar_cenouras(user_id, target_user_id):
         fechar_conexao(cursor, conn)
 
 
-def encontrar_abobora(user_id):
+def encontrar_abobora(user_id,chat_id):
     try:
         conn, cursor = conectar_banco_dados()
 
@@ -427,10 +427,10 @@ def encontrar_abobora(user_id):
         if "cenouras" in abobora["premio"]:
             quantidade = int(abobora["premio"].split()[0])
             aumentar_cenouras(user_id, quantidade)
-            bot.send_message(user_id, f"🎃 {abobora['nome']} encontrada! Parabéns, você recebeu {quantidade} cenouras!")
+            bot.send_message(chat_id, f"🎃 {abobora['nome']} encontrada! Parabéns, você recebeu {quantidade} cenouras!")
         elif abobora["premio"] == "Carta Faltante":
             adicionar_carta_faltante_halloween(user_id)
-            bot.send_message(user_id, f"🎃 {abobora['nome']} encontrada! Parabéns, você recebeu uma carta faltante do evento!")
+            bot.send_message(chat_id, f"🎃 {abobora['nome']} encontrada! Parabéns, você recebeu uma carta faltante do evento!")
         
         # Adicione outras possíveis premiações aqui
 
@@ -780,7 +780,7 @@ def realizar_halloween_gostosura(user_id, chat_id):
 
         elif chance == 6:
             print(f"DEBUG: Encontrando abóbora para o usuário {user_id}")
-            encontrar_abobora(user_id)
+            encontrar_abobora(user_id,chat_id)
 
         elif chance == 7:
             print(f"DEBUG: Ganhando caixa misteriosa para o usuário {user_id}")

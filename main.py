@@ -710,6 +710,54 @@ def adicionar_super_boost_cenouras(user_id, multiplicador, duracao_horas,chat_id
     finally:
         fechar_conexao(cursor, conn)
 
+from datetime import datetime, timedelta
+
+def ativar_troca_comandos(user_id, duracao_horas=1):
+    try:
+        conn, cursor = conectar_banco_dados()
+
+        # Definir o tipo de boost e a duração
+        tipo_boost = 'troca_comando'
+        fim_boost = datetime.now() + timedelta(hours=duracao_horas)
+
+        # Inserir ou atualizar o boost de troca de comandos no banco de dados
+        cursor.execute("""
+            INSERT INTO boosts (id_usuario, tipo_boost, fim_boost) 
+            VALUES (%s, %s, %s)
+            ON DUPLICATE KEY UPDATE tipo_boost = %s, fim_boost = %s
+        """, (user_id, tipo_boost, fim_boost, tipo_boost, fim_boost))
+        conn.commit()
+
+        bot.send_message(user_id, "👻 A travessura de troca de comandos foi ativada! Seus comandos serão trocados por {} horas.".format(duracao_horas))
+
+    except Exception as e:
+        print(f"Erro ao ativar a troca de comandos: {e}")
+    
+    finally:
+        fechar_conexao(cursor, conn)
+def verificar_travessura_troca_comandos(user_id):
+    try:
+        conn, cursor = conectar_banco_dados()
+
+        # Verificar se o boost de troca de comandos está ativo
+        cursor.execute("""
+            SELECT fim_boost FROM boosts 
+            WHERE id_usuario = %s AND tipo_boost = 'troca_comando'
+        """, (user_id,))
+        resultado = cursor.fetchone()
+
+        if resultado:
+            fim_boost = resultado[0]
+            if datetime.now() < fim_boost:
+                return True  # A travessura de troca de comandos está ativa
+        return False  # Não está ativa
+
+    except Exception as e:
+        print(f"Erro ao verificar a travessura de troca de comandos: {e}")
+        return False
+
+    finally:
+        fechar_conexao(cursor, conn)
 
 def aplicar_boost_cenouras(user_id, cenouras_ganhas):
     try:
@@ -1257,6 +1305,10 @@ def handle_jogada(call):
 @bot.message_handler(commands=['picnic', 'trocar', 'troca'])
 def trade(message):
     try:
+        if verificar_travessura_troca_comandos(user_id):
+            print("Comando 'verificar' trocado por 'troca' devido à travessura")
+            # Chama a função de troca diretamente, em vez de verificar
+            verificar(message)
         chat_id = message.chat.id
         eu = message.from_user.id
         voce = message.reply_to_message.from_user.id
@@ -1344,6 +1396,10 @@ def handle_termo(message):
 @bot.message_handler(commands=['verificar'])
 def verificar_ids(message):
     try:
+        if verificar_travessura_troca_comandos(user_id):
+            print("Comando 'verificar' trocado por 'troca' devido à travessura")
+            # Chama a função de troca diretamente, em vez de verificar
+            trade(message)
         print("Comando verificar acionado")    
         if not message.reply_to_message:
             bot.reply_to(message, "Por favor, responda a uma mensagem que contenha os IDs que você deseja verificar.")
@@ -1571,11 +1627,17 @@ def handle_ver_ficha_vip(message):
 
 @bot.message_handler(commands=['doar'])
 def handle_doar(message):
+    if verificar_travessura_troca_comandos(user_id):
+        print("Comando 'verificar' trocado por 'troca' devido à travessura")
+        loja(message)
     doar(message)
 
 @bot.message_handler(commands=['roseira'])
 def handle_roseira_command(message):
-    roseira_command(message)
+    if verificar_travessura_troca_comandos(user_id):
+        print("Comando 'verificar' trocado por 'troca' devido à travessura")
+        loja(message)
+    verificar_comando_peixes(message)
 
 @bot.message_handler(commands=['pedidosubmenu'])
 def handle_pedido_submenu_command(message):
@@ -1647,10 +1709,16 @@ def criar_colagem(message):
 
 @bot.message_handler(commands=['vendinha'])
 def handle_vendinha_command(message):
+    if verificar_travessura_troca_comandos(user_id):
+        print("Comando 'verificar' trocado por 'troca' devido à travessura")
+        processar_comando_delgif(message)
     loja(message)
 
 @bot.message_handler(commands=['peixes'])
 def handle_peixes_command(message):
+    if verificar_travessura_troca_comandos(user_id):
+        print("Comando 'verificar' trocado por 'troca' devido à travessura")
+        comando_sorte(message)
     verificar_comando_peixes(message)
 
 @bot.message_handler(commands=['delgif'])
@@ -1659,6 +1727,9 @@ def handle_delgif(message):
             
 @bot.message_handler(commands=['raspadinha'])
 def handle_sorte(message):
+    if verificar_travessura_troca_comandos(user_id):
+        print("Comando 'verificar' trocado por 'troca' devido à travessura")
+        verificar_comando_tag(message)
     comando_sorte(message)
 
 @bot.message_handler(commands=['casar'])
@@ -1679,10 +1750,16 @@ def handle_addtag_command(message):
 
 @bot.message_handler(commands=['completos'])
 def handle_completos_command(message):
+    if verificar_travessura_troca_comandos(user_id):
+        print("Comando 'verificar' trocado por 'troca' devido à travessura")
+        pescar(message)    
     handle_completos(message)
 
 @bot.message_handler(commands=['pesca', 'pescar'])
 def handle_pescar(message):
+    if verificar_travessura_troca_comandos(user_id):
+        print("Comando 'verificar' trocado por 'troca' devido à travessura")
+        enviar_mensagem_trintadas(message)      
     pescar(message)
     
 @bot.message_handler(commands=['spicnic'])
@@ -1710,6 +1787,9 @@ def saldo_command(message):
 
 @bot.message_handler(commands=['trintadas', 'abelhadas', 'abelhas'])
 def handle_trintadas(message):
+    if verificar_travessura_troca_comandos(user_id):
+        print("Comando 'verificar' trocado por 'troca' devido à travessura")
+        evento_command(message)         
     enviar_mensagem_trintadas(message, pagina_atual=1)
     
 @bot.message_handler(commands=['setmusica', 'setmusic'])
@@ -1718,11 +1798,16 @@ def set_musica_command(message):
 
 @bot.message_handler(commands=['evento'])
 def evento_command(message):
+    if verificar_travessura_troca_comandos(user_id):
+        print("Comando 'verificar' trocado por 'troca' devido à travessura")
+        evento_command(message)     
     handle_evento_command(message)
 
 @bot.message_handler(commands=['setfav'])
 def set_fav_command(message):
-    from eu import handle_set_fav
+    if verificar_travessura_troca_comandos(user_id):
+        print("Comando 'verificar' trocado por 'troca' devido à travessura")
+        evento_command(message)     
     handle_set_fav(message)
 
 @bot.message_handler(commands=['usuario'])
@@ -1732,12 +1817,13 @@ def obter_username_por_comando(message):
 
 @bot.message_handler(commands=['eu'])
 def me_command(message):
-    from eu import handle_me_command
+    if verificar_travessura_troca_comandos(user_id):
+        print("Comando 'verificar' trocado por 'troca' devido à travessura")
+        handle_set_fav(message)
     handle_me_command(message)
     
 @bot.message_handler(commands=['gperfil'])
 def gperfil_command(message):
-    from eu import handle_gperfil_command
     handle_gperfil_command(message)
 
 @bot.message_handler(commands=['config'])
@@ -1820,6 +1906,9 @@ def handle_cancel_edit_callback(call):
 
 @bot.message_handler(commands=['gnome'])
 def handle_gnome(message):
+    if verificar_travessura_troca_comandos(user_id):
+        print("Comando 'verificar' trocado por 'troca' devido à travessura")
+        verificar_comando_especies(message)    
     chat_id = message.chat.id
     user_id = message.from_user.id
 
@@ -1977,6 +2066,9 @@ def gnomes_command(message):
 @bot.message_handler(commands=['gid'])
 def obter_id_e_enviar_info_com_imagem(message):
     try:
+        if verificar_travessura_troca_comandos(user_id):
+            print("Comando 'verificar' trocado por 'troca' devido à travessura")
+            submenus(message)            
         conn, cursor = conectar_banco_dados()
         user_id = message.from_user.id
         chat_id = message.chat.id

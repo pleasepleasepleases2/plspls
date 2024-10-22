@@ -140,7 +140,7 @@ def votar_usuario(call):
 # URL da imagem a ser enviada
 url_imagem = "https://pub-6f23ef52e8614212a14d24b0cf55ae4a.r2.dev/BQACAgEAAxkBAAIcfGcVeT6gaLXd0DKA7aihUQJfV62hAAJMBQACSV6xRD2puYHoSyajNgQ.jpg"
 
-def adicionar_carta_faltante_halloween(user_id,num_cartas):
+def adicionar_carta_faltante_halloween(user_id, chat_id):
     try:
         conn, cursor = conectar_banco_dados()
 
@@ -154,11 +154,26 @@ def adicionar_carta_faltante_halloween(user_id,num_cartas):
         cursor.execute(query_faltantes_halloween, (user_id,))
         cartas_faltantes = cursor.fetchall()
 
+        # Se não houver cartas faltantes, dar uma carta aleatória do evento
         if not cartas_faltantes:
-            bot.send_message(user_id, "Parabéns! Mas você já tem todas as cartas do evento de Halloween.")
+            cursor.execute("SELECT id_personagem, nome FROM evento WHERE evento = 'Halloween'")
+            cartas_halloween = cursor.fetchall()
+
+            if not cartas_halloween:
+                bot.send_message(chat_id, "Não há cartas disponíveis do evento de Halloween no momento.")
+                return
+
+            carta_aleatoria = random.choice(cartas_halloween)
+            id_carta_aleatoria, nome_carta_aleatoria = carta_aleatoria
+
+            # Adicionar a carta aleatória ao inventário
+            cursor.execute("INSERT INTO inventario (id_usuario, id_personagem, quantidade) VALUES (%s, %s, 1)", (user_id, id_carta_aleatoria))
+            conn.commit()
+
+            bot.send_message(chat_id, f"🎃 Parabéns! Como você já tem todas as cartas faltantes, você ganhou uma carta aleatória do evento Halloween: {nome_carta_aleatoria} foi adicionada ao seu inventário.")
             return
 
-        # Selecionar uma carta de Halloween aleatória
+        # Caso contrário, dar uma carta faltante
         carta_faltante = random.choice(cartas_faltantes)
         id_carta_faltante, nome_carta_faltante = carta_faltante
 
@@ -166,8 +181,11 @@ def adicionar_carta_faltante_halloween(user_id,num_cartas):
         cursor.execute("INSERT INTO inventario (id_usuario, id_personagem, quantidade) VALUES (%s, %s, 1)", (user_id, id_carta_faltante))
         conn.commit()
 
+        # Enviar a mensagem informando a carta recebida
+        bot.send_message(chat_id, f"🎃 Parabéns! Você encontrou uma carta do evento Halloween: {nome_carta_faltante} foi adicionada ao seu inventário.")
+
     except Exception as e:
-        print(f"Erro ao adicionar carta de Halloween faltante: {e}")
+        print(f"Erro ao adicionar carta de Halloween: {e}")
     finally:
         fechar_conexao(cursor, conn)
 
@@ -448,7 +466,7 @@ def encontrar_abobora(user_id,chat_id):
         aboboras_disponiveis = {id_abobora: aboboras[id_abobora] for id_abobora in aboboras if id_abobora not in aboboras_ganhas_ids}
 
         if not aboboras_disponiveis:
-            bot.send_message(user_id, "🎃 Você já encontrou todas as abóboras disponíveis!")
+            bot.send_message(user_id, "🎃 Você já encontrou todas as abóboras disponíveis! Mas vai levar como recompensa 100 cenouras.")
             return
 
         # Escolher uma abóbora aleatória entre as disponíveis

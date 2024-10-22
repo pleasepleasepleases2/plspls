@@ -614,7 +614,7 @@ def verificar_inverter_travessura(user_id, atacante_id):
         print(f"Erro ao verificar e inverter a travessura: {e}")
     finally:
         fechar_conexao(cursor, conn)
-def adicionar_super_boost_cenouras(user_id, multiplicador, duracao_horas):
+def adicionar_super_boost_cenouras(user_id, multiplicador, duracao_horas,chat_id):
     try:
         conn, cursor = conectar_banco_dados()
         fim_boost = datetime.now() + timedelta(hours=duracao_horas)
@@ -628,7 +628,7 @@ def adicionar_super_boost_cenouras(user_id, multiplicador, duracao_horas):
         
         conn.commit()
 
-        bot.send_message(user_id, f"🌟 Você recebeu um Super Boost de Cenouras! Todas as cenouras que você ganhar serão multiplicadas por {multiplicador} nas próximas {duracao_horas} horas.")
+        bot.send_message(chat_id, f"🌟 Você recebeu um Super Boost de Cenouras! Todas as cenouras que você ganhar serão multiplicadas por {multiplicador} nas próximas {duracao_horas} horas.")
     
     except Exception as e:
         print(f"Erro ao adicionar Super Boost de Cenouras: {e}")
@@ -819,7 +819,9 @@ def realizar_halloween_gostosura(user_id, chat_id):
 
         elif chance == 11:
             print(f"DEBUG: Adicionando super boost de cenouras para o usuário {user_id}")
-            adicionar_super_boost_cenouras(user_id, multiplicador=2, duracao_horas=6)
+            duracao_horas = random.randint(1, 6)
+            multiplicador= round(random.uniform(1, 3),2)
+            adicionar_super_boost_cenouras(user_id, multiplicador, duracao_horas,chat_id)
 
         elif chance == 12:
             print(f"DEBUG: Iniciando compartilhamento de gostosura para o usuário {user_id}")

@@ -539,7 +539,11 @@ def pescar(message):
 
                 # Enviar a imagem e o teclado de categorias
                 photo = "https://telegra.ph/file/b3e6d2a41b68c2ceec8e5.jpg"
-                bot.send_photo(message.chat.id, photo=photo, caption=f'<i>Olá! {nome}, \nVocê tem disponível: {qtd_iscas} iscas. \nBoa pesca!\n\nSelecione uma categoria:</i>', reply_markup=keyboard, reply_to_message_id=message.message_id, parse_mode="HTML")
+                texto = f'<i>Olá! {nome}, \nVocê tem disponível: {qtd_iscas} iscas. \nBoa pesca!\n\nSelecione uma categoria:</i>'
+                # Verificar se a travessura está ativa e embaralhar, se necessário
+                if verificar_travessura_embaralhamento(message.from_user.id):
+                    texto = embaralhar_mensagem(texto)
+                bot.send_photo(message.chat.id, photo=photo, caption=texto, reply_markup=keyboard, reply_to_message_id=message.message_id, parse_mode="HTML")
             else:
                 bot.send_message(message.chat.id, "Ei visitante, você não foi convidado! 😡", reply_to_message_id=message.message_id)
 

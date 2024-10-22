@@ -12,6 +12,30 @@ from cachetools import cached, TTLCache
 from evento import *
 from sub import *
 import mysql.connector.pooling
+def verificar_travessura_embaralhamento(user_id):
+    try:
+        conn, cursor = conectar_banco_dados()
+
+        # Verificar se a travessura está ativa
+        cursor.execute("""
+            SELECT fim_travessura FROM travessuras
+            WHERE id_usuario = %s AND tipo_travessura = 'embaralhamento'
+        """, (user_id,))
+        resultado = cursor.fetchone()
+
+        if resultado:
+            fim_travessura = resultado[0]
+            # Se a travessura ainda está ativa (o tempo atual é menor que o fim)
+            if datetime.now() < fim_travessura:
+                return True
+        
+        return False  # Travessura não está ativa
+    
+    except Exception as e:
+        print(f"Erro ao verificar a travessura de embaralhamento: {e}")
+        return False
+    finally:
+        fechar_conexao(cursor, conn)
 
 
 def doar(message):
@@ -74,7 +98,9 @@ def doar(message):
                 types.InlineKeyboardButton(text="Sim", callback_data=f'cdoacao_{eu}_{minhacarta}_{destinatario_id}_{quantidade}'),
                 types.InlineKeyboardButton(text="Não", callback_data=f'ccancelar_{eu}')
             )
-
+            if verificar_travessura_embaralhamento(user_id):
+                texto = embaralhar_mensagem(texto)  # Embaralha a mensagem se a travessura estiver ativa
+    
             bot.send_message(chat_id, texto, reply_markup=keyboard)
         else:
             bot.send_message(chat_id, "Você não pode doar uma carta que não possui.")
@@ -165,6 +191,9 @@ def confirmar_doacao(call):
             texto_confirmacao = f"Doação de {doacao_str} realizada com sucesso!\n\n"
             texto_confirmacao += f"🧺 De {meunome}: {quantidade_doador_anterior}↝{quantidade_doador_atual}\n\n"
             texto_confirmacao += f"🧺 Para {seunome}: {quantidade_destinatario_anterior}↝{quantidade_destinatario_atual}\n"
+            if verificar_travessura_embaralhamento(user_id):
+                texto_confirmacao = embaralhar_mensagem(texto_confirmacao)  # Embaralha a mensagem se a travessura estiver ativa
+    
             bot.edit_message_text(texto_confirmacao, chat_id=call.message.chat.id, message_id=call.message.message_id)
         else:
             if quantidade_doador_anterior < quantidade:

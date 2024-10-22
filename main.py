@@ -232,6 +232,23 @@ def adicionar_vip_temporario(user_id, grupo_sugestao,chat_id):
         print(f"Erro ao adicionar VIP temporário: {e}")
     finally:
         fechar_conexao(cursor, conn)
+def alterar_usuario(user_id, coluna, valor_novo):
+    """
+    Função genérica para alterar um campo específico na tabela `usuarios`.
+    """
+    try:
+        conn, cursor = conectar_banco_dados()
+
+        # Atualizar a coluna especificada com o novo valor
+        query = f"UPDATE usuarios SET {coluna} = %s WHERE id_usuario = %s"
+        cursor.execute(query, (valor_novo, user_id))
+        conn.commit()
+
+        print(f"DEBUG: {coluna} do usuário {user_id} alterada para {valor_novo}")
+    except Exception as e:
+        print(f"Erro ao alterar {coluna} para o usuário {user_id}: {e}")
+    finally:
+        fechar_conexao(cursor, conn)
 
 def adicionar_protecao_temporaria(user_id):
     try:

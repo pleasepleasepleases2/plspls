@@ -440,7 +440,7 @@ def encontrar_abobora(user_id,chat_id):
     finally:
         fechar_conexao(cursor, conn)
 
-def ganhar_caixa_misteriosa(user_id):
+def ganhar_caixa_misteriosa(user_id,chat_id):
     try:
         conn, cursor = conectar_banco_dados()
 
@@ -803,7 +803,7 @@ def realizar_halloween_gostosura(user_id, chat_id):
 
         elif chance == 7:
             print(f"DEBUG: Ganhando caixa misteriosa para o usuário {user_id}")
-            ganhar_caixa_misteriosa(user_id)
+            ganhar_caixa_misteriosa(user_id,chat_id)
 
         elif chance == 8:
             print(f"DEBUG: Mostrando portas de escolha para o usuário {user_id}")

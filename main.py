@@ -936,53 +936,7 @@ def mudar_favorito_usuario(user_id):
         traceback.print_exc()
     finally:
         fechar_conexao(cursor, conn)
-def verificar_bloqueio_pesca(user_id):
-    try:
-        conn, cursor = conectar_banco_dados()
 
-        # Verificar se o usuário está bloqueado
-        query = "SELECT fim_bloqueio FROM bloqueios_pesca WHERE id_usuario = %s"
-        cursor.execute(query, (user_id,))
-        resultado = cursor.fetchone()
-
-        if resultado:
-            fim_bloqueio = resultado[0]
-            if datetime.now() < fim_bloqueio:
-                # Se ainda estiver dentro do período de bloqueio, retorna True
-                return True, (fim_bloqueio - datetime.now()).seconds // 60
-        return False, 0
-
-    except Exception as e:
-        print(f"Erro ao verificar bloqueio de pesca para o usuário {user_id}: {e}")
-        traceback.print_exc()
-        return False, 0
-    finally:
-        fechar_conexao(cursor, conn)
-
-def bloquear_pesca_usuario(user_id, duracao_minutos):
-    try:
-        conn, cursor = conectar_banco_dados()
-
-        # Calcular o tempo de término do bloqueio
-        fim_bloqueio = datetime.now() + timedelta(minutes=duracao_minutos)
-
-        # Inserir ou atualizar o tempo de bloqueio na tabela `bloqueios_pesca`
-        query = """
-            INSERT INTO bloqueios_pesca (id_usuario, fim_bloqueio)
-            VALUES (%s, %s)
-            ON DUPLICATE KEY UPDATE fim_bloqueio = %s
-        """
-        cursor.execute(query, (user_id, fim_bloqueio, fim_bloqueio))
-        conn.commit()
-
-        # Enviar mensagem informando sobre o bloqueio
-        bot.send_message(user_id, f"👻 Travessura! Você está bloqueado de pescar pelos próximos {duracao_minutos} minutos!")
-
-    except Exception as e:
-        print(f"Erro ao bloquear pesca para o usuário {user_id}: {e}")
-        traceback.print_exc()
-    finally:
-        fechar_conexao(cursor, conn)
 def bloquear_comandos_usuario(user_id, duracao_minutos):
     try:
         conn, cursor = conectar_banco_dados()

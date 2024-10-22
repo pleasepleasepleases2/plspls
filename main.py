@@ -861,7 +861,7 @@ def realizar_halloween_gostosura(user_id, chat_id):
         elif chance == 11:
             print(f"DEBUG: Adicionando super boost de cenouras para o usuário {user_id}")
             duracao_horas = random.randint(1, 6)
-            multiplicador= round(random.uniform(1, 3),2)
+            multiplicador= random.randint(1, 4)
             adicionar_super_boost_cenouras(user_id, multiplicador, duracao_horas,chat_id)
 
         elif chance == 12:

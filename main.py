@@ -910,25 +910,124 @@ def realizar_halloween_gostosura(user_id, chat_id):
         bot.send_message(user_id, "Ocorreu um erro ao realizar a gostosura.")
 
 
+def realizar_halloween_travessura(user_id, chat_id):
+    try:
+        print(f"DEBUG: Iniciando travessura para o usuário {user_id}")
+        chance = random.randint(1, 22)  # 22 tipos de travessuras diferentes
+        print(f"DEBUG: Chance sorteada: {chance}")
 
-# Função que realiza uma travessura aleatória
-def travessura(message):
-    print(f"DEBUG: Iniciando travessura para o usuário {message.from_user.id}")
-    emojis_travessura = ["🎃", "👻", "🕸️", "🕷️", "🧟‍♀️", "🐈‍⬛", "⚰️", "💀", "🕯️"]
-    url_imagem = "https://link-da-imagem.jpg"  # Troque pelo link correto da imagem
+        if chance == 1:
+            # Perder cenouras
+            cenouras_perdidas = random.randint(20, 50)
+            diminuir_cenouras(user_id, cenouras_perdidas)
+            bot.send_message(chat_id, f"👻 Travessura! Você perdeu {cenouras_perdidas} cenouras!")
 
-    funcoes_travessura = [
-        f"{random.choice(emojis_travessura)} Travessura! Ah não, você perdeu 20 cenouras.",
-        f"{random.choice(emojis_travessura)} Travessura! Oops, uma carta foi removida do seu inventário.",
-        f"{random.choice(emojis_travessura)} Travessura! Que pena, sua próxima jogada será bloqueada por 10 minutos.",
-        f"{random.choice(emojis_travessura)} Travessura! A sorte não está ao seu lado, você perdeu 30 cenouras!",
-    ]
-    resultado = random.choice(funcoes_travessura)
-    print(f"DEBUG: Resultado da travessura: {resultado}")
-    bot.send_photo(message.chat.id, url_imagem, caption=resultado)
+        elif chance == 2:
+            # Mudar o nome para algo engraçado
+            nome_novo = random.choice(["Zé Bobo", "Palhaço Triste", "Mestre das Travessuras"])
+            mudar_nome_usuario(user_id, nome_novo)
+            bot.send_message(chat_id, f"😂 Que travessura! Seu nome agora é {nome_novo}!")
+
+        elif chance == 3:
+            # Mudar a música para Zé Felipe
+            nova_musica = random.choice(["Rap do Zé Felipe", "Bandido - Zé Felipe", "Malvada - Zé Felipe"])
+            mudar_musica_usuario(user_id, nova_musica)
+            bot.send_message(chat_id, f"🎶 Travessura! Sua música agora é: {nova_musica}.")
+
+        elif chance == 4:
+            # Mudar a bio para uma bio engraçada
+            bio_nova = random.choice(["Eu adoro travessuras!", "Perdi no jogo da vida.", "Me salva, Halloween!"])
+            mudar_bio_usuario(user_id, bio_nova)
+            bot.send_message(chat_id, f"😂 Travessura! Sua bio agora é: {bio_nova}.")
+
+        elif chance == 5:
+            # Mudar o favorito para outra carta aleatória
+            carta_aleatoria = escolher_carta_aleatoria()
+            mudar_favorito(user_id, carta_aleatoria)
+            bot.send_message(chat_id, f"🎃 Travessura! Seu favorito foi alterado para {carta_aleatoria['nome']}.")
+
+        elif chance == 6:
+            # Bloquear de pescar por X minutos
+            minutos_bloqueio = random.randint(10, 60)
+            bloquear_acao(user_id, "pescar", minutos_bloqueio)
+            bot.send_message(chat_id, f"🎣 Travessura! Você está bloqueado de pescar por {minutos_bloqueio} minutos.")
+
+        elif chance == 7:
+            # Bloquear de enviar comandos (usuário fica invisível)
+            bloquear_acao(user_id, "todos_comandos", 30)
+            bot.send_message(chat_id, "👻 Travessura! Você está invisível e não pode enviar comandos por 30 minutos.")
+
+        elif chance == 8:
+            # Embaralhar as mensagens
+            bot.send_message(chat_id, embaralhar_mensagem("🐯 Olá! Você tem disponível: X iscas. Boa pesca!"))
+
+        elif chance == 9:
+            # Pega-pega (passar uma praga para outros usuários)
+            bot.send_message(chat_id, f"👹 Travessura! Você foi amaldiçoado, use +praga para passar a praga para outra pessoa.")
+            iniciar_pega_pega(user_id)
+
+        elif chance == 10:
+            # Nada acontece
+            bot.send_message(chat_id, "🎁 Gostosura! ...Ah, não, era uma travessura! Não há recompensa para você dessa vez.")
+
+        elif chance == 11:
+            # Jogo da velha com um fantasma
+            bot.send_message(chat_id, "👻 Um fantasma te desafiou para um jogo da velha! Se você ganhar, a travessura será evitada.")
+            iniciar_jogo_da_velha_fantasma(user_id)
+
+        elif chance == 12:
+            # Labirinto com um fantasma
+            bot.send_message(chat_id, "👻 Um fantasma te desafiou para escapar de um labirinto!")
+            iniciar_labirinto_fantasma(user_id)
+
+        elif chance == 13:
+            # Travessura acontece com todos os que mandaram mensagem no grupo nos últimos 10 minutos
+            travessura_grupal(chat_id)
+
+        elif chance == 14:
+            # Comandos trocados
+            trocar_comandos_temporariamente(user_id)
+            bot.send_message(chat_id, "🎃 Travessura! Seus comandos estão todos trocados!")
+
+        elif chance == 15:
+            # Troca de ordem nos comandos de troca
+            inverter_ordem_troca(user_id)
+            bot.send_message(chat_id, "🎭 Travessura! A ordem dos comandos de troca foi invertida.")
+
+        elif chance == 16:
+            # Bloquear raspadinha por 1 dia
+            bloquear_acao(user_id, "raspadinha", 1440)
+            bot.send_message(chat_id, "🎰 Travessura! Você está bloqueado de jogar raspadinha por 1 dia.")
+
+        elif chance == 17:
+            # Sombra rouba cenouras a cada 10 segundos
+            iniciar_sombra_roubo_cenouras(user_id)
+            bot.send_message(chat_id, "🕯️ Travessura! Uma sombra está roubando suas cenouras a cada 10 segundos. Use +exorcizar para parar!")
+
+        elif chance == 18:
+            # Alucinação: mensagens incompletas
+            bot.send_message(chat_id, "💀 Travessura! Suas mensagens estarão incompletas por um tempo!")
+
+        elif chance == 19:
+            # Cartas aparecem com a categoria errada
+            embaralhar_categorias_cartas(user_id)
+            bot.send_message(chat_id, "🎃 Travessura! Suas cartas estão com as categorias erradas temporariamente.")
+
+        elif chance == 20:
+            # Carta roubada por um demônio
+            iniciar_demonio_roubo_carta(user_id, chat_id)
+
+        elif chance == 21:
+            # Carta aleatória do inventário será apagada
+            apagar_carta_aleatoria(user_id)
+            bot.send_message(chat_id, "💀 Travessura! Uma carta aleatória foi apagada do seu inventário.")
+
+    except Exception as e:
+        print(f"DEBUG: Erro ao realizar travessura para o usuário {user_id}: {e}")
+        traceback.print_exc()
+        bot.send_message(user_id, "Ocorreu um erro ao realizar a travessura.")
 
 
-# Comando /halloween
 @bot.message_handler(commands=['halloween'])
 def handle_halloween(message):
     print(f"DEBUG: Comando /halloween acionado pelo usuário {message.from_user.id}")
@@ -942,7 +1041,7 @@ def handle_halloween(message):
         realizar_halloween_gostosura(user_id,chat_id)  # Executa uma das funções de gostosura
     else:
         print(f"DEBUG: Executando travessura para o usuário {user_id}")
-        travessura(message)  # Executa uma das funções de travessura
+        realizar_halloween_travessura(user_id, chat_id)  # Executa uma das funções de travessura
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("descartar_caixa_"))
 def callback_descartar_caixa(call):

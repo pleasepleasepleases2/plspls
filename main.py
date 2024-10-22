@@ -1587,7 +1587,7 @@ def trade(message):
             f"E {seunome} oferece de lanche:\n"
             f" {idsuacarta} {emojisuacarta}  —  {nomesuacarta} de {subcategoriasuacarta}\n\n"
             f"Podemos começar a comer, {seu_nome_formatado}?"
-            f"👻 Uma travessura está ativa! As cartas foram trocadas na troca!"
+            f"👻 Uma travessura está ativa! As cartas foram trocadas na troca!")
         # Criação dos botões de confirmação e rejeição
         keyboard = types.InlineKeyboardMarkup()
         primeiro = [

@@ -113,15 +113,7 @@ def set_webhook():
 @app.route('/', methods=['GET', 'HEAD'])
 def index():
     return 'Server is running.'
-@bot.message_handler(func=lambda message: True)  # Captura todos os comandos
-def todos_comandos(message):
-    user_id = message.from_user.id
 
-    # Verificar se o usuário está bloqueado de enviar comandos
-    bloqueado, minutos_restantes = verificar_bloqueio_comandos(user_id)
-    if bloqueado:
-        bot.send_message(message.chat.id, f"👻 Você está invisível e seus comandos serão ignorados por mais {minutos_restantes} minutos.")
-        return
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith('votar_'))
 def votar_usuario(call):

@@ -119,7 +119,9 @@ def pages_command(message):
         for i, (data, anotacao) in enumerate(anotacoes, 1):
             page_number = total_anotacoes - i + 1
             response += f"Dia {page_number} - {data.strftime('%d/%m/%Y')}\n"
-        
+            # Verificar se a travessura está ativa e embaralhar, se necessário
+        if verificar_travessura_embaralhamento(message.from_user.id):
+            response = embaralhar_mensagem(response)
         bot.send_message(message.chat.id, response)
 
     except mysql.connector.Error as err:

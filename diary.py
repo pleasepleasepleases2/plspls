@@ -10,6 +10,30 @@ from gif import *
 from cachetools import cached, TTLCache
 from evento import *
 from sub import *
+def verificar_travessura_embaralhamento(user_id):
+    try:
+        conn, cursor = conectar_banco_dados()
+
+        # Verificar se a travessura está ativa
+        cursor.execute("""
+            SELECT fim_travessura FROM travessuras
+            WHERE id_usuario = %s AND tipo_travessura = 'embaralhamento'
+        """, (user_id,))
+        resultado = cursor.fetchone()
+
+        if resultado:
+            fim_travessura = resultado[0]
+            # Se a travessura ainda está ativa (o tempo atual é menor que o fim)
+            if datetime.now() < fim_travessura:
+                return True
+        
+        return False  # Travessura não está ativa
+    
+    except Exception as e:
+        print(f"Erro ao verificar a travessura de embaralhamento: {e}")
+        return False
+    finally:
+        fechar_conexao(cursor, conn)
 
 def receive_note(message):
     user_id = message.from_user.id

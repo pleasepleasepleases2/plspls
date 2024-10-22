@@ -607,9 +607,9 @@ def mostrar_portas_escolha(user_id):
 
     # Criar os botões das portas
     markup = InlineKeyboardMarkup()
-    porta_1 = InlineKeyboardButton("🚪 Porta 1", callback_data=f"escolha_porta_1_{user_id}")
-    porta_2 = InlineKeyboardButton("🚪 Porta 2", callback_data=f"escolha_porta_2_{user_id}")
-    porta_3 = InlineKeyboardButton("🚪 Porta 3", callback_data=f"escolha_porta_3_{user_id}")
+    porta_1 = InlineKeyboardButton("🚪", callback_data=f"escolha_porta_1_{user_id}")
+    porta_2 = InlineKeyboardButton("🚪", callback_data=f"escolha_porta_2_{user_id}")
+    porta_3 = InlineKeyboardButton("🚪 ", callback_data=f"escolha_porta_3_{user_id}")
     
     markup.add(porta_1, porta_2, porta_3)
     
@@ -657,7 +657,7 @@ def adicionar_inverter_travessura(user_id,chat_id):
         """, (user_id, True))
         conn.commit()
 
-        bot.send_message(user_id, "🎃 Você ganhou a habilidade de inverter uma travessura! Quando for alvo, poderá reverter o efeito.")
+        bot.send_message(chat_id, "🪄 Você ganhou a habilidade de inverter uma travessura! Quando for alvo, poderá reverter o efeito.")
     except Exception as e:
         print(f"Erro ao adicionar a chance de inverter a travessura: {e}")
     finally:

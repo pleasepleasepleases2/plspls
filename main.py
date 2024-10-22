@@ -617,37 +617,57 @@ def verificar_inverter_travessura(user_id, atacante_id):
 def adicionar_super_boost_cenouras(user_id, multiplicador, duracao_horas):
     try:
         conn, cursor = conectar_banco_dados()
-        # Adiciona o multiplicador e a duração ao banco de dados
-        cursor.execute("UPDATE usuarios SET boost_cenouras = %s, duracao_boost = %s, inicio_boost = NOW() WHERE id_usuario = %s", (multiplicador, duracao_horas, user_id))
+        fim_boost = datetime.now() + timedelta(hours=duracao_horas)
+
+        # Inserir o boost de cenouras na tabela 'boosts'
+        cursor.execute("""
+            INSERT INTO boosts (id_usuario, tipo_boost, multiplicador, fim_boost)
+            VALUES (%s, 'cenouras', %s, %s)
+            ON DUPLICATE KEY UPDATE multiplicador = %s, fim_boost = %s
+        """, (user_id, multiplicador, fim_boost, multiplicador, fim_boost))
+        
         conn.commit()
+
         bot.send_message(user_id, f"🌟 Você recebeu um Super Boost de Cenouras! Todas as cenouras que você ganhar serão multiplicadas por {multiplicador} nas próximas {duracao_horas} horas.")
+    
     except Exception as e:
         print(f"Erro ao adicionar Super Boost de Cenouras: {e}")
+    
     finally:
         fechar_conexao(cursor, conn)
 
-# Função para aplicar o boost ao jogador quando ele ganha cenouras
+
 def aplicar_boost_cenouras(user_id, cenouras_ganhas):
     try:
         conn, cursor = conectar_banco_dados()
-        cursor.execute("SELECT boost_cenouras, duracao_boost, TIMESTAMPDIFF(HOUR, inicio_boost, NOW()) as horas_passadas FROM usuarios WHERE id_usuario = %s", (user_id,))
+
+        # Verificar se o usuário tem um boost ativo de cenouras
+        cursor.execute("""
+            SELECT multiplicador, fim_boost 
+            FROM boosts 
+            WHERE id_usuario = %s AND tipo_boost = 'cenouras' AND fim_boost > NOW()
+        """, (user_id,))
+        
         resultado = cursor.fetchone()
 
-        if resultado and resultado[0] and resultado[2] < resultado[1]:  # Se o jogador tem boost ativo e dentro da duração
-            multiplicador = resultado[0]
+        if resultado:
+            multiplicador, fim_boost = resultado
             cenouras_com_boost = cenouras_ganhas * multiplicador
             cursor.execute("UPDATE usuarios SET cenouras = cenouras + %s WHERE id_usuario = %s", (cenouras_com_boost, user_id))
-            conn.commit()
             bot.send_message(user_id, f"🌟 Suas cenouras foram multiplicadas! Você recebeu {cenouras_com_boost} cenouras.")
         else:
-            # Sem boost ativo ou fora da duração, dá as cenouras normalmente
+            # Sem boost ativo, dá as cenouras normalmente
             cursor.execute("UPDATE usuarios SET cenouras = cenouras + %s WHERE id_usuario = %s", (cenouras_ganhas, user_id))
-            conn.commit()
             bot.send_message(user_id, f"Você recebeu {cenouras_ganhas} cenouras.")
+
+        conn.commit()
+    
     except Exception as e:
         print(f"Erro ao aplicar boost de cenouras: {e}")
+    
     finally:
         fechar_conexao(cursor, conn)
+
 # Lista de emojis de gostosuras
 emojis_gostosura = [
     "🍬", "🍪", "🍭", "🍩", "🧁", "🧇", "🍫", "🎂", "🍡", "🍨",

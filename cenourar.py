@@ -158,7 +158,7 @@ def cenourar_carta(call, id_usuario, ids_personagens):
         if cartas_cenouradas:
             mensagem_final = f"🥕<b> Agora você está mais rico em cenouras!</b>\nCartas cenouradas com sucesso:\n\n{', '.join(cartas_cenouradas)}"
                         # Verificar se a travessura está ativa e embaralhar, se necessário
-            if verificar_travessura_embaralhamento(message.from_user.id):
+            if verificar_travessura_embaralhamento(message):
                 mensagem_final = embaralhar_mensagem(mensagem_final)
             bot.edit_message_text(chat_id=chat_id, message_id=message_id, text=mensagem_final,parse_mode="HTML")
      

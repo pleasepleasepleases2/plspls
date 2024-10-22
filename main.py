@@ -699,6 +699,31 @@ def handle_100vip(message):
 
     finally:
         fechar_conexao(cursor, conn)
+def ativar_fonte_extra(user_id, chat_id):
+    try:
+        # Configuração padrão de cenouras para o pedido
+        quantidade_cenouras = random.randint(10, 20)
+        
+        # IDs de cartas fictícias que o usuário pode ganhar
+        id_cartas = [random.randint(10000, 10100) for _ in range(5)]  # Exemplo de IDs de peixes/carta
+
+        diminuir_cenouras(user_id, quantidade_cenouras)
+        adicionar_cenouras_banco(quantidade_cenouras)  # Adiciona as cenouras ao banco da cidade
+
+        results = []
+        for id_carta in id_cartas:
+            chance = random.randint(1, 100)
+            if chance <= 15:  # 15% de chance de ganhar
+                results.append(id_carta)
+                update_inventory(user_id, id_carta)
+
+        if results:
+            bot.send_message(chat_id, f"<i>As águas da fonte extra começam a circular em uma velocidade assustadora. Aparecem na sua cesta os seguintes peixes: <b>{', '.join(map(str, results))}</b>.</i>\n\nA fonte então desaparece.")
+        else:
+            bot.send_message(chat_id, "<i>A fonte extra nem se move ao receber suas cenouras, elas apenas desaparecem na água. Talvez você deva tentar novamente mais tarde...</i>")
+    
+    except Exception as e:
+        bot.send_message(chat_id, f"Ocorreu um erro ao ativar a fonte extra: {e}")
         
 url_imagem = "https://pub-6f23ef52e8614212a14d24b0cf55ae4a.r2.dev/BQACAgEAAxkBAAIcfGcVeT6gaLXd0DKA7aihUQJfV62hAAJMBQACSV6xRD2puYHoSyajNgQ.jpg"
 
@@ -747,7 +772,7 @@ def realizar_halloween_gostosura(user_id, chat_id):
 
         elif chance == 9:
             print(f"DEBUG: Ativando fonte extra para o usuário {user_id}")
-            ativar_fonte_extra(user_id)
+            ativar_fonte_extra(user_id, chat_id)
 
         elif chance == 10:
             print(f"DEBUG: Adicionando inversão de travessura para o usuário {user_id}")

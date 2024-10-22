@@ -3,55 +3,7 @@ import traceback
 from credentials import *
 from bd import *
 bot = telebot.TeleBot(API_TOKEN)
-def verificar_travessura_embaralhamento(user_id):
-    try:
-        conn, cursor = conectar_banco_dados()
 
-        # Verificar se a travessura está ativa
-        cursor.execute("""
-            SELECT fim_travessura FROM travessuras
-            WHERE id_usuario = %s AND tipo_travessura = 'embaralhamento'
-        """, (user_id,))
-        resultado = cursor.fetchone()
-
-        if resultado:
-            fim_travessura = resultado[0]
-            # Se a travessura ainda está ativa (o tempo atual é menor que o fim)
-            if datetime.now() < fim_travessura:
-                return True
-        
-        return False  # Travessura não está ativa
-    
-    except Exception as e:
-        print(f"Erro ao verificar a travessura de embaralhamento: {e}")
-        return False
-    finally:
-        fechar_conexao(cursor, conn)
-
-def verificar_travessura_embaralhamento(user_id):
-    try:
-        conn, cursor = conectar_banco_dados()
-
-        # Verificar se a travessura está ativa
-        cursor.execute("""
-            SELECT fim_travessura FROM travessuras
-            WHERE id_usuario = %s AND tipo_travessura = 'embaralhamento'
-        """, (user_id,))
-        resultado = cursor.fetchone()
-
-        if resultado:
-            fim_travessura = resultado[0]
-            # Se a travessura ainda está ativa (o tempo atual é menor que o fim)
-            if datetime.now() < fim_travessura:
-                return True
-        
-        return False  # Travessura não está ativa
-    
-    except Exception as e:
-        print(f"Erro ao verificar a travessura de embaralhamento: {e}")
-        return False
-    finally:
-        fechar_conexao(cursor, conn)
 
 def enviar_pergunta_cenoura(message, id_usuario, ids_personagens, bot):
     try:
@@ -69,6 +21,9 @@ def enviar_pergunta_cenoura(message, id_usuario, ids_personagens, bot):
         # Verificar se a travessura está ativa e embaralhar, se necessário
         if verificar_travessura_embaralhamento(message.from_user.id):
             texto_pergunta = embaralhar_mensagem(texto_pergunta)
+
+        # Verificar quais travessuras estão ativas para o usuário
+        travessuras_ativas = verificar_travessuras(user_id)
         keyboard = telebot.types.InlineKeyboardMarkup()
         sim_button = telebot.types.InlineKeyboardButton(text="Sim", callback_data=f"cenourar_sim_{id_usuario}_{'_'.join(ids_personagens)}")
         nao_button = telebot.types.InlineKeyboardButton(text="Não", callback_data=f"cenourar_nao_{id_usuario}")
@@ -158,8 +113,20 @@ def cenourar_carta(call, id_usuario, ids_personagens):
         if cartas_cenouradas:
             mensagem_final = f"🥕<b> Agora você está mais rico em cenouras!</b>\nCartas cenouradas com sucesso:\n\n{', '.join(cartas_cenouradas)}"
                         # Verificar se a travessura está ativa e embaralhar, se necessário
-            if verificar_travessura_embaralhamento(message):
-                mensagem_final = embaralhar_mensagem(mensagem_final)
+                        # Verificar quais travessuras estão ativas para o usuário
+            resultado_travessuras = verificar_travessuras(user_id)
+            travessuras_ativas = resultado_travessuras["travessuras"]
+            embaralhamento_ativo = resultado_travessuras["embaralhamento_ativo"]
+            # Se a travessura de embaralhamento estiver ativa, embaralhar o texto
+            if embaralhamento_ativo:
+                texto_exemplo = embaralhar_mensagem(mensagem_final)
+            
+            # Aplicar outras travessuras ativas
+            for tipo in travessuras_ativas:
+                texto_exemplo = aplicar_travessura(user_id, tipo, mensagem_final)
+            
+            # Enviar o texto modificado ou inalterado
+            bot.send_message(chat_id, texto_exemplo, parse_mode="HTML")
             bot.edit_message_text(chat_id=chat_id, message_id=message_id, text=mensagem_final,parse_mode="HTML")
      
         if cartas_nao_encontradas:

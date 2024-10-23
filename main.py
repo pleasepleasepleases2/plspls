@@ -1280,9 +1280,9 @@ def mudar_favorito_usuario(user_id,chat_id):
             novo_favorito = resultado[0]
             # Atualizar o favorito na tabela `usuarios`
             alterar_usuario(user_id, "fav", novo_favorito)
-            bot.send_message(user_id, f"👻 Travessura! Seu favorito agora é a carta ID {novo_favorito}!")
+            bot.send_message(chat_id, f"👻 Travessura! Seu favorito agora é a carta ID {novo_favorito}!")
         else:
-            bot.send_message(user_id, "Parece que você não tem cartas no inventário para fazer essa travessura.")
+            bot.send_message(chat_id, "Parece que você não tem cartas no inventário para fazer essa travessura.")
 
     except Exception as e:
         print(f"Erro ao mudar favorito para o usuário {user_id}: {e}")
@@ -1341,7 +1341,13 @@ def apagar_carta_aleatoria(user_id, chat_id):
         conn, cursor = conectar_banco_dados()
 
         # Verificar se o jogador tem cartas no inventário
-        cursor.execute("SELECT id_personagem, nome FROM inventario WHERE id_usuario = %s", (user_id,))
+        query = """
+        SELECT i.id_personagem, p.nome 
+        FROM inventario i
+        JOIN personagens p ON i.id_personagem = p.id_personagem
+        WHERE i.id_usuario = %s
+        """
+        cursor.execute(query, (user_id,))
         cartas = cursor.fetchall()
 
         if not cartas:

@@ -971,7 +971,7 @@ def handle_compartilhar(message):
     # Chamar a função para compartilhar as cenouras
     compartilhar_cenouras(user_id, target_user_id, chat_id, message.reply_to_message.from_user.first_name)
 
-def compartilhar_cenouras(user_id, target_user_id, chat_id, target_user_name):
+def compartilhar_cenouras(user_id, target_user_id, chat_id, user_name, target_user_name):
     try:
         conn, cursor = conectar_banco_dados()
 
@@ -995,13 +995,14 @@ def compartilhar_cenouras(user_id, target_user_id, chat_id, target_user_name):
 
         # Informar ambos os usuários
         bot.send_message(user_id, f"🎃 Você compartilhou {quantidade_cenouras} cenouras com {target_user_name}! Cenouras removidas.")
-        bot.send_message(target_user_id, f"🎃 {message.from_user.first_name} compartilhou {quantidade_cenouras} cenouras com você! Aproveite!")
+        bot.send_message(target_user_id, f"🎃 {user_name} compartilhou {quantidade_cenouras} cenouras com você! Aproveite!")
     
     except Exception as e:
         print(f"Erro ao compartilhar cenouras: {e}")
     
     finally:
         fechar_conexao(cursor, conn)
+
 
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("descartar_caixa") or call.data == "recusar_caixa")

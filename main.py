@@ -723,10 +723,10 @@ def iniciar_compartilhamento(user_id,chat_id):
 @bot.message_handler(func=lambda message: message.text and message.text.startswith('+compartilhar'))
 def handle_compartilhar(message):
     user_id = message.from_user.id
-
+    chat_id = message.chat.id
     # Verificar se a mensagem é uma resposta
     if not message.reply_to_message:
-        bot.send_message(user_id, "👻 Você deve responder a uma mensagem da pessoa com quem deseja compartilhar as cenouras.")
+        bot.send_message(chat_id, "👻 Você deve responder a uma mensagem da pessoa com quem deseja compartilhar as cenouras.")
         return
     
     # Obter o ID da pessoa alvo (a pessoa que recebeu a mensagem)
@@ -734,7 +734,7 @@ def handle_compartilhar(message):
 
     # Não pode compartilhar com você mesmo
     if target_user_id == user_id:
-        bot.send_message(user_id, "👻 Você não pode compartilhar cenouras com você mesmo.")
+        bot.send_message(chat_id, "👻 Você não pode compartilhar cenouras com você mesmo.")
         return
 
     # Chamar a função para compartilhar as cenouras
@@ -743,6 +743,8 @@ def handle_compartilhar(message):
 def compartilhar_cenouras(user_id, target_user_id):
     try:
         conn, cursor = conectar_banco_dados()
+        target_user_name = message.reply_to_message.from_user.first_name  # Nome do usuário
+
 
         # Verificar se o usuário tem um compartilhamento ativo
         cursor.execute("SELECT quantidade_cenouras FROM compartilhamentos WHERE id_usuario = %s AND ativo = TRUE", (user_id,))
@@ -763,8 +765,8 @@ def compartilhar_cenouras(user_id, target_user_id):
         conn.commit()
 
         # Informar ambos os usuários
-        bot.send_message(user_id, f"🎃 Você compartilhou {quantidade_cenouras} cenouras com {target_user_id}! Cenouras adicionadas.")
-        bot.send_message(target_user_id, f"🎃 {user_id} compartilhou {quantidade_cenouras} cenouras com você! Aproveite!")
+        bot.send_message(user_id, f"🎃 Você compartilhou {quantidade_cenouras} cenouras com {target_user_name}! Cenouras adicionadas.")
+        bot.send_message(target_user_id, f"🎃 {target_user_name} compartilhou {quantidade_cenouras} cenouras com você! Aproveite!")
     
     except Exception as e:
         print(f"Erro ao compartilhar cenouras: {e}")

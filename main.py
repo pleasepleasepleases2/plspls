@@ -530,11 +530,6 @@ def verificar_travessuras(id_usuario):
     finally:
         fechar_conexao(cursor, conn)
 
-
-import threading
-import time
-from datetime import datetime, timedelta
-
 # Dicionário para rastrear as threads e o status do roubo para cada usuário
 roubo_ativo = {}
 
@@ -594,7 +589,7 @@ def exorcizar_sombra(message):
     try:
         conn, cursor = conectar_banco_dados()
 
-        # Verificar se o usuário está com a travessura ativa
+        # Verificar se o usuário está com a travessura ativa (ajuste no nome da travessura para 'roubo_cenouras')
         cursor.execute("""
             SELECT fim_travessura FROM travessuras
             WHERE id_usuario = %s AND tipo_travessura = 'roubo_cenouras'
@@ -619,7 +614,6 @@ def exorcizar_sombra(message):
         bot.send_message(message.chat.id, f"Erro ao exorcizar a sombra: {e}")
     finally:
         fechar_conexao(cursor, conn)
-
 
 
 def adicionar_vip_temporario(user_id, grupo_sugestao,chat_id):

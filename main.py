@@ -169,7 +169,30 @@ def verificar_travessuras(id_usuario):
         return []
     finally:
         fechar_conexao(cursor, conn)
+ef iniciar_demonio_roubo_carta(user_id, chat_id):
+    try:
+        conn, cursor = conectar_banco_dados()
 
+        # Selecionar uma carta aleatória do inventário do usuário
+        cursor.execute("SELECT id_personagem, nome FROM inventario WHERE id_usuario = %s ORDER BY RAND() LIMIT 1", (user_id,))
+        carta = cursor.fetchone()
+
+        if carta:
+            id_carta, nome_carta = carta
+            palavra_desafio = gerar_palavra_desafio()
+
+            # Enviar mensagem para o usuário com a palavra desafio
+            bot.send_message(chat_id, f"👹 Um demônio está tentando roubar sua carta '{nome_carta}'! Responda rapidamente com a palavra: <b>{palavra_desafio}</b>", parse_mode="HTML")
+
+            # Iniciar um temporizador de 10 segundos para o usuário responder
+            threading.Timer(10.0, verificar_resposta, args=(user_id, id_carta, palavra_desafio, chat_id)).start()
+        else:
+            bot.send_message(chat_id, "Parece que você não tem nenhuma carta para o demônio roubar.")
+    
+    except Exception as e:
+        print(f"Erro ao iniciar o roubo de carta pelo demônio: {e}")
+    finally:
+        fechar_conexao(cursor, conn)
 def adicionar_carta_faltante_halloween(user_id, chat_id, num_cartas):
     try:
         conn, cursor = conectar_banco_dados()

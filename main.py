@@ -557,7 +557,6 @@ def iniciar_sombra_roubo_cenouras(user_id, duracao_minutos=10):
         cursor.execute("""
             INSERT INTO travessuras (id_usuario, tipo_travessura, fim_travessura)
             VALUES (%s, 'sombra_rouba_cenouras', %s)
-            ON DUPLICATE KEY UPDATE fim_travessura = %s
         """, (user_id, fim_roubo, fim_roubo))
         conn.commit()
 
@@ -566,8 +565,11 @@ def iniciar_sombra_roubo_cenouras(user_id, duracao_minutos=10):
 
         def roubar_cenouras_periodicamente():
             while datetime.now() < fim_roubo and roubo_ativo.get(user_id, False):
-                diminuir_cenouras(user_id, 1)
-                bot.send_message(user_id, "👻 A sombra roubou 1 cenoura de você! Use +exorcizar para parar a travessura!")
+                sucesso = diminuir_cenouras(user_id, 1)
+                if sucesso:
+                    bot.send_message(user_id, "👻 A sombra roubou 1 cenoura de você! Use +exorcizar para parar a travessura!")
+                else:
+                    break  # Parar se não houver mais cenouras para roubar
                 time.sleep(10)
 
             # Ao terminar, remover a travessura
@@ -582,6 +584,7 @@ def iniciar_sombra_roubo_cenouras(user_id, duracao_minutos=10):
         print(f"Erro ao iniciar sombra para roubar cenouras: {e}")
     finally:
         fechar_conexao(cursor, conn)
+
 
 @bot.message_handler(commands=['exorcizar'])
 def exorcizar_sombra(message):

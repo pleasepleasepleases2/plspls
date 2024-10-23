@@ -1384,13 +1384,12 @@ def apagar_carta_aleatoria(user_id, chat_id):
         conn, cursor = conectar_banco_dados()
 
         # Verificar se o jogador tem cartas no inventário
-        query = """
-        SELECT i.id_personagem, p.nome 
-        FROM inventario i
-        JOIN personagens p ON i.id_personagem = p.id_personagem
-        WHERE i.id_usuario = %s
-        """
-        cursor.execute(query, (user_id,))
+        cursor.execute("""
+            SELECT i.id_personagem, i.quantidade, p.nome, p.subcategoria
+            FROM inventario i
+            JOIN personagens p ON i.id_personagem = p.id_personagem
+            WHERE i.id_usuario = %s
+        """, (user_id,))
         cartas = cursor.fetchall()
 
         if not cartas:
@@ -1399,19 +1398,25 @@ def apagar_carta_aleatoria(user_id, chat_id):
 
         # Selecionar uma carta aleatória para apagar
         carta_apagada = random.choice(cartas)
-        id_carta, nome_carta = carta_apagada
+        id_carta, quantidade_carta, nome_carta, subcategoria = carta_apagada
 
-        # Remover a carta do inventário
-        cursor.execute("DELETE FROM inventario WHERE id_usuario = %s AND id_personagem = %s", (user_id, id_carta))
+        if quantidade_carta > 1:
+            # Reduzir apenas uma unidade da carta
+            cursor.execute("UPDATE inventario SET quantidade = quantidade - 1 WHERE id_usuario = %s AND id_personagem = %s", (user_id, id_carta))
+            bot.send_message(chat_id, f"👻 O demônio removeu uma unidade da carta ID {id_carta} - {nome_carta} de {subcategoria}. Você ainda tem {quantidade_carta - 1} restantes.")
+        else:
+            # Apagar a carta completamente do inventário
+            cursor.execute("DELETE FROM inventario WHERE id_usuario = %s AND id_personagem = %s", (user_id, id_carta))
+            bot.send_message(chat_id, f"👻 O demônio apagou a carta ID {id_carta} - {nome_carta} de {subcategoria} do seu inventário!")
+
         conn.commit()
-
-        # Informar o jogador sobre a carta apagada
-        bot.send_message(chat_id, f"👻 O demônio apagou a carta '{nome_carta}' do seu inventário!")
 
     except Exception as e:
         print(f"Erro ao apagar carta: {e}")
         bot.send_message(chat_id, "Ocorreu um erro ao tentar apagar sua carta.")
     finally:
+        fechar_conexao(cursor, conn)
+
         fechar_conexao(cursor, conn)
 
 def aplicar_travessura(user_id, chat_id):

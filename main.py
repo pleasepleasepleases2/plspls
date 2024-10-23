@@ -2559,7 +2559,14 @@ def handle_gnome(message):
 
         # Verificar se a travessura de categoria errada está ativa
         if verificar_categoria_errada(user_id):
-            embaralhar_categorias_cartas(user_id)
+            conn, cursor = conectar_banco_dados()
+            cursor.execute("SELECT subcategoria FROM personagens ORDER BY RAND() LIMIT 1")
+            categoria_errada = cursor.fetchone()[0]
+            fechar_conexao(cursor, conn)
+            categoria = categoria_errada
+        else:
+            categoria = subcategoria  # Usar a categoria correta se a travessura não estiver ativa
+
 
         # Salvar os resultados no dicionário global para navegação posterior
         globals.resultados_gnome[user_id] = resultados_personagens

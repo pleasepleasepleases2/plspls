@@ -149,6 +149,26 @@ def mudar_musica_usuario(user_id, musica_nova):
 def mudar_nome_usuario(user_id, nome_novo):
     alterar_usuario(user_id, "nome", nome_novo,chat_id)
     bot.send_message(chat_id, f"😂 Travessura! Seu nome agora é {nome_novo}!")
+def verificar_travessuras(id_usuario):
+    """
+    Verifica quais travessuras estão ativas para o usuário.
+    Retorna uma lista com os tipos de travessuras ativas.
+    """
+    conn, cursor = conectar_banco_dados()
+    try:
+        cursor.execute("""
+            SELECT tipo_travessura
+            FROM travessuras
+            WHERE id_usuario = %s AND fim_travessura > NOW()
+        """, (id_usuario,))
+        travessuras_ativas = cursor.fetchall()
+        return [row[0] for row in travessuras_ativas]  # Retorna uma lista com os tipos de travessuras ativas
+
+    except Exception as e:
+        print(f"Erro ao verificar travessuras: {e}")
+        return []
+    finally:
+        fechar_conexao(cursor, conn)
 
 def adicionar_carta_faltante_halloween(user_id, chat_id, num_cartas):
     try:

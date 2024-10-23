@@ -1491,7 +1491,7 @@ def mudar_favorito_usuario(user_id,chat_id):
         if resultado:
             novo_favorito = resultado[0]
             # Atualizar o favorito na tabela `usuarios`
-            alterar_usuario(user_id, "fav", novo_favorito)
+            alterar_usuario(user_id, "fav", novo_favorito,chat_id)
             bot.send_message(chat_id, f"👻 Travessura! Seu favorito agora é a carta ID {novo_favorito}!")
         else:
             bot.send_message(chat_id, "Parece que você não tem cartas no inventário para fazer essa travessura.")

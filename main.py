@@ -1951,18 +1951,7 @@ def trade(message):
             f" {idsuacarta} {emojisuacarta}  —  {nomesuacarta} de {subcategoriasuacarta}\n\n"
             f"Podemos começar a comer, {seu_nome_formatado}?"
         )
-        # Verificar se a travessura de inverter a troca está ativa
-        if verificar_travessura(eu, 'inverter_troca'):
-            # Inverte as cartas se a travessura estiver ativa
-                    # Texto de descrição da troca
-            texto = (
-                f"🥪 | Hora do picnic!\n\n"
-                f"{meunome} oferece de lanche:\n"
-                f" {idminhacarta} {emojiminhacarta}  —  {nomeminhacarta} de {subcategoriaminhacarta}\n\n"
-                f"E {seunome} oferece de lanche:\n"
-                f" {idsuacarta} {emojisuacarta}  —  {nomesuacarta} de {subcategoriasuacarta}\n\n"
-                f"Podemos começar a comer, {seu_nome_formatado}?"
-                f"👻 Uma travessura está ativa! As cartas foram trocadas na troca!")
+
         # Criação dos botões de confirmação e rejeição
         keyboard = types.InlineKeyboardMarkup()
         primeiro = [

@@ -1807,9 +1807,28 @@ def realizar_halloween_travessura(user_id, chat_id):
             bot.send_message(chat_id, "💀 Travessura! Suas mensagens estarão incompletas por um tempo!")
 
         elif chance == 18:
-            # Cartas aparecem com a categoria errada
-            embaralhar_categorias_cartas(user_id)
-            bot.send_message(chat_id, "🎃 Travessura! Suas cartas estão com as categorias erradas temporariamente.")
+            # Registrar a travessura na tabela
+            try:
+                conn, cursor = conectar_banco_dados()
+        
+                # Definir o tempo de duração da travessura (por exemplo, 1 hora)
+                fim_travessura = datetime.now() + timedelta(hours=1)
+        
+                # Inserir ou atualizar a travessura no banco de dados
+                cursor.execute("""
+                    INSERT INTO travessuras (id_usuario, tipo_travessura, fim_travessura)
+                    VALUES (%s, %s, %s)
+                    ON DUPLICATE KEY UPDATE tipo_travessura = VALUES(tipo_travessura), fim_travessura = VALUES(fim_travessura)
+                """, (user_id, 'categoria_errada', fim_travessura))
+                conn.commit()
+        
+                bot.send_message(chat_id, "🎃 Travessura! Suas cartas estão com as categorias erradas temporariamente.")
+        
+            except Exception as e:
+                print(f"Erro ao registrar travessura de categoria errada: {e}")
+        
+            finally:
+                fechar_conexao(cursor, conn)
 
         elif chance == 19:
             # Carta roubada por um demônio

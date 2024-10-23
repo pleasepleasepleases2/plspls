@@ -2,7 +2,7 @@
 import telebot
 import requests
 import flask
-import http.serverf
+import http.server
 import socketserver
 from telebot.types import InputMediaPhoto, InlineKeyboardMarkup, InlineKeyboardButton
 from http.server import HTTPServer, BaseHTTPRequestHandler

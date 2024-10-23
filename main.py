@@ -1724,7 +1724,7 @@ def realizar_halloween_travessura(user_id, chat_id):
 
         elif chance == 4:
             # Mudar a bio para uma bio engraçada
-            bio_nova = random.choice(["Eu adoro travessuras!", "Perdi no jogo da vida.", "Me salva, Halloween!","Esquerdista 🍁 Evangelica 🙏 Feminista 🚺  Homofobica 🏳‍🌈 Independente 💪 Bolsonaro2k18 🇧🇷", "se viro profesora sua mocreia lacraia malasafraia desalmada ordinaria fedida catingueira","OLA limda bjss sabe vc ELINDA GOSTARIA SE jair bolsonaro 👍"])
+            bio_nova = random.choice(["Eu adoro travessuras!","Halloween chegando, quem quiser me assustar, eu tenho medo de whisky","Me desbloqueia vida eu mudei","Como confiar no amor, se o amor dos outros fica me mandando msg 🤡","metas ano 2025: 1 - ir no show do Zé Felipe", "só de pensar que seu corpo é 70% água já me deu sede", "Pare de correr atrás, pare de se importar, seja indisponível, desapegue. Pessoas gostam do que não têm. 🌸💭", "Perdi no jogo da vida.", "Me salva, Halloween!","Esquerdista 🍁 Evangelica 🙏 Feminista 🚺  Homofobica 🏳‍🌈 Independente 💪 Bolsonaro2k18 🇧🇷", "se viro profesora sua mocreia lacraia malasafraia desalmada ordinaria fedida catingueira","OLA limda bjss sabe vc ELINDA GOSTARIA SE jair bolsonaro 👍"])
             mudar_bio_usuario(user_id, bio_nova,chat_id)
 
         elif chance == 5:

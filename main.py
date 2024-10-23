@@ -1930,10 +1930,6 @@ def trade(message):
         if verifica_inventario_troca(voce, suacarta) == 0:
             bot.send_message(chat_id, f"🌦️ ་  Parece que {seunome} não possui o peixe {suacarta} para trocar.", reply_to_message_id=message.message_id)
             return
-        # Verificar se a travessura de inverter a troca está ativa
-        if verificar_travessura(eu, 'inverter_troca'):
-            # Inverte as cartas se a travessura estiver ativa
-            minhacarta, suacarta = suacarta, minhacarta
 
         # Obter informações das cartas
         info_minhacarta = obter_informacoes_carta(minhacarta)

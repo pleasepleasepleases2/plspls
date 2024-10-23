@@ -114,6 +114,39 @@ def set_webhook():
 def index():
     return 'Server is running.'
 
+def inverter_ordem_troca(user_id):
+    try:
+        conn, cursor = conectar_banco_dados()
+
+        # Verificar se o usuário tem uma troca ativa
+        cursor.execute("""
+            SELECT id_usuario1, id_usuario2, carta_usuario1, carta_usuario2
+            FROM trocas_ativas
+            WHERE id_usuario1 = %s OR id_usuario2 = %s
+        """, (user_id, user_id))
+        troca = cursor.fetchone()
+
+        if troca:
+            id_usuario1, id_usuario2, carta_usuario1, carta_usuario2 = troca
+
+            # Inverter as cartas
+            cursor.execute("""
+                UPDATE trocas_ativas
+                SET carta_usuario1 = %s, carta_usuario2 = %s
+                WHERE id_usuario1 = %s OR id_usuario2 = %s
+            """, (carta_usuario2, carta_usuario1, id_usuario1, id_usuario2))
+            conn.commit()
+
+            # Notificar os usuários sobre a inversão
+            bot.send_message(id_usuario1, "👻 Uma travessura foi realizada! As cartas na sua troca foram invertidas!")
+            bot.send_message(id_usuario2, "👻 Uma travessura foi realizada! As cartas na sua troca foram invertidas!")
+        else:
+            print(f"DEBUG: Nenhuma troca ativa encontrada para o usuário {user_id}")
+
+    except Exception as e:
+        print(f"Erro ao inverter a ordem da troca: {e}")
+    finally:
+        fechar_conexao(cursor, conn)
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith('votar_'))
 def votar_usuario(call):

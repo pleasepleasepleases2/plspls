@@ -540,7 +540,7 @@ def iniciar_sombra_roubo_cenouras(user_id, duracao_minutos=10):
         # Verificar se a sombra já está ativa para o usuário
         cursor.execute("""
             SELECT fim_travessura FROM travessuras
-            WHERE id_usuario = %s AND tipo_travessura = 'roubo_cenouras'
+            WHERE id_usuario = %s AND tipo_travessura = 'sombra_rouba_cenouras'
         """, (user_id,))
         resultado = cursor.fetchone()
 
@@ -556,7 +556,7 @@ def iniciar_sombra_roubo_cenouras(user_id, duracao_minutos=10):
         # Registrar a travessura no banco de dados
         cursor.execute("""
             INSERT INTO travessuras (id_usuario, tipo_travessura, fim_travessura)
-            VALUES (%s, 'roubo_cenouras', %s)
+            VALUES (%s, 'sombra_rouba_cenouras', %s)
             ON DUPLICATE KEY UPDATE fim_travessura = %s
         """, (user_id, fim_roubo, fim_roubo))
         conn.commit()
@@ -572,7 +572,7 @@ def iniciar_sombra_roubo_cenouras(user_id, duracao_minutos=10):
 
             # Ao terminar, remover a travessura
             if roubo_ativo.get(user_id, False):  # Se não foi exorcizado
-                cursor.execute("DELETE FROM travessuras WHERE id_usuario = %s AND tipo_travessura = 'roubo_cenouras'", (user_id,))
+                cursor.execute("DELETE FROM travessuras WHERE id_usuario = %s AND tipo_travessura = 'sombra_rouba_cenouras'", (user_id,))
                 conn.commit()
 
         # Iniciar a sombra em uma thread separada
@@ -592,7 +592,7 @@ def exorcizar_sombra(message):
         # Verificar se o usuário está com a travessura ativa (ajuste no nome da travessura para 'roubo_cenouras')
         cursor.execute("""
             SELECT fim_travessura FROM travessuras
-            WHERE id_usuario = %s AND tipo_travessura = 'roubo_cenouras'
+            WHERE id_usuario = %s AND tipo_travessura = 'sombra_rouba_cenouras'
         """, (user_id,))
         resultado = cursor.fetchone()
 
@@ -602,7 +602,7 @@ def exorcizar_sombra(message):
             if chance_sucesso <= 30:  # Sucesso em 30% das tentativas
                 # Exorcismo bem-sucedido: parar o roubo e remover a travessura
                 roubo_ativo[user_id] = False  # Parar o roubo
-                cursor.execute("DELETE FROM travessuras WHERE id_usuario = %s AND tipo_travessura = 'roubo_cenouras'", (user_id,))
+                cursor.execute("DELETE FROM travessuras WHERE id_usuario = %s AND tipo_travessura = 'sombra_rouba_cenouras'", (user_id,))
                 conn.commit()
                 bot.send_message(message.chat.id, "🕯️ Você exorcizou a sombra! Suas cenouras estão seguras.")
             else:

@@ -226,6 +226,65 @@ def iniciar_demonio_roubo_carta(user_id, chat_id):
         print(f"Erro ao iniciar o roubo de carta pelo demônio: {e}")
     finally:
         fechar_conexao(cursor, conn)
+
+def ativar_protecao_travessura(user_id, horas_duracao):
+    try:
+        conn, cursor = conectar_banco_dados()
+        
+        # Definir o fim da proteção como o tempo atual mais a duração
+        fim_protecao = datetime.now() + timedelta(hours=horas_duracao)
+        
+        # Verificar se já existe uma proteção para esse usuário
+        cursor.execute("""
+            SELECT id_usuario FROM protecoes_travessura WHERE id_usuario = %s
+        """, (user_id,))
+        resultado = cursor.fetchone()
+
+        if resultado:
+            # Atualizar o tempo de fim da proteção
+            cursor.execute("""
+                UPDATE protecoes_travessura SET fim_protecao = %s WHERE id_usuario = %s
+            """, (fim_protecao, user_id))
+        else:
+            # Inserir uma nova proteção
+            cursor.execute("""
+                INSERT INTO protecoes_travessura (id_usuario, fim_protecao) VALUES (%s, %s)
+            """, (user_id, fim_protecao))
+        
+        conn.commit()
+        bot.send_message(user_id, f"🛡️ Você está protegido contra travessuras por {horas_duracao} horas!")
+    
+    except Exception as e:
+        print(f"Erro ao ativar proteção: {e}")
+        bot.send_message(user_id, "Ocorreu um erro ao tentar ativar sua proteção.")
+    finally:
+        fechar_conexao(cursor, conn)
+
+def verificar_protecao_travessura(user_id):
+    try:
+        conn, cursor = conectar_banco_dados()
+        
+        # Verificar se o usuário tem proteção ativa
+        cursor.execute("""
+            SELECT fim_protecao FROM protecoes_travessura
+            WHERE id_usuario = %s
+        """, (user_id,))
+        resultado = cursor.fetchone()
+
+        if resultado:
+            fim_protecao = resultado[0]
+            # Se a proteção ainda está ativa (o tempo atual é menor que o fim)
+            if datetime.now() < fim_protecao:
+                return True
+        
+        return False  # Sem proteção ativa ou proteção expirada
+    
+    except Exception as e:
+        print(f"Erro ao verificar a proteção contra travessuras: {e}")
+        return False
+    finally:
+        fechar_conexao(cursor, conn)
+
 def adicionar_carta_faltante_halloween(user_id, chat_id, num_cartas):
     try:
         conn, cursor = conectar_banco_dados()
@@ -1529,6 +1588,11 @@ def passar_praga(message):
 def realizar_halloween_travessura(user_id, chat_id):
     try:
         print(f"DEBUG: Iniciando travessura para o usuário {user_id}")
+                # Verificar se o usuário tem proteção ativa
+        if verificar_protecao_travessura(user_id):
+            bot.send_message(chat_id, "🛡️ Você está protegido contra travessuras! Nada aconteceu desta vez.")
+            return
+
         chance = random.randint(1, 22)  # 22 tipos de travessuras diferentes
         print(f"DEBUG: Chance sorteada: {chance}")
 

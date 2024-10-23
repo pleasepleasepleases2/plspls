@@ -176,7 +176,7 @@ url_imagem = "https://pub-6f23ef52e8614212a14d24b0cf55ae4a.r2.dev/BQACAgEAAxkBAA
 def mudar_bio_usuario(user_id, bio_nova):
     alterar_usuario(user_id, "bio", bio_nova,chat_id)
     bot.send_message(chat_id, f"😂 Travessura! Sua bio agora é: {bio_nova}.")
-def mudar_musica_usuario(user_id, musica_nova):
+def mudar_musica_usuario(user_id, musica_nova,chat_id):
     alterar_usuario(user_id, "musica", musica_nova,chat_id)
     bot.send_message(chat_id, f"🎶 Travessura! Sua música agora é: {musica_nova}.")
 def mudar_nome_usuario(user_id, nome_novo):

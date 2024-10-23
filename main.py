@@ -755,7 +755,77 @@ def realizar_combo_gostosura(user_id, chat_id):
         print(f"Erro ao realizar combo de gostosuras: {e}")
     finally:
         fechar_conexao(cursor, conn)
+# Dicionário para armazenar quem está com a praga e o tempo restante
+praga_ativa = {}
 
+def iniciar_pega_pega(user_id, chat_id):
+    try:
+        # Definir a pessoa inicial com a praga
+        praga_ativa[chat_id] = {
+            "usuario_atual": user_id,
+            "tempo_inicial": time.time(),
+            "tempo_final": time.time() + 600  # 10 minutos de duração
+        }
+
+        # Anunciar o início do pega-pega com praga
+        bot.send_message(chat_id, f"👻 {user_id} está com a praga! Use +praga para passar a praga para outra pessoa!")
+
+        # Iniciar uma thread para monitorar o tempo e aplicar a travessura
+        threading.Thread(target=monitorar_praga, args=(chat_id,)).start()
+
+    except Exception as e:
+        print(f"Erro ao iniciar o Pega-Pega com praga: {e}")
+        bot.send_message(chat_id, "Ocorreu um erro ao iniciar o Pega-Pega com praga.")
+
+def monitorar_praga(chat_id):
+    try:
+        while True:
+            # Verificar se o tempo da praga acabou
+            if praga_ativa[chat_id]["tempo_final"] <= time.time():
+                # O tempo acabou, a pessoa que está com a praga sofre a travessura
+                usuario_com_praga = praga_ativa[chat_id]["usuario_atual"]
+                bot.send_message(chat_id, f"⏰ O tempo acabou! {usuario_com_praga} ainda está com a praga e vai sofrer uma travessura!")
+                
+                # Aplique a travessura aqui, como uma penalidade
+                realizar_travessura_final(usuario_com_praga, chat_id)
+                
+                # Remover a praga do chat
+                del praga_ativa[chat_id]
+                break
+
+            time.sleep(10)  # Verificar a cada 10 segundos
+
+    except Exception as e:
+        print(f"Erro ao monitorar a praga: {e}")
+
+def passar_praga(novo_usuario, chat_id, usuario_atual):
+    try:
+        # Verificar se a praga está ativa
+        if chat_id not in praga_ativa:
+            bot.send_message(chat_id, "👻 Não há praga ativa no momento.")
+            return
+
+        # Verificar se o usuário atual é quem tem a praga
+        if praga_ativa[chat_id]["usuario_atual"] != usuario_atual:
+            bot.send_message(chat_id, "👻 Você não tem a praga para passar.")
+            return
+
+        # Passar a praga para o novo usuário
+        praga_ativa[chat_id]["usuario_atual"] = novo_usuario
+        praga_ativa[chat_id]["tempo_inicial"] = time.time()
+        praga_ativa[chat_id]["tempo_final"] = time.time() + 600  # Reiniciar o timer para 10 minutos
+
+        bot.send_message(chat_id, f"👻 {usuario_atual} passou a praga para {novo_usuario}! Agora {novo_usuario} tem 10 minutos para passar a praga.")
+
+    except Exception as e:
+        print(f"Erro ao passar a praga: {e}")
+        bot.send_message(chat_id, "Ocorreu um erro ao tentar passar a praga.")
+
+def realizar_travessura_final(usuario_com_praga, chat_id):
+    # Implemente aqui a travessura final que será aplicada ao usuário com a praga
+    # Por exemplo, roubar cenouras ou remover cartas
+    bot.send_message(chat_id, f"👻 {usuario_com_praga} sofreu uma travessura! Uma carta foi removida do seu inventário.")
+   
 def ativar_dobro_cenouras(user_id):
     try:
         conn, cursor = conectar_banco_dados()

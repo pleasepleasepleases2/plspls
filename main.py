@@ -147,7 +147,13 @@ def inverter_ordem_troca(user_id):
         print(f"Erro ao inverter a ordem da troca: {e}")
     finally:
         fechar_conexao(cursor, conn)
-
+def bloquear_acao(user_id, acao, minutos):
+    # Bloquear a ação por x minutos
+    conn, cursor = conectar_banco_dados()
+    fim_bloqueio = datetime.now() + timedelta(minutes=minutos)
+    cursor.execute("INSERT INTO bloqueios (id_usuario, acao, fim_bloqueio) VALUES (%s, %s, %s)", (user_id, acao, fim_bloqueio))
+    conn.commit()
+    fechar_conexao(cursor, conn)
 @bot.callback_query_handler(func=lambda call: call.data.startswith('votar_'))
 def votar_usuario(call):
     id_usuario_avaliador = call.from_user.id

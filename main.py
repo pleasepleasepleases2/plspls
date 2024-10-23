@@ -7,6 +7,7 @@ import socketserver
 from telebot.types import InputMediaPhoto, InlineKeyboardMarkup, InlineKeyboardButton
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from socketserver import ThreadingMixIn
+
 #Conexão com o Banco de Dados
 import mysql.connector
 from mysql.connector import Error

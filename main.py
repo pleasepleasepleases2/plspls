@@ -752,7 +752,7 @@ def encontrar_abobora(user_id,chat_id):
         aboboras_disponiveis = {id_abobora: aboboras[id_abobora] for id_abobora in aboboras if id_abobora not in aboboras_ganhas_ids}
 
         if not aboboras_disponiveis:
-            bot.send_message(user_id, "🎃 Você já encontrou todas as abóboras disponíveis! Mas vai levar como recompensa 100 cenouras.")
+            bot.send_message(chat_id, "🎃 Você já encontrou todas as abóboras disponíveis! Mas vai levar como recompensa 100 cenouras.")
             return
 
         # Escolher uma abóbora aleatória entre as disponíveis

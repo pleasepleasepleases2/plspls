@@ -898,6 +898,7 @@ def iniciar_compartilhamento(user_id,chat_id):
 def handle_compartilhar(message):
     user_id = message.from_user.id
     chat_id = message.chat.id
+    
     # Verificar se a mensagem é uma resposta
     if not message.reply_to_message:
         bot.send_message(chat_id, "👻 Você deve responder a uma mensagem da pessoa com quem deseja compartilhar as cenouras.")
@@ -912,14 +913,10 @@ def handle_compartilhar(message):
         return
 
     # Chamar a função para compartilhar as cenouras
-    compartilhar_cenouras(user_id, target_user_id)
+    compartilhar_cenouras(user_id, target_user_id, chat_id, message.reply_to_message.from_user.first_name)
 
-def compartilhar_cenouras(message):
+def compartilhar_cenouras(user_id, target_user_id, chat_id, target_user_name):
     try:
-        user_id = message.from_user.id  # Quem está compartilhando
-        target_user_id = message.reply_to_message.from_user.id  # Quem recebe as cenouras
-        chat_id = message.chat.id
-
         conn, cursor = conectar_banco_dados()
 
         # Verificar se o usuário tem um compartilhamento ativo
@@ -941,7 +938,7 @@ def compartilhar_cenouras(message):
         conn.commit()
 
         # Informar ambos os usuários
-        bot.send_message(user_id, f"🎃 Você compartilhou {quantidade_cenouras} cenouras com {message.reply_to_message.from_user.first_name}! Cenouras removidas.")
+        bot.send_message(user_id, f"🎃 Você compartilhou {quantidade_cenouras} cenouras com {target_user_name}! Cenouras removidas.")
         bot.send_message(target_user_id, f"🎃 {message.from_user.first_name} compartilhou {quantidade_cenouras} cenouras com você! Aproveite!")
     
     except Exception as e:
@@ -949,6 +946,7 @@ def compartilhar_cenouras(message):
     
     finally:
         fechar_conexao(cursor, conn)
+
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("descartar_caixa") or call.data == "recusar_caixa")
 def callback_descartar_ou_recusar_caixa(call):

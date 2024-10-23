@@ -169,7 +169,7 @@ def verificar_travessuras(id_usuario):
         return []
     finally:
         fechar_conexao(cursor, conn)
-ef iniciar_demonio_roubo_carta(user_id, chat_id):
+def iniciar_demonio_roubo_carta(user_id, chat_id):
     try:
         conn, cursor = conectar_banco_dados()
 

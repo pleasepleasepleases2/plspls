@@ -486,7 +486,7 @@ def alterar_usuario(user_id, coluna, valor_novo):
     finally:
         fechar_conexao(cursor, conn)
 
-def adicionar_protecao_temporaria(user_id):
+def adicionar_protecao_temporaria(user_id,chat_id):
     try:
         conn, cursor = conectar_banco_dados()
 
@@ -503,7 +503,7 @@ def adicionar_protecao_temporaria(user_id):
         conn.commit()
 
         # Informar o usuário sobre a proteção
-        bot.send_message(user_id, f"🛡️ Você ganhou uma proteção mágica por {horas_protecao} horas! Durante esse tempo, você está imune a travessuras.")
+        bot.send_message(chat_id, f"🛡️ Você ganhou uma proteção mágica por {horas_protecao} horas! Durante esse tempo, você está imune a travessuras.")
     
     except Exception as e:
         print(f"Erro ao adicionar proteção temporária: {e}")
@@ -546,7 +546,7 @@ def realizar_combo_gostosura(user_id, chat_id):
             mensagem_combo += "🐟 Bônus ativado: Você receberá peixes em dobro ao pescar!\n"
 
         elif efeito_escolhido == "proteção contra travessuras":
-            adicionar_protecao_temporaria(user_id)
+            adicionar_protecao_temporaria(user_id,chat_id)
             mensagem_combo += "🛡️ Bônus ativado: Você está protegido contra travessuras!\n"
 
         elif efeito_escolhido == "VIP de 1 dia":
@@ -1128,7 +1128,7 @@ def realizar_halloween_gostosura(user_id, chat_id):
 
         elif chance == 4:
             print(f"DEBUG: Adicionando proteção temporária para o usuário {user_id}")
-            adicionar_protecao_temporaria(user_id)
+            adicionar_protecao_temporaria(user_id,chat_id)
 
         elif chance == 5:
             print(f"DEBUG: Realizando combo de gostosura para o usuário {user_id}")

@@ -1585,7 +1585,7 @@ def realizar_halloween_travessura(user_id, chat_id):
 
         elif chance == 21:
             # Carta aleatória do inventário será apagada
-            apagar_carta_aleatoria(user_id)
+            apagar_carta_aleatoria(user_id, chat_id)
             bot.send_message(chat_id, "💀 Travessura! Uma carta aleatória foi apagada do seu inventário.")
 
     except Exception as e:

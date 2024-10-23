@@ -226,7 +226,7 @@ def iniciar_demonio_roubo_carta(user_id, chat_id):
         print(f"Erro ao iniciar o roubo de carta pelo demônio: {e}")
     finally:
         fechar_conexao(cursor, conn)
-def adicionar_carta_faltante_halloween(user_id, chat_id, num_cartas=1):
+def adicionar_carta_faltante_halloween(user_id, chat_id, num_cartas):
     try:
         conn, cursor = conectar_banco_dados()
 
@@ -241,27 +241,27 @@ def adicionar_carta_faltante_halloween(user_id, chat_id, num_cartas=1):
         cartas_faltantes = cursor.fetchall()
 
         if not cartas_faltantes:
-            bot.send_message(user_id, "Parabéns! Mas você já tem todas as cartas do evento de Halloween.")
+            bot.send_message(chat_id, "Parabéns! Mas você já tem todas as cartas do evento de Halloween.")
             return
 
-        # Selecionar até num_cartas cartas de Halloween aleatórias
-        cartas_adicionadas = random.sample(cartas_faltantes, min(num_cartas, len(cartas_faltantes)))
-
-        # Adicionar as cartas ao inventário e armazenar os nomes para exibição
-        nomes_cartas_adicionadas = []
-        for carta_faltante in cartas_adicionadas:
+        # Selecionar uma ou mais cartas de Halloween aleatórias e adicioná-las ao inventário
+        for _ in range(num_cartas):
+            carta_faltante = random.choice(cartas_faltantes)
             id_carta_faltante, nome_carta_faltante = carta_faltante
+
+            # Adicionar a carta ao inventário
             cursor.execute("INSERT INTO inventario (id_usuario, id_personagem, quantidade) VALUES (%s, %s, 1)", (user_id, id_carta_faltante))
             conn.commit()
-            nomes_cartas_adicionadas.append(nome_carta_faltante)
 
-        # Enviar a mensagem informando as cartas recebidas
-        bot.send_message(chat_id, f"🎃 Parabéns! Você encontrou as seguintes cartas do evento Halloween: {', '.join(nomes_cartas_adicionadas)} foram adicionadas ao seu inventário.")
+            # Enviar a mensagem informando a carta recebida
+            bot.send_message(chat_id, f"🎃 Parabéns! Você encontrou uma carta do evento Halloween: {nome_carta_faltante} foi adicionada ao seu inventário.")
 
     except Exception as e:
         print(f"Erro ao adicionar carta de Halloween faltante: {e}")
+        bot.send_message(chat_id, "Ocorreu um erro ao tentar adicionar a carta de Halloween.")
     finally:
         fechar_conexao(cursor, conn)
+
 
 def iniciar_sombra_roubo_cenouras(user_id, duracao_minutos=10):
     try:

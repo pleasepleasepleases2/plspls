@@ -1172,7 +1172,7 @@ def realizar_halloween_gostosura(user_id, chat_id):
         traceback.print_exc()
         bot.send_message(user_id, "Ocorreu um erro ao realizar a gostosura.")
 
-def mudar_favorito_usuario(user_id):
+def mudar_favorito_usuario(user_id,chat_id):
     try:
         conn, cursor = conectar_banco_dados()
 

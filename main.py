@@ -660,7 +660,7 @@ def adicionar_vip_temporario(user_id, grupo_sugestao,chat_id):
         print(f"Erro ao adicionar VIP temporário: {e}")
     finally:
         fechar_conexao(cursor, conn)
-def alterar_usuario(user_id, coluna, valor_novo):
+def alterar_usuario(user_id, coluna, valor_novo,chat_id):
     """
     Função genérica para alterar um campo específico na tabela `usuarios`.
     """

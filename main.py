@@ -146,7 +146,7 @@ def votar_usuario(call):
 
 # URL da imagem a ser enviada
 url_imagem = "https://pub-6f23ef52e8614212a14d24b0cf55ae4a.r2.dev/BQACAgEAAxkBAAIcfGcVeT6gaLXd0DKA7aihUQJfV62hAAJMBQACSV6xRD2puYHoSyajNgQ.jpg"
-def mudar_bio_usuario(user_id, bio_nova):
+def mudar_bio_usuario(user_id, bio_nova,chat_id):
     alterar_usuario(user_id, "bio", bio_nova,chat_id)
     bot.send_message(chat_id, f"😂 Travessura! Sua bio agora é: {bio_nova}.")
 def mudar_musica_usuario(user_id, musica_nova,chat_id):

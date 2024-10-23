@@ -307,10 +307,16 @@ def adicionar_carta_faltante_halloween(user_id, chat_id):
 
 
 
-# Função para realizar a travessura grupal
 def travessura_grupal(chat_id, user_id):
     try:
-        # Obter a lista de participantes do grupo
+        chat_info = bot.get_chat(chat_id)
+
+        # Verificar se o chat é um grupo
+        if chat_info.type == "private":
+            bot.send_message(chat_id, "👻 Travessuras grupais só podem ser realizadas em grupos!")
+            return
+
+        # Obter a lista de participantes do grupo (administradores + membros comuns)
         membros = bot.get_chat_administrators(chat_id)
         todos_participantes = [membro.user.id for membro in membros]
 
@@ -337,6 +343,7 @@ def travessura_grupal(chat_id, user_id):
 
     except Exception as e:
         print(f"Erro ao realizar travessura grupal: {e}")
+
 
 # Função para aplicar a travessura ao usuário
 def aplicar_travessura(user_id, chat_id):

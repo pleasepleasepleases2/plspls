@@ -311,14 +311,14 @@ def travessura_grupal(chat_id, user_id):
     try:
         chat_info = bot.get_chat(chat_id)
 
-        # Verificar se o chat é um grupo
-        if chat_info.type == "private":
-            bot.send_message(chat_id, "👻 Travessuras grupais só podem ser realizadas em grupos!")
+        # Verificar se o chat é um grupo (não precisa verificar se é privado, porque é acionado em grupo)
+        if chat_info.type not in ["group", "supergroup"]:
+            bot.send_message(chat_id, "👻 Travessuras grupais só podem ser realizadas em grupos ou supergrupos!")
             return
 
-        # Obter a lista de participantes do grupo (administradores + membros comuns)
-        membros = bot.get_chat_administrators(chat_id)
-        todos_participantes = [membro.user.id for membro in membros]
+        # Obter a lista de participantes do grupo
+        membros = bot.get_chat_members_count(chat_id)
+        todos_participantes = [user.user.id for user in bot.get_chat_members(chat_id, 0, membros)]
 
         # Garantir que o usuário que acionou o comando esteja na lista
         if user_id not in todos_participantes:

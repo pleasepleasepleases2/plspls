@@ -210,7 +210,7 @@ def aumentar_cenouras(user, valor):
             nova_quantidade = cenouras_atuais + int(valor)
             cursor.execute("UPDATE usuarios SET cenouras = %s WHERE user = %s", (nova_quantidade, user))
             conn.commit()
-            print("cenouras aumentadas." cenouras_atuais, nova_quantidade)
+            print("cenouras aumentadas.", cenouras_atuais, nova_quantidade)
         else:
             print("Erro: Usuário não encontrado.")
 

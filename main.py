@@ -1406,7 +1406,7 @@ def realizar_halloween_travessura(user_id, chat_id):
         elif chance == 4:
             # Mudar a bio para uma bio engraçada
             bio_nova = random.choice(["Eu adoro travessuras!", "Perdi no jogo da vida.", "Me salva, Halloween!"])
-            mudar_bio_usuario(user_id, bio_nova)
+            mudar_bio_usuario(user_id, bio_nova,chat_id)
 
         elif chance == 5:
             # Mudar o favorito para outra carta aleatória

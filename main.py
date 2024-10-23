@@ -226,6 +226,10 @@ def iniciar_demonio_roubo_carta(user_id, chat_id):
         print(f"Erro ao iniciar o roubo de carta pelo demônio: {e}")
     finally:
         fechar_conexao(cursor, conn)
+def embaralhar_mensagem(mensagem):
+    palavras = mensagem.split()
+    random.shuffle(palavras)  # Embaralha as palavras da mensagem
+    return ' '.join(palavras)  # Retorna a mensagem embaralhada
 
 def ativar_protecao_travessura(user_id, horas_duracao):
     try:

@@ -436,33 +436,6 @@ def iniciar_praga(user_id):
     jogo_praga['start_time'] = time.time()
     bot.send_message(user_id, "👻 Você foi amaldiçoado com a praga! Passe a praga para outro usuário rapidamente, ou sofrerá uma travessura!")
 
-def ativar_sombra_rouba_cenouras(user_id):
-    try:
-        conn, cursor = conectar_banco_dados()
-
-        # Definir a duração da travessura (pode durar, por exemplo, 5 minutos)
-        fim_travessura = datetime.now() + timedelta(minutes=5)
-
-        # Inserir a travessura na tabela `travessuras`
-        cursor.execute("""
-            INSERT INTO travessuras (id_usuario, tipo_travessura, fim_travessura)
-            VALUES (%s, 'sombra_rouba_cenouras', %s)
-            ON DUPLICATE KEY UPDATE fim_travessura = VALUES(fim_travessura)
-        """, (user_id, fim_travessura))
-        conn.commit()
-
-        # Enviar mensagem informando que a sombra foi ativada
-        bot.send_message(user_id, "👻 Uma sombra começou a roubar suas cenouras! Use +exorcizar para parar a travessura.")
-        
-        # Iniciar o roubo de cenouras a cada 10 segundos
-        threading.Thread(target=roubar_cenouras_periodicamente, args=(user_id, fim_travessura)).start()
-
-    except Exception as e:
-        print(f"Erro ao ativar a sombra: {e}")
-    finally:
-        fechar_conexao(cursor, conn)
-import time
-
 def roubar_cenouras_periodicamente(user_id, fim_travessura):
     try:
         conn, cursor = conectar_banco_dados()

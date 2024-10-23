@@ -179,7 +179,7 @@ def mudar_bio_usuario(user_id, bio_nova):
 def mudar_musica_usuario(user_id, musica_nova,chat_id):
     alterar_usuario(user_id, "musica", musica_nova,chat_id)
     bot.send_message(chat_id, f"🎶 Travessura! Sua música agora é: {musica_nova}.")
-def mudar_nome_usuario(user_id, nome_novo):
+def mudar_nome_usuario(user_id, nome_novo,chat_id):
     alterar_usuario(user_id, "nome", nome_novo,chat_id)
     bot.send_message(chat_id, f"😂 Travessura! Seu nome agora é {nome_novo}!")
 def verificar_travessura(id_usuario):

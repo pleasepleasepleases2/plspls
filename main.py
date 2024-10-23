@@ -354,52 +354,7 @@ def aplicar_travessura(user_id, chat_id):
     except Exception as e:
         print(f"Erro ao aplicar travessura: {e}")
 
-def iniciar_sombra_roubo_cenouras(user_id, duracao_minutos=10):
-    try:
-        conn, cursor = conectar_banco_dados()
 
-        # Verificar se a sombra já está ativa para o usuário
-        cursor.execute("""
-            SELECT fim_travessura FROM travessuras
-            WHERE id_usuario = %s AND tipo_travessura = 'roubo_cenouras'
-        """, (user_id,))
-        resultado = cursor.fetchone()
-
-        if resultado:
-            fim_travessura = resultado[0]
-            if datetime.now() < fim_travessura:
-                bot.send_message(user_id, "👻 A sombra já está roubando suas cenouras! Use +exorcizar para se livrar dela!")
-                return
-
-        # Definir a duração da travessura (ex.: 10 minutos)
-        fim_roubo = datetime.now() + timedelta(minutes=duracao_minutos)
-        
-        # Registrar a travessura na tabela
-        cursor.execute("""
-            INSERT INTO travessuras (id_usuario, tipo_travessura, fim_travessura)
-            VALUES (%s, 'roubo_cenouras', %s)
-            ON DUPLICATE KEY UPDATE fim_travessura = %s
-        """, (user_id, fim_roubo, fim_roubo))
-        conn.commit()
-
-        # Iniciar o processo de roubo de cenouras a cada 10 segundos
-        def roubar_cenouras_periodicamente():
-            while datetime.now() < fim_roubo:
-                diminuir_cenouras(user_id, 1)
-                bot.send_message(user_id, "👻 A sombra roubou 1 cenoura de você! Use +exorcizar para parar a travessura!")
-                time.sleep(10)  # Rouba 1 cenoura a cada 10 segundos
-
-            # Quando o tempo acabar, remover a travessura
-            cursor.execute("DELETE FROM travessuras WHERE id_usuario = %s AND tipo_travessura = 'roubo_cenouras'", (user_id,))
-            conn.commit()
-
-        # Iniciar a sombra em uma thread separada para não bloquear o bot
-        threading.Thread(target=roubar_cenouras_periodicamente).start()
-
-    except Exception as e:
-        print(f"Erro ao iniciar sombra para roubar cenouras: {e}")
-    finally:
-        fechar_conexao(cursor, conn)
 def troca_invertida(user_id,chat_id):
     try:
         conn, cursor = conectar_banco_dados()
@@ -602,36 +557,84 @@ def verificar_travessuras(id_usuario):
         fechar_conexao(cursor, conn)
 
 
-@bot.message_handler(commands=['exorcizar'])
-def exorcizar_sombra(message):
-    user_id = message.from_user.id
+# Dicionário para rastrear as threads e o status do roubo para cada usuário
+roubo_ativo = {}
 
+def iniciar_sombra_roubo_cenouras(user_id, duracao_minutos=10):
     try:
         conn, cursor = conectar_banco_dados()
 
-        # Verificar se a travessura da sombra está ativa
+        # Verificar se a sombra já está ativa para o usuário
         cursor.execute("""
             SELECT fim_travessura FROM travessuras
-            WHERE id_usuario = %s AND tipo_travessura = 'sombra_rouba_cenouras'
+            WHERE id_usuario = %s AND tipo_travessura = 'roubo_cenouras'
         """, (user_id,))
         resultado = cursor.fetchone()
 
         if resultado:
-            # Definir uma chance de sucesso (exemplo: 30% de chance de sucesso)
+            fim_travessura = resultado[0]
+            if datetime.now() < fim_travessura:
+                bot.send_message(user_id, "👻 A sombra já está roubando suas cenouras! Use +exorcizar para se livrar dela!")
+                return
+
+        # Definir a duração da travessura
+        fim_roubo = datetime.now() + timedelta(minutes=duracao_minutos)
+        
+        # Registrar a travessura no banco de dados
+        cursor.execute("""
+            INSERT INTO travessuras (id_usuario, tipo_travessura, fim_travessura)
+            VALUES (%s, 'roubo_cenouras', %s)
+            ON DUPLICATE KEY UPDATE fim_travessura = %s
+        """, (user_id, fim_roubo, fim_roubo))
+        conn.commit()
+
+        # Sinalizador para parar o roubo quando exorcizado
+        roubo_ativo[user_id] = True
+
+def roubar_cenouras_periodicamente():
+    try:
+        while datetime.now() < fim_roubo and roubo_ativo.get(user_id, False):
+            diminuir_cenouras(user_id, 1)
+            bot.send_message(user_id, "👻 A sombra roubou 1 cenoura de você! Use +exorcizar para parar a travessura!")
+            time.sleep(10)
+
+            # Ao terminar, remover a travessura
+        if roubo_ativo.get(user_id, False):  # Se não foi exorcizado
+            cursor.execute("DELETE FROM travessuras WHERE id_usuario = %s AND tipo_travessura = 'roubo_cenouras'", (user_id,))
+            conn.commit()
+
+        # Iniciar a sombra em uma thread separada
+        threading.Thread(target=roubar_cenouras_periodicamente).start()
+
+    except Exception as e:
+        print(f"Erro ao iniciar sombra para roubar cenouras: {e}")
+    finally:
+        fechar_conexao(cursor, conn)
+
+@bot.message_handler(commands=['exorcizar'])
+def exorcizar_sombra(message):
+    user_id = message.from_user.id
+    try:
+        conn, cursor = conectar_banco_dados()
+
+        # Verificar se o usuário está com a travessura ativa
+        cursor.execute("""
+            SELECT fim_travessura FROM travessuras
+            WHERE id_usuario = %s AND tipo_travessura = 'roubo_cenouras'
+        """, (user_id,))
+        resultado = cursor.fetchone()
+
+        if resultado:
             chance_sucesso = random.randint(1, 100)
 
             if chance_sucesso <= 30:  # Sucesso em 30% das tentativas
-                # Exorcismo bem-sucedido: remover a travessura
-                cursor.execute("""
-                    DELETE FROM travessuras WHERE id_usuario = %s AND tipo_travessura = 'sombra_rouba_cenouras'
-                """, (user_id,))
+                # Exorcismo bem-sucedido: parar o roubo e remover a travessura
+                roubo_ativo[user_id] = False  # Parar o roubo
+                cursor.execute("DELETE FROM travessuras WHERE id_usuario = %s AND tipo_travessura = 'roubo_cenouras'", (user_id,))
                 conn.commit()
-
-                # Informar o usuário que ele exorcizou a sombra
-                bot.send_message(message.chat.id, "🕯️ Você exorcizou a sombra! As suas cenouras estão seguras.")
+                bot.send_message(message.chat.id, "🕯️ Você exorcizou a sombra! Suas cenouras estão seguras.")
             else:
-                # Exorcismo falhou
-                bot.send_message(message.chat.id, "👻 O exorcismo falhou! A sombra continua a roubar suas cenouras. Tente novamente!")
+                bot.send_message(message.chat.id, "👻 O exorcismo falhou! A sombra continua a roubar suas cenouras.")
         else:
             bot.send_message(message.chat.id, "👻 Não há nenhuma sombra para exorcizar.")
 

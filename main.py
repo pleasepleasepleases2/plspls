@@ -1290,7 +1290,7 @@ def mudar_favorito_usuario(user_id,chat_id):
     finally:
         fechar_conexao(cursor, conn)
 
-def bloquear_comandos_usuario(user_id, duracao_minutos):
+def bloquear_comandos_usuario(user_id, duracao_minutos,chat_id):
     try:
         conn, cursor = conectar_banco_dados()
 
@@ -1307,7 +1307,7 @@ def bloquear_comandos_usuario(user_id, duracao_minutos):
         conn.commit()
 
         # Enviar mensagem informando sobre o bloqueio
-        bot.send_message(user_id, f"👻 Travessura! Você está invisível por {duracao_minutos} minutos. Nenhum comando será processado!")
+        bot.send_message(chat_id, f"👻 Travessura! Você está invisível por {duracao_minutos} minutos. Nenhum comando será processado!")
 
     except Exception as e:
         print(f"Erro ao bloquear comandos para o usuário {user_id}: {e}")
@@ -1511,13 +1511,13 @@ def realizar_halloween_travessura(user_id, chat_id):
 
         elif chance == 6:
             # Bloquear pesca por um tempo aleatório entre 5 e 30 minutos
-            duracao_bloqueio = random.randint(5, 30)
+            duracao_bloqueio = random.randint(2, 30)
             bloquear_pesca_usuario(user_id, duracao_bloqueio)
 
         elif chance == 7:
             # Bloquear o envio de comandos por um tempo aleatório entre 5 e 30 minutos
-            duracao_bloqueio_comandos = random.randint(5, 30)
-            bloquear_comandos_usuario(user_id, duracao_bloqueio_comandos)
+            duracao_bloqueio_comandos = random.randint(2, 30)
+            bloquear_comandos_usuario(user_id, duracao_bloqueio_comandos,chat_id)
             
         elif chance == 8:
             # Embaralhar as mensagens

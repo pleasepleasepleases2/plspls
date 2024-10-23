@@ -557,6 +557,10 @@ def verificar_travessuras(id_usuario):
         fechar_conexao(cursor, conn)
 
 
+import threading
+import time
+from datetime import datetime, timedelta
+
 # Dicionário para rastrear as threads e o status do roubo para cada usuário
 roubo_ativo = {}
 
@@ -591,17 +595,16 @@ def iniciar_sombra_roubo_cenouras(user_id, duracao_minutos=10):
         # Sinalizador para parar o roubo quando exorcizado
         roubo_ativo[user_id] = True
 
-def roubar_cenouras_periodicamente():
-    try:
-        while datetime.now() < fim_roubo and roubo_ativo.get(user_id, False):
-            diminuir_cenouras(user_id, 1)
-            bot.send_message(user_id, "👻 A sombra roubou 1 cenoura de você! Use +exorcizar para parar a travessura!")
-            time.sleep(10)
+        def roubar_cenouras_periodicamente():
+            while datetime.now() < fim_roubo and roubo_ativo.get(user_id, False):
+                diminuir_cenouras(user_id, 1)
+                bot.send_message(user_id, "👻 A sombra roubou 1 cenoura de você! Use +exorcizar para parar a travessura!")
+                time.sleep(10)
 
             # Ao terminar, remover a travessura
-        if roubo_ativo.get(user_id, False):  # Se não foi exorcizado
-            cursor.execute("DELETE FROM travessuras WHERE id_usuario = %s AND tipo_travessura = 'roubo_cenouras'", (user_id,))
-            conn.commit()
+            if roubo_ativo.get(user_id, False):  # Se não foi exorcizado
+                cursor.execute("DELETE FROM travessuras WHERE id_usuario = %s AND tipo_travessura = 'roubo_cenouras'", (user_id,))
+                conn.commit()
 
         # Iniciar a sombra em uma thread separada
         threading.Thread(target=roubar_cenouras_periodicamente).start()
@@ -642,6 +645,9 @@ def exorcizar_sombra(message):
         bot.send_message(message.chat.id, f"Erro ao exorcizar a sombra: {e}")
     finally:
         fechar_conexao(cursor, conn)
+
+
+
 def adicionar_vip_temporario(user_id, grupo_sugestao,chat_id):
     try:
         conn, cursor = conectar_banco_dados()

@@ -2436,16 +2436,21 @@ def handle_gnome(message):
             bot.send_message(chat_id, f"Nenhum personagem encontrado com o nome '{nome}'.")
             return
 
+        # Verificar se a travessura de categoria errada está ativa
+        if verificar_categoria_errada(user_id):
+            embaralhar_categorias_cartas(user_id)
+
         # Salvar os resultados no dicionário global para navegação posterior
         globals.resultados_gnome[user_id] = resultados_personagens
 
-        # Exibir a primeira carta - ENVIA ao invés de editar
+        # Exibir a primeira carta
         enviar_primeira_carta(chat_id, user_id, resultados_personagens, 0)
 
     except Exception as e:
         print(f"Erro: {e}")
     finally:
         fechar_conexao(cursor, conn)
+
 def verificar_categoria_errada(user_id):
     try:
         conn, cursor = conectar_banco_dados()

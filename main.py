@@ -274,6 +274,56 @@ def adicionar_carta_faltante_halloween(user_id, chat_id, num_cartas):
         print(f"Erro ao adicionar carta de Halloween: {e}")
     finally:
         fechar_conexao(cursor, conn)
+import time
+import threading
+
+# Função para iniciar o roubo de cenouras por uma sombra
+def iniciar_sombra_roubo_cenouras(user_id, duracao_minutos=10):
+    try:
+        conn, cursor = conectar_banco_dados()
+
+        # Verificar se a sombra já está ativa para o usuário
+        cursor.execute("""
+            SELECT fim_travessura FROM travessuras
+            WHERE id_usuario = %s AND tipo_travessura = 'roubo_cenouras'
+        """, (user_id,))
+        resultado = cursor.fetchone()
+
+        if resultado:
+            fim_travessura = resultado[0]
+            if datetime.now() < fim_travessura:
+                bot.send_message(user_id, "👻 A sombra já está roubando suas cenouras! Use +exorcizar para se livrar dela!")
+                return
+
+        # Definir a duração da travessura (ex.: 10 minutos)
+        fim_roubo = datetime.now() + timedelta(minutes=duracao_minutos)
+        
+        # Registrar a travessura na tabela
+        cursor.execute("""
+            INSERT INTO travessuras (id_usuario, tipo_travessura, fim_travessura)
+            VALUES (%s, 'roubo_cenouras', %s)
+            ON DUPLICATE KEY UPDATE fim_travessura = %s
+        """, (user_id, fim_roubo, fim_roubo))
+        conn.commit()
+
+        # Iniciar o processo de roubo de cenouras a cada 10 segundos
+        def roubar_cenouras_periodicamente():
+            while datetime.now() < fim_roubo:
+                diminuir_cenouras(user_id, 1)
+                bot.send_message(user_id, "👻 A sombra roubou 1 cenoura de você! Use +exorcizar para parar a travessura!")
+                time.sleep(10)  # Rouba 1 cenoura a cada 10 segundos
+
+            # Quando o tempo acabar, remover a travessura
+            cursor.execute("DELETE FROM travessuras WHERE id_usuario = %s AND tipo_travessura = 'roubo_cenouras'", (user_id,))
+            conn.commit()
+
+        # Iniciar a sombra em uma thread separada para não bloquear o bot
+        threading.Thread(target=roubar_cenouras_periodicamente).start()
+
+    except Exception as e:
+        print(f"Erro ao iniciar sombra para roubar cenouras: {e}")
+    finally:
+        fechar_conexao(cursor, conn)
 
 def aplicar_praga(user_id):
     try:

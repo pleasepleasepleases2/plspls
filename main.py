@@ -289,30 +289,37 @@ def verificar_protecao_travessura(user_id):
     finally:
         fechar_conexao(cursor, conn)
 
-def adicionar_carta_faltante_halloween(user_id, id_personagem):
+def adicionar_carta_faltante_halloween(user_id,chat_id):
     try:
         conn, cursor = conectar_banco_dados()
 
-        # Verificar se o usuário já tem a carta no inventário
-        cursor.execute("SELECT quantidade FROM inventario WHERE id_usuario = %s AND id_personagem = %s", (user_id, id_personagem))
-        resultado = cursor.fetchone()
+        # Obter todas as cartas do evento Halloween que o usuário ainda não possui
+        query_faltantes_halloween = """
+            SELECT e.id_personagem, e.nome 
+            FROM evento e
+            LEFT JOIN inventario i ON e.id_personagem = i.id_personagem AND i.id_usuario = %s
+            WHERE e.evento = 'Halloween' AND i.id_personagem IS NULL
+        """
+        cursor.execute(query_faltantes_halloween, (user_id,))
+        cartas_faltantes = cursor.fetchall()
 
-        if resultado:
-            # Aumentar a quantidade se a carta já existir no inventário
-            quantidade_atual = resultado[0]
-            nova_quantidade = quantidade_atual + 1
-            cursor.execute("UPDATE inventario SET quantidade = %s WHERE id_usuario = %s AND id_personagem = %s", (nova_quantidade, user_id, id_personagem))
-            bot.send_message(user_id, f"🎃 A carta do evento Halloween já existia no seu inventário, então a quantidade foi aumentada para {nova_quantidade}.")
-        else:
-            # Inserir a nova carta no inventário se não existir
-            cursor.execute("INSERT INTO inventario (id_usuario, id_personagem, quantidade) VALUES (%s, %s, %s)", (user_id, id_personagem, 1))
-            bot.send_message(user_id, f"🎃 A carta do evento Halloween foi adicionada ao seu inventário!")
+        if not cartas_faltantes:
+            bot.send_message(user_id, "Parabéns! Mas você já tem todas as cartas do evento de Halloween.")
+            return
 
+        # Selecionar uma carta de Halloween aleatória
+        carta_faltante = random.choice(cartas_faltantes)
+        id_carta_faltante, nome_carta_faltante = carta_faltante
+
+        # Adicionar a carta ao inventário
+        cursor.execute("INSERT INTO inventario (id_usuario, id_personagem, quantidade) VALUES (%s, %s, 1)", (user_id, id_carta_faltante))
         conn.commit()
+
+        # Enviar a mensagem informando a carta recebida
+        bot.send_message(user_id, f"🎁 Parabéns! Você encontrou uma carta do evento Halloween: {nome_carta_faltante} foi adicionada ao seu inventário.")
 
     except Exception as e:
         print(f"Erro ao adicionar carta de Halloween faltante: {e}")
-        bot.send_message(user_id, "Ocorreu um erro ao tentar adicionar a carta de Halloween.")
     finally:
         fechar_conexao(cursor, conn)
 
@@ -705,11 +712,9 @@ def realizar_combo_gostosura(user_id, chat_id):
         aumentar_cenouras(user_id, cenouras_ganhas)
         mensagem_combo += f"🍬 {cenouras_ganhas} cenouras no Combo!\n\n"
 
-        # Parte 2: Receber de 1 a 3 cartas faltantes do evento Halloween
-        num_cartas = random.randint(1, 3)
-        cartas_ganhas = adicionar_carta_faltante_halloween(user_id, chat_id, num_cartas)
+        cartas_ganhas = adicionar_carta_faltante_halloween(user_id, chat_id)
         if cartas_ganhas:
-            mensagem_combo += f"🎃 {num_cartas} carta(s) faltante(s) do evento Halloween!\n\n"
+            mensagem_combo += f"🎃 1 carta faltante do evento Halloween!\n\n"
         else:
             mensagem_combo += f"🎃 Parabéns! Mas você já tem todas as cartas do evento Halloween.\n\n"
 
@@ -936,8 +941,7 @@ def encontrar_abobora(user_id,chat_id):
             aumentar_cenouras(user_id, quantidade)
             bot.send_message(chat_id, f"🎃 {abobora['nome']} encontrada! Parabéns, você recebeu {quantidade} cenouras!")
         elif abobora["premio"] == "Carta Faltante":
-            num_cartas = random.randint(1, 3)
-            adicionar_carta_faltante_halloween(user_id, chat_id, num_cartas)
+            adicionar_carta_faltante_halloween(user_id, chat_id)
             bot.send_message(chat_id, f"🎃 {abobora['nome']} encontrada! Parabéns, você recebeu uma carta faltante do evento!")
         
         # Adicione outras possíveis premiações aqui
@@ -1307,8 +1311,7 @@ def realizar_halloween_gostosura(user_id, chat_id):
 
         elif chance == 2:
             print(f"DEBUG: Adicionando carta faltante de Halloween para o usuário {user_id}")
-            num_cartas = random.randint(1, 3)
-            adicionar_carta_faltante_halloween(user_id, chat_id, num_cartas)
+            adicionar_carta_faltante_halloween(user_id, chat_id)
             # Enviar a mensagem informando a carta recebida
             bot.send_message(chat_id, f"🎃 Parabéns! Você encontrou uma carta do evento Halloween: {nome_carta_faltante} foi adicionada ao seu inventário.")
 

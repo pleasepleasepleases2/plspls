@@ -175,6 +175,15 @@ def verificar_travessura(id_usuario):
         return []
     finally:
         fechar_conexao(cursor, conn)
+
+def iniciar_labirinto_fantasma(user_id):
+    try:
+        # Inicializa o labirinto fantasma para o usuário
+        iniciar_labirinto(user_id)
+        bot.send_message(user_id, "👻 Você foi transportado para um labirinto fantasma! Tente escapar o mais rápido possível.")
+    except Exception as e:
+        print(f"Erro ao iniciar o labirinto fantasma: {e}")
+
 def iniciar_demonio_roubo_carta(user_id, chat_id):
     try:
         conn, cursor = conectar_banco_dados()

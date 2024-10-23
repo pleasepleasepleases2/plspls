@@ -1590,7 +1590,7 @@ def realizar_halloween_travessura(user_id, chat_id):
             bot.send_message(chat_id, "🛡️ Você está protegido contra travessuras! Nada aconteceu desta vez.")
             return
 
-        chance = random.randint(1, 22)  # 22 tipos de travessuras diferentes
+        chance = random.randint(1, 20)  # 22 tipos de travessuras diferentes
         print(f"DEBUG: Chance sorteada: {chance}")
 
         if chance == 1:
@@ -1655,35 +1655,35 @@ def realizar_halloween_travessura(user_id, chat_id):
             # Travessura acontece com todos os que mandaram mensagem no grupo nos últimos 10 minutos
             travessura_grupal(chat_id)
 
-        elif chance == 15:
+        elif chance == 14:
             # Troca de ordem nos comandos de troca
             inverter_ordem_troca(user_id)
             bot.send_message(chat_id, "🎭 Travessura! A ordem dos comandos de troca foi invertida.")
 
-        elif chance == 16:
+        elif chance == 15:
             # Bloquear raspadinha por 1 dia
             bloquear_acao(user_id, "raspadinha", 1440)
             bot.send_message(chat_id, "🎰 Travessura! Você está bloqueado de jogar raspadinha por 1 dia.")
 
-        elif chance == 17:
+        elif chance == 16:
             # Sombra rouba cenouras a cada 10 segundos
             iniciar_sombra_roubo_cenouras(user_id)
             bot.send_message(chat_id, "🕯️ Travessura! Uma sombra está roubando suas cenouras a cada 10 segundos. Use +exorcizar para parar!")
 
-        elif chance == 18:
+        elif chance == 17:
             # Alucinação: mensagens incompletas
             bot.send_message(chat_id, "💀 Travessura! Suas mensagens estarão incompletas por um tempo!")
 
-        elif chance == 19:
+        elif chance == 18:
             # Cartas aparecem com a categoria errada
             embaralhar_categorias_cartas(user_id)
             bot.send_message(chat_id, "🎃 Travessura! Suas cartas estão com as categorias erradas temporariamente.")
 
-        elif chance == 20:
+        elif chance == 19:
             # Carta roubada por um demônio
             iniciar_demonio_roubo_carta(user_id, chat_id)
 
-        elif chance == 21:
+        elif chance == 20:
             # Carta aleatória do inventário será apagada
             apagar_carta_aleatoria(user_id, chat_id)
             bot.send_message(chat_id, "💀 Travessura! Uma carta aleatória foi apagada do seu inventário.")

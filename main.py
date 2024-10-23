@@ -262,6 +262,47 @@ def adicionar_carta_faltante_halloween(user_id, chat_id, num_cartas):
     finally:
         fechar_conexao(cursor, conn)
 
+import random
+
+# Função para realizar a travessura grupal
+def travessura_grupal(chat_id, user_id):
+    try:
+        # Obter a lista de participantes do grupo
+        membros = bot.get_chat_administrators(chat_id)
+        todos_participantes = [membro.user.id for membro in membros]
+
+        # Garantir que o usuário que acionou o comando esteja na lista
+        if user_id not in todos_participantes:
+            todos_participantes.append(user_id)
+
+        # Sortear de 1 a 10 pessoas (incluindo quem acionou)
+        num_pessoas = random.randint(1, 10)
+        sorteados = random.sample(todos_participantes, min(num_pessoas, len(todos_participantes)))
+
+        # Aplicar a travessura a cada usuário sorteado
+        for usuario_sorteado in sorteados:
+            aplicar_travessura(usuario_sorteado, chat_id)
+
+        # Enviar mensagem informando quem foi sorteado
+        nomes_sorteados = []
+        for usuario_id in sorteados:
+            user_info = bot.get_chat_member(chat_id, usuario_id).user
+            nomes_sorteados.append(user_info.first_name)
+
+        mensagem = f"👻 As seguintes pessoas foram amaldiçoadas pela travessura grupal: {', '.join(nomes_sorteados)}!"
+        bot.send_message(chat_id, mensagem)
+
+    except Exception as e:
+        print(f"Erro ao realizar travessura grupal: {e}")
+
+# Função para aplicar a travessura ao usuário
+def aplicar_travessura(user_id, chat_id):
+    try:
+        # Aqui você coloca a lógica para aplicar a travessura ao usuário
+        bot.send_message(chat_id, f"👻 O usuário {user_id} foi amaldiçoado!")
+    
+    except Exception as e:
+        print(f"Erro ao aplicar travessura: {e}")
 
 def iniciar_sombra_roubo_cenouras(user_id, duracao_minutos=10):
     try:

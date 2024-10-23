@@ -114,39 +114,6 @@ def set_webhook():
 def index():
     return 'Server is running.'
 
-def inverter_ordem_troca(user_id):
-    try:
-        conn, cursor = conectar_banco_dados()
-
-        # Verificar se o usuário tem uma troca ativa
-        cursor.execute("""
-            SELECT id_usuario1, id_usuario2, carta_usuario1, carta_usuario2
-            FROM trocas_ativas
-            WHERE id_usuario1 = %s OR id_usuario2 = %s
-        """, (user_id, user_id))
-        troca = cursor.fetchone()
-
-        if troca:
-            id_usuario1, id_usuario2, carta_usuario1, carta_usuario2 = troca
-
-            # Inverter as cartas
-            cursor.execute("""
-                UPDATE trocas_ativas
-                SET carta_usuario1 = %s, carta_usuario2 = %s
-                WHERE id_usuario1 = %s OR id_usuario2 = %s
-            """, (carta_usuario2, carta_usuario1, id_usuario1, id_usuario2))
-            conn.commit()
-
-            # Notificar os usuários sobre a inversão
-            bot.send_message(id_usuario1, "👻 Uma travessura foi realizada! As cartas na sua troca foram invertidas!")
-            bot.send_message(id_usuario2, "👻 Uma travessura foi realizada! As cartas na sua troca foram invertidas!")
-        else:
-            print(f"DEBUG: Nenhuma troca ativa encontrada para o usuário {user_id}")
-
-    except Exception as e:
-        print(f"Erro ao inverter a ordem da troca: {e}")
-    finally:
-        fechar_conexao(cursor, conn)
 def bloquear_acao(user_id, acao, minutos):
     # Bloquear a ação por x minutos
     conn, cursor = conectar_banco_dados()
@@ -295,7 +262,7 @@ def verificar_protecao_travessura(user_id):
     finally:
         fechar_conexao(cursor, conn)
 
-def adicionar_carta_faltante_halloween(user_id,chat_id):
+def adicionar_carta_faltante_halloween(user_id, chat_id):
     try:
         conn, cursor = conectar_banco_dados()
 
@@ -304,7 +271,7 @@ def adicionar_carta_faltante_halloween(user_id,chat_id):
             SELECT e.id_personagem, e.nome 
             FROM evento e
             LEFT JOIN inventario i ON e.id_personagem = i.id_personagem AND i.id_usuario = %s
-            WHERE e.evento = 'Halloween' AND i.id_personagem IS NULL
+            WHERE e.evento = 'Festival das Abóboras' AND i.id_personagem IS NULL
         """
         cursor.execute(query_faltantes_halloween, (user_id,))
         cartas_faltantes = cursor.fetchall()
@@ -322,12 +289,13 @@ def adicionar_carta_faltante_halloween(user_id,chat_id):
         conn.commit()
 
         # Enviar a mensagem informando a carta recebida
-        bot.send_message(user_id, f"🎁 Parabéns! Você encontrou uma carta do evento Halloween: {nome_carta_faltante} foi adicionada ao seu inventário.")
+        bot.send_message(chat_id, f"🎃 Parabéns! Você encontrou uma carta do evento Halloween: {nome_carta_faltante} foi adicionada ao seu inventário.")
 
     except Exception as e:
         print(f"Erro ao adicionar carta de Halloween faltante: {e}")
     finally:
         fechar_conexao(cursor, conn)
+
 
 
 # Função para realizar a travessura grupal
@@ -416,7 +384,29 @@ def iniciar_sombra_roubo_cenouras(user_id, duracao_minutos=10):
         print(f"Erro ao iniciar sombra para roubar cenouras: {e}")
     finally:
         fechar_conexao(cursor, conn)
+def troca_invertida(user_id,chat_id):
+    try:
+        conn, cursor = conectar_banco_dados()
 
+        # Definir o tempo de duração da praga (exemplo: 10 minutos)
+        fim_travessura = datetime.now() + timedelta(minutes=15)
+
+        # Inserir a praga na tabela 'travessuras' para o usuário
+        cursor.execute("""
+            INSERT INTO travessuras (id_usuario, tipo_travessura, fim_travessura)
+            VALUES (%s, 'troca_invertida', %s)
+            ON DUPLICATE KEY UPDATE fim_travessura = %s
+        """, (user_id, fim_travessura, fim_travessura))
+
+        conn.commit()
+
+        # Informar o usuário que ele foi amaldiçoado
+        bot.send_message(chat_id, "🎭 Travessura! A ordem dos comandos das suas proximas troca foi invertida por 15min. Tome cuidado!")
+
+    except Exception as e:
+        print(f"Erro ao aplicar praga: {e}")
+    finally:
+        fechar_conexao(cursor, conn)
 def aplicar_praga(user_id):
     try:
         conn, cursor = conectar_banco_dados()
@@ -1666,8 +1656,7 @@ def realizar_halloween_travessura(user_id, chat_id):
 
         elif chance == 14:
             # Troca de ordem nos comandos de troca
-            inverter_ordem_troca(user_id)
-            bot.send_message(chat_id, "🎭 Travessura! A ordem dos comandos de troca foi invertida.")
+            troca_invertida(user_id,chat_id)
 
         elif chance == 15:
             # Bloquear raspadinha por 1 dia

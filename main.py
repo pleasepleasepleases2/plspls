@@ -85,6 +85,7 @@ from compat import *
 from armazem import *
 from diamantes import *
 from game import *
+from gif import *
 # Configuração de Webhook
 WEBHOOK_URL_PATH = '/' + API_TOKEN + '/'
 WEBHOOK_LISTEN = "0.0.0.0"

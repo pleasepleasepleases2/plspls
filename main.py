@@ -2361,11 +2361,6 @@ def handle_delgif(message):
             
 @bot.message_handler(commands=['raspadinha'])
 def handle_sorte(message):
-    bloqueado, horas_restantes, minutos_restantes = verificar_bloqueio_raspadinha(user_id)
-
-    if bloqueado:
-        bot.send_message(message.chat.id, f"👻 O comando de raspadinha está bloqueado por mais {horas_restantes} horas e {minutos_restantes} minutos.")
-        return
     comando_sorte(message)
 
 @bot.message_handler(commands=['casar'])

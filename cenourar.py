@@ -75,14 +75,15 @@ def processar_verificar_e_cenourar(message, bot):
         if conn:
             conn.close()
 
+# Aqui removemos o split, pois estamos passando diretamente uma lista de ids_personagens
 def cenourar_carta(call, id_usuario, ids_personagens_str):
     try:
         conn, cursor = conectar_banco_dados()
         chat_id = call.message.chat.id
         message_id = call.message.message_id
 
-        # Converter a string separada por vírgulas de volta para uma lista
-        ids_personagens = ids_personagens_str.split(',')
+        # Como ids_personagens já é uma lista, não precisamos de split.
+        ids_personagens = ids_personagens_str if isinstance(ids_personagens_str, list) else ids_personagens_str.split(',')
 
         cartas_cenouradas = []
         cartas_nao_encontradas = []

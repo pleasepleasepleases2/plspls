@@ -13,31 +13,34 @@ def enviar_pergunta_cenoura(message, id_usuario, ids_personagens, bot):
         cartas_formatadas = []
         for id_personagem in ids_personagens:
             cursor.execute("SELECT nome FROM personagens WHERE id_personagem = %s", (id_personagem,))
-            nome_carta = cursor.fetchone()[0]  # Pega o nome da carta
-            cartas_formatadas.append(f"{id_personagem} - {nome_carta}")
+            nome_carta = cursor.fetchone()
+            if nome_carta:
+                cartas_formatadas.append(f"{id_personagem} - {nome_carta[0]}")
 
-        # Formata a pergunta com os nomes das cartas
         texto_pergunta = f"Você deseja mesmo cenourar as cartas:\n\n" + "\n".join(cartas_formatadas)
+
         # Verificar se a travessura está ativa e embaralhar, se necessário
-        if verificar_travessura_embaralhamento(message.from_user.id):
+        if verificar_travessura_embaralhamento(id_usuario):  # id_usuario aqui
             texto_pergunta = embaralhar_mensagem(texto_pergunta)
 
         # Verificar quais travessuras estão ativas para o usuário
-        travessuras_ativas = verificar_travessuras(user_id)
+        travessuras_ativas = verificar_travessuras(id_usuario)  # id_usuario aqui
+
         keyboard = telebot.types.InlineKeyboardMarkup()
         sim_button = telebot.types.InlineKeyboardButton(text="Sim", callback_data=f"cenourar_sim_{id_usuario}_{'_'.join(ids_personagens)}")
         nao_button = telebot.types.InlineKeyboardButton(text="Não", callback_data=f"cenourar_nao_{id_usuario}")
         keyboard.row(sim_button, nao_button)
+        
         bot.send_message(message.chat.id, texto_pergunta, reply_markup=keyboard)
     
     except Exception as e:
         print(f"Erro ao enviar pergunta de cenourar: {e}")
+        traceback.print_exc()  # Mostra mais detalhes da exceção
     finally:
         if cursor:
             cursor.close()
         if conn:
             conn.close()
-
 
 def processar_verificar_e_cenourar(message, bot):
     try:
@@ -47,8 +50,8 @@ def processar_verificar_e_cenourar(message, bot):
         if len(message.text.split()) < 2:
             bot.send_message(message.chat.id, "Por favor, forneça os IDs dos personagens que deseja cenourar, separados por vírgulas. Exemplo: /cenourar 12345,67890")
             return
-        ids_personagens_bruto = ' '.join(message.text.split()[1:]).strip()  # Pega o texto após o comando, unido por espaço
-
+        
+        ids_personagens_bruto = ' '.join(message.text.split()[1:]).strip()
         ids_personagens = [id_personagem.strip() for id_personagem in ids_personagens_bruto.split(',') if id_personagem.strip()]
 
         cartas_a_cenourar = []
@@ -71,13 +74,15 @@ def processar_verificar_e_cenourar(message, bot):
             bot.send_message(message.chat.id, "Nenhuma carta válida foi encontrada para cenourar.")
     except Exception as e:
         print(f"DEBUG: Erro ao processar o comando de cenourar: {e}")
-        traceback.print_exc()
+        traceback.print_exc()  # Mostra mais detalhes da exceção
         bot.send_message(message.chat.id, "Erro ao processar o comando de cenourar.")
     finally:
         if cursor:
             cursor.close()
         if conn:
             conn.close()
+
+# Certifique-se de definir corretamente o 'user_id' ou 'id_usuario'
 
 def cenourar_carta(call, id_usuario, ids_personagens):
     try:

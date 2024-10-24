@@ -4,7 +4,6 @@ from credentials import *
 from bd import *
 bot = telebot.TeleBot(API_TOKEN)
 
-
 def enviar_pergunta_cenoura(message, id_usuario, ids_personagens, bot):
     try:
         conn, cursor = conectar_banco_dados()
@@ -19,13 +18,14 @@ def enviar_pergunta_cenoura(message, id_usuario, ids_personagens, bot):
 
         texto_pergunta = f"Você deseja mesmo cenourar as cartas:\n\n" + "\n".join(cartas_formatadas)
 
+        # Passando os IDs como uma string separada por vírgula
         keyboard = telebot.types.InlineKeyboardMarkup()
-        sim_button = telebot.types.InlineKeyboardButton(text="Sim", callback_data=f"cenourar_sim_{id_usuario}_{'_'.join(ids_personagens)}")
+        sim_button = telebot.types.InlineKeyboardButton(text="Sim", callback_data=f"cenourar_sim_{id_usuario}_{','.join(ids_personagens)}")
         nao_button = telebot.types.InlineKeyboardButton(text="Não", callback_data=f"cenourar_nao_{id_usuario}")
         keyboard.row(sim_button, nao_button)
-        
+
         bot.send_message(message.chat.id, texto_pergunta, reply_markup=keyboard)
-    
+
     except Exception as e:
         print(f"Erro ao enviar pergunta de cenourar: {e}")
         traceback.print_exc()  # Mostra mais detalhes da exceção
@@ -75,13 +75,14 @@ def processar_verificar_e_cenourar(message, bot):
         if conn:
             conn.close()
 
-# Certifique-se de definir corretamente o 'user_id' ou 'id_usuario'
-
-def cenourar_carta(call, id_usuario, ids_personagens):
+def cenourar_carta(call, id_usuario, ids_personagens_str):
     try:
         conn, cursor = conectar_banco_dados()
         chat_id = call.message.chat.id
         message_id = call.message.message_id
+
+        # Converter a string separada por vírgulas de volta para uma lista
+        ids_personagens = ids_personagens_str.split(',')
 
         cartas_cenouradas = []
         cartas_nao_encontradas = []
@@ -112,11 +113,11 @@ def cenourar_carta(call, id_usuario, ids_personagens):
             mensagem_final = f"🥕<b> Agora você está mais rico em cenouras!</b>\nCartas cenouradas com sucesso:\n\n{', '.join(cartas_cenouradas)}"
 
             bot.send_message(chat_id, mensagem_final, parse_mode="HTML")
-            bot.edit_message_text(chat_id=chat_id, message_id=message_id, text=mensagem_final,parse_mode="HTML")
-     
+            bot.edit_message_text(chat_id=chat_id, message_id=message_id, text=mensagem_final, parse_mode="HTML")
+
         if cartas_nao_encontradas:
             bot.send_message(chat_id, f"As seguintes cartas não foram encontradas no inventário ou a quantidade é insuficiente: {', '.join(cartas_nao_encontradas)}")
-    
+
     except mysql.connector.Error as e:
         bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text="Erro ao processar a cenoura.")
     finally:
@@ -127,21 +128,3 @@ def cenourar_carta(call, id_usuario, ids_personagens):
                 conn.close()
         except Exception as e:
             print(f"DEBUG: Erro ao fechar conexão ou cursor: {e}")
-
-
-def verificar_id_na_tabelabeta(user_id):
-    try:
-        conn = conectar_banco_dados()
-        cursor = conn.cursor()
-        query = f"SELECT id FROM beta WHERE id = {user_id}"
-        cursor.execute(query)
-        resultado = cursor.fetchone()
-        return resultado is not None
-    except Exception as e:
-        print(f"Erro ao verificar ID na tabela beta: {e}")
-        raise ValueError("Erro ao verificar ID na tabela beta")
-    finally:
-        cursor.close()
-        conn.close()
-
-

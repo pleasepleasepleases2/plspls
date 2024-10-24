@@ -1296,48 +1296,7 @@ def receber_link_gif(message, id_personagem):
             bot.send_message(message.chat.id, "Erro ao processar o link do GIF. ID de usuário inválido.")
     else:
         bot.send_message(message.chat.id, "Erro ao processar o link do GIF. ID de usuário inválido.")
-def receber_link_gif(message, id_personagem):
-    id_usuario = message.from_user.id
 
-    try:
-        if id_usuario:
-            link_gif = message.text
-
-            # Verifica se o link é válido
-            if not re.match(r'^https?://\S+$', link_gif):
-                bot.send_message(message.chat.id, "Por favor, envie <b>apenas</b> o <b>link</b> do GIF.", parse_mode="HTML")
-                return
-
-            if id_usuario in globals.links_gif:
-                id_personagem = globals.links_gif[id_usuario]
-
-                if id_personagem:
-                    numero_personagem = id_personagem.split('_')[0]
-                    conn, cursor = conectar_banco_dados()
-
-                    # Insere o GIF no banco de dados ou o processa de alguma maneira
-                    sql_temp_insert = """
-                        INSERT INTO temp_data (id_usuario, id_personagem, chave, valor)
-                        VALUES (%s, %s, %s, %s)
-                        ON DUPLICATE KEY UPDATE valor = VALUES(valor), chave = VALUES(chave)
-                    """
-                    chave = f"{id_usuario}_{numero_personagem}"
-                    cursor.execute(sql_temp_insert, (id_usuario, numero_personagem, chave, link_gif))
-                    conn.commit()
-
-                    fechar_conexao(cursor, conn)
-
-                    # Enviar mensagem de sucesso
-                    bot.send_message(message.chat.id, "Link do GIF registrado com sucesso. Aguardando aprovação.")
-                else:
-                    bot.send_message(message.chat.id, "Erro ao processar o link do GIF. ID de personagem não encontrado.")
-            else:
-                bot.send_message(message.chat.id, "Erro ao processar o link do GIF. ID de usuário inválido.")
-        else:
-            bot.send_message(message.chat.id, "Erro ao processar o link do GIF. ID de usuário inválido.")
-
-    except Exception as e:
-        print(f"Erro ao processar o link do GIF: {e}")
 def verificar_inverter_travessura(user_id, atacante_id):
     try:
         conn, cursor = conectar_banco_dados()

@@ -287,42 +287,6 @@ def set_bio_command(message):
     else:
         bot.send_message(message.chat.id, "Formato incorreto. Use /setbio seguido da nova bio desejada, por exemplo: /setbio Hhmm, bolo de morango.")
 
-
-def enviar_gif(message):
-    try:
-        comando = message.text.split('/setgif', 1)[1].strip().lower()
-        partes_comando = comando.split(' ')
-        id_personagem = partes_comando[0]
-        id_usuario = message.from_user.id
-
-        conn, cursor = conectar_banco_dados()
-
-        # Verificar se o usuário possui 30 unidades da carta
-        cursor.execute("SELECT quantidade FROM inventario WHERE id_usuario = %s AND id_personagem = %s", (id_usuario, id_personagem))
-        resultado = cursor.fetchone()
-        if not resultado or resultado[0] < 30:
-            bot.send_message(message.chat.id, "Você precisa ter pelo menos 30 unidades dessa carta para enviar um gif.")
-            fechar_conexao(cursor, conn)
-            return
-
-        if 'eusoqueriasernormal' not in partes_comando:
-            tempo_restante = verifica_tempo_ultimo_gif(id_usuario)
-            if tempo_restante:
-                bot.send_message(message.chat.id, f"Você já enviou um gif recentemente. Aguarde {tempo_restante} antes de enviar outro.")
-                fechar_conexao(cursor, conn)
-                return
-
-        bot.send_message(message.chat.id, "Eba! Você pode escolher um gif!\nEnvie o link do gif gerado pelo @LinksdamabiBot:")
-        globals.links_gif[message.from_user.id] = id_personagem
-        bot.register_next_step_handler(message, receber_link_gif, id_personagem)
-
-        fechar_conexao(cursor, conn)
-
-    except IndexError:
-        bot.send_message(message.chat.id, "Por favor, forneça o ID do personagem.")
-    except Exception as e:
-        print(f"Erro ao processar o comando /setgif: {e}")
-        fechar_conexao(cursor, conn)
 def set_nome_command(message):
     command_parts = message.text.split(maxsplit=1)
     if len(command_parts) == 2:
@@ -389,36 +353,66 @@ def remove_fav_command(message):
 
     bot.send_message(message.chat.id, "Favorito removido com sucesso.", reply_to_message_id=message.message_id)
 
+def enviar_gif(message):
+    try:
+        comando = message.text.split('/setgif', 1)[1].strip().lower()
+        partes_comando = comando.split(' ')
+        id_personagem = partes_comando[0]
+        id_usuario = message.from_user.id
+
+        conn, cursor = conectar_banco_dados()
+
+        # Verificar se o usuário possui 30 unidades da carta
+        cursor.execute("SELECT quantidade FROM inventario WHERE id_usuario = %s AND id_personagem = %s", (id_usuario, id_personagem))
+        resultado = cursor.fetchone()
+        if not resultado or resultado[0] < 30:
+            bot.send_message(message.chat.id, "Você precisa ter pelo menos 30 unidades dessa carta para enviar um gif.")
+            fechar_conexao(cursor, conn)
+            return
+
+        if 'eusoqueriasernormal' not in partes_comando:
+            tempo_restante = verifica_tempo_ultimo_gif(id_usuario)
+            if tempo_restante:
+                bot.send_message(message.chat.id, f"Você já enviou um gif recentemente. Aguarde {tempo_restante} antes de enviar outro.")
+                fechar_conexao(cursor, conn)
+                return
+
+        bot.send_message(message.chat.id, "Eba! Você pode escolher um gif!\nEnvie o link do gif gerado pelo @LinksdamabiBot:")
+
+        # Armazena o estado global para o próximo handler
+        globals.links_gif[id_usuario] = id_personagem
+
+        # Registra o próximo step para capturar o link do GIF
+        bot.register_next_step_handler(message, receber_link_gif, id_personagem)
+
+        fechar_conexao(cursor, conn)
+
+    except IndexError:
+        bot.send_message(message.chat.id, "Por favor, forneça o ID do personagem.")
+    except Exception as e:
+        print(f"Erro ao processar o comando /setgif: {e}")
+        fechar_conexao(cursor, conn)
+
 def receber_link_gif(message, id_personagem):
     id_usuario = message.from_user.id
 
-    if id_usuario:
-        link_gif = message.text
+    try:
+        if id_usuario:
+            link_gif = message.text
 
-        if not re.match(r'^https?://\S+$', link_gif):
-            bot.send_message(message.chat.id, "Por favor, envie <b>apenas</b> o <b>link</b> do GIF.", parse_mode="HTML")
-            return
+            # Verifica se o link é válido
+            if not re.match(r'^https?://\S+$', link_gif):
+                bot.send_message(message.chat.id, "Por favor, envie <b>apenas</b> o <b>link</b> do GIF.", parse_mode="HTML")
+                return
 
-        if id_usuario in globals.links_gif:
-            id_personagem = globals.links_gif[id_usuario]
+            if id_usuario in globals.links_gif:
+                id_personagem = globals.links_gif[id_usuario]
 
-            if id_personagem:
-                numero_personagem = id_personagem.split('_')[0]
-                conn, cursor = conectar_banco_dados()
+                if id_personagem:
+                    numero_personagem = id_personagem.split('_')[0]
+                    conn, cursor = conectar_banco_dados()
 
-                sql_usuario = "SELECT nome_usuario, nome FROM usuarios WHERE id_usuario = %s"
-                cursor.execute(sql_usuario, (id_usuario,))
-                resultado_usuario = cursor.fetchone()
-
-                sql_personagem = "SELECT nome, subcategoria FROM personagens WHERE id_personagem = %s"
-                cursor.execute(sql_personagem, (numero_personagem,))
-                resultado_personagem = cursor.fetchone()
-
-                if resultado_usuario and resultado_personagem:
-                    nome_usuario = resultado_usuario[0]
-                    nome_personagem = resultado_personagem[0]
-                    subcategoria_personagem = resultado_personagem[1]
-
+                    # Insere o GIF no banco de dados ou o processa de alguma maneira
                     sql_temp_insert = """
                         INSERT INTO temp_data (id_usuario, id_personagem, chave, valor)
                         VALUES (%s, %s, %s, %s)
@@ -427,30 +421,17 @@ def receber_link_gif(message, id_personagem):
                     chave = f"{id_usuario}_{numero_personagem}"
                     cursor.execute(sql_temp_insert, (id_usuario, numero_personagem, chave, link_gif))
                     conn.commit()
+
                     fechar_conexao(cursor, conn)
 
-                    keyboard = telebot.types.InlineKeyboardMarkup()
-                    btn_aprovar = telebot.types.InlineKeyboardButton(text="✔️ Aprovar", callback_data=f"aprovar_{id_usuario}_{numero_personagem}_{message.message_id}")
-                    btn_reprovar = telebot.types.InlineKeyboardButton(text="❌ Reprovar", callback_data=f"reprovar_{id_usuario}_{numero_personagem}_{message.message_id}")
-
-                    keyboard.row(btn_aprovar, btn_reprovar)
-                    bot.forward_message(chat_id=-1002144134360, from_chat_id=message.chat.id, message_id=message.message_id)
-                    chat_id = -1002144134360
-                    mensagem = f"Pedido de aprovação de GIF:\n\n"
-                    mensagem += f"ID Personagem: {numero_personagem}\n"
-                    mensagem += f"{nome_personagem} de {subcategoria_personagem}\n\n"
-                    mensagem += f"Usuário: @{message.from_user.username}\n"
-                    mensagem += f"Nome: {nome_usuario}\n"
-
-                    sent_message = bot.send_message(chat_id, mensagem, reply_markup=keyboard)
+                    # Enviar mensagem de sucesso
                     bot.send_message(message.chat.id, "Link do GIF registrado com sucesso. Aguardando aprovação.")
-                    return sent_message.message_id
                 else:
-                    fechar_conexao(cursor, conn)
-                    bot.send_message(message.chat.id, "Erro ao obter informações do usuário ou do personagem.")
+                    bot.send_message(message.chat.id, "Erro ao processar o link do GIF. ID de personagem não encontrado.")
             else:
-                bot.send_message(message.chat.id, "Erro ao processar o link do GIF. Por favor, use o comando /setgif novamente.")
+                bot.send_message(message.chat.id, "Erro ao processar o link do GIF. ID de usuário inválido.")
         else:
             bot.send_message(message.chat.id, "Erro ao processar o link do GIF. ID de usuário inválido.")
-    else:
-        bot.send_message(message.chat.id, "Erro ao processar o link do GIF. ID de usuário inválido.")
+
+    except Exception as e:
+        print(f"Erro ao processar o link do GIF: {e}")

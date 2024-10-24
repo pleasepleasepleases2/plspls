@@ -745,7 +745,74 @@ def realizar_combo_gostosura(user_id, chat_id):
         fechar_conexao(cursor, conn)
 # Dicionário para armazenar quem está com a praga e o tempo restante
 praga_ativa = {}
+@bot.message_handler(commands=['setgif'])
+def handle_setgif(message):
+    enviar_gif(message)
+def receber_link_gif(message, id_personagem):
+    id_usuario = message.from_user.id
 
+    if id_usuario:
+        link_gif = message.text
+
+        if not re.match(r'^https?://\S+$', link_gif):
+            bot.send_message(message.chat.id, "Por favor, envie <b>apenas</b> o <b>link</b> do GIF.", parse_mode="HTML")
+            return
+
+        if id_usuario in globals.links_gif:
+            id_personagem = globals.links_gif[id_usuario]
+
+            if id_personagem:
+                numero_personagem = id_personagem.split('_')[0]
+                conn, cursor = conectar_banco_dados()
+
+                sql_usuario = "SELECT nome_usuario, nome FROM usuarios WHERE id_usuario = %s"
+                cursor.execute(sql_usuario, (id_usuario,))
+                resultado_usuario = cursor.fetchone()
+
+                sql_personagem = "SELECT nome, subcategoria FROM personagens WHERE id_personagem = %s"
+                cursor.execute(sql_personagem, (numero_personagem,))
+                resultado_personagem = cursor.fetchone()
+
+                if resultado_usuario and resultado_personagem:
+                    nome_usuario = resultado_usuario[0]
+                    nome_personagem = resultado_personagem[0]
+                    subcategoria_personagem = resultado_personagem[1]
+
+                    sql_temp_insert = """
+                        INSERT INTO temp_data (id_usuario, id_personagem, chave, valor)
+                        VALUES (%s, %s, %s, %s)
+                        ON DUPLICATE KEY UPDATE valor = VALUES(valor), chave = VALUES(chave)
+                    """
+                    chave = f"{id_usuario}_{numero_personagem}"
+                    cursor.execute(sql_temp_insert, (id_usuario, numero_personagem, chave, link_gif))
+                    conn.commit()
+                    fechar_conexao(cursor, conn)
+
+                    keyboard = telebot.types.InlineKeyboardMarkup()
+                    btn_aprovar = telebot.types.InlineKeyboardButton(text="✔️ Aprovar", callback_data=f"aprovar_{id_usuario}_{numero_personagem}_{message.message_id}")
+                    btn_reprovar = telebot.types.InlineKeyboardButton(text="❌ Reprovar", callback_data=f"reprovar_{id_usuario}_{numero_personagem}_{message.message_id}")
+
+                    keyboard.row(btn_aprovar, btn_reprovar)
+                    bot.forward_message(chat_id=-1002144134360, from_chat_id=message.chat.id, message_id=message.message_id)
+                    chat_id = -1002144134360
+                    mensagem = f"Pedido de aprovação de GIF:\n\n"
+                    mensagem += f"ID Personagem: {numero_personagem}\n"
+                    mensagem += f"{nome_personagem} de {subcategoria_personagem}\n\n"
+                    mensagem += f"Usuário: @{message.from_user.username}\n"
+                    mensagem += f"Nome: {nome_usuario}\n"
+
+                    sent_message = bot.send_message(chat_id, mensagem, reply_markup=keyboard)
+                    bot.send_message(message.chat.id, "Link do GIF registrado com sucesso. Aguardando aprovação.")
+                    return sent_message.message_id
+                else:
+                    fechar_conexao(cursor, conn)
+                    bot.send_message(message.chat.id, "Erro ao obter informações do usuário ou do personagem.")
+            else:
+                bot.send_message(message.chat.id, "Erro ao processar o link do GIF. Por favor, use o comando /setgif novamente.")
+        else:
+            bot.send_message(message.chat.id, "Erro ao processar o link do GIF. ID de usuário inválido.")
+    else:
+        bot.send_message(message.chat.id, "Erro ao processar o link do GIF. ID de usuário inválido.")
 def iniciar_pega_pega(user_id, chat_id):
     try:
         # Definir a pessoa inicial com a praga
@@ -1231,71 +1298,7 @@ def adicionar_inverter_travessura(user_id,chat_id):
         print(f"Erro ao adicionar a chance de inverter a travessura: {e}")
     finally:
         fechar_conexao(cursor, conn)
-def receber_link_gif(message, id_personagem):
-    id_usuario = message.from_user.id
 
-    if id_usuario:
-        link_gif = message.text
-
-        if not re.match(r'^https?://\S+$', link_gif):
-            bot.send_message(message.chat.id, "Por favor, envie <b>apenas</b> o <b>link</b> do GIF.", parse_mode="HTML")
-            return
-
-        if id_usuario in globals.links_gif:
-            id_personagem = globals.links_gif[id_usuario]
-
-            if id_personagem:
-                numero_personagem = id_personagem.split('_')[0]
-                conn, cursor = conectar_banco_dados()
-
-                sql_usuario = "SELECT nome_usuario, nome FROM usuarios WHERE id_usuario = %s"
-                cursor.execute(sql_usuario, (id_usuario,))
-                resultado_usuario = cursor.fetchone()
-
-                sql_personagem = "SELECT nome, subcategoria FROM personagens WHERE id_personagem = %s"
-                cursor.execute(sql_personagem, (numero_personagem,))
-                resultado_personagem = cursor.fetchone()
-
-                if resultado_usuario and resultado_personagem:
-                    nome_usuario = resultado_usuario[0]
-                    nome_personagem = resultado_personagem[0]
-                    subcategoria_personagem = resultado_personagem[1]
-
-                    sql_temp_insert = """
-                        INSERT INTO temp_data (id_usuario, id_personagem, chave, valor)
-                        VALUES (%s, %s, %s, %s)
-                        ON DUPLICATE KEY UPDATE valor = VALUES(valor), chave = VALUES(chave)
-                    """
-                    chave = f"{id_usuario}_{numero_personagem}"
-                    cursor.execute(sql_temp_insert, (id_usuario, numero_personagem, chave, link_gif))
-                    conn.commit()
-                    fechar_conexao(cursor, conn)
-
-                    keyboard = telebot.types.InlineKeyboardMarkup()
-                    btn_aprovar = telebot.types.InlineKeyboardButton(text="✔️ Aprovar", callback_data=f"aprovar_{id_usuario}_{numero_personagem}_{message.message_id}")
-                    btn_reprovar = telebot.types.InlineKeyboardButton(text="❌ Reprovar", callback_data=f"reprovar_{id_usuario}_{numero_personagem}_{message.message_id}")
-
-                    keyboard.row(btn_aprovar, btn_reprovar)
-                    bot.forward_message(chat_id=-1002144134360, from_chat_id=message.chat.id, message_id=message.message_id)
-                    chat_id = -1002144134360
-                    mensagem = f"Pedido de aprovação de GIF:\n\n"
-                    mensagem += f"ID Personagem: {numero_personagem}\n"
-                    mensagem += f"{nome_personagem} de {subcategoria_personagem}\n\n"
-                    mensagem += f"Usuário: @{message.from_user.username}\n"
-                    mensagem += f"Nome: {nome_usuario}\n"
-
-                    sent_message = bot.send_message(chat_id, mensagem, reply_markup=keyboard)
-                    bot.send_message(message.chat.id, "Link do GIF registrado com sucesso. Aguardando aprovação.")
-                    return sent_message.message_id
-                else:
-                    fechar_conexao(cursor, conn)
-                    bot.send_message(message.chat.id, "Erro ao obter informações do usuário ou do personagem.")
-            else:
-                bot.send_message(message.chat.id, "Erro ao processar o link do GIF. Por favor, use o comando /setgif novamente.")
-        else:
-            bot.send_message(message.chat.id, "Erro ao processar o link do GIF. ID de usuário inválido.")
-    else:
-        bot.send_message(message.chat.id, "Erro ao processar o link do GIF. ID de usuário inválido.")
 
 def verificar_inverter_travessura(user_id, atacante_id):
     try:
@@ -3849,10 +3852,6 @@ def handle_removew(message):
 @bot.message_handler(commands=['setbio'])
 def handle_setbio(message):
     set_bio_command(message)
-
-@bot.message_handler(commands=['setgif'])
-def handle_setgif(message):
-    enviar_gif(message)
 
 @bot.message_handler(commands=['admin'])
 def handle_admin(message):

@@ -19,13 +19,6 @@ def enviar_pergunta_cenoura(message, id_usuario, ids_personagens, bot):
 
         texto_pergunta = f"Você deseja mesmo cenourar as cartas:\n\n" + "\n".join(cartas_formatadas)
 
-        # Verificar se a travessura está ativa e embaralhar, se necessário
-        if verificar_travessura_embaralhamento(id_usuario):  # id_usuario aqui
-            texto_pergunta = embaralhar_mensagem(texto_pergunta)
-
-        # Verificar quais travessuras estão ativas para o usuário
-        travessuras_ativas = verificar_travessuras(id_usuario)  # id_usuario aqui
-
         keyboard = telebot.types.InlineKeyboardMarkup()
         sim_button = telebot.types.InlineKeyboardButton(text="Sim", callback_data=f"cenourar_sim_{id_usuario}_{'_'.join(ids_personagens)}")
         nao_button = telebot.types.InlineKeyboardButton(text="Não", callback_data=f"cenourar_nao_{id_usuario}")
@@ -117,20 +110,7 @@ def cenourar_carta(call, id_usuario, ids_personagens):
         # Mensagens de confirmação
         if cartas_cenouradas:
             mensagem_final = f"🥕<b> Agora você está mais rico em cenouras!</b>\nCartas cenouradas com sucesso:\n\n{', '.join(cartas_cenouradas)}"
-                        # Verificar se a travessura está ativa e embaralhar, se necessário
-                        # Verificar quais travessuras estão ativas para o usuário
-            resultado_travessuras = verificar_travessuras(user_id)
-            travessuras_ativas = resultado_travessuras["travessuras"]
-            embaralhamento_ativo = resultado_travessuras["embaralhamento_ativo"]
-            # Se a travessura de embaralhamento estiver ativa, embaralhar o texto
-            if embaralhamento_ativo:
-                texto_exemplo = embaralhar_mensagem(mensagem_final)
-            
-            # Aplicar outras travessuras ativas
-            for tipo in travessuras_ativas:
-                texto_exemplo = aplicar_travessura(user_id, tipo, mensagem_final)
-            
-            # Enviar o texto modificado ou inalterado
+
             bot.send_message(chat_id, texto_exemplo, parse_mode="HTML")
             bot.edit_message_text(chat_id=chat_id, message_id=message_id, text=mensagem_final,parse_mode="HTML")
      

@@ -3195,6 +3195,8 @@ def callback_tag(call):
 @bot.callback_query_handler(func=lambda call: call.data.startswith('aprovar_'))
 def callback_aprovar(call):
     try:
+                # Apaga a mensagem original após o botão ser pressionado
+        bot.delete_message(call.message.chat.id, call.message.message_id)
         aprovar_callback(call)
     except Exception as e:
         print(f"Erro ao processar callback de aprovação: {e}")
@@ -3202,6 +3204,8 @@ def callback_aprovar(call):
 @bot.callback_query_handler(func=lambda call: call.data.startswith('reprovar_'))
 def callback_reprovar(call):
     try:
+                # Apaga a mensagem original após o botão ser pressionado
+        bot.delete_message(call.message.chat.id, call.message.message_id)
         reprovar_callback(call)
     except Exception as e:
         print(f"Erro ao processar callback de reprovação: {e}")

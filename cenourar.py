@@ -113,7 +113,6 @@ def cenourar_carta(call, id_usuario, ids_personagens_str):
         if cartas_cenouradas:
             mensagem_final = f"🥕<b> Agora você está mais rico em cenouras!</b>\nCartas cenouradas com sucesso:\n\n{', '.join(cartas_cenouradas)}"
 
-            bot.send_message(chat_id, mensagem_final, parse_mode="HTML")
             bot.edit_message_text(chat_id=chat_id, message_id=message_id, text=mensagem_final, parse_mode="HTML")
 
         if cartas_nao_encontradas:

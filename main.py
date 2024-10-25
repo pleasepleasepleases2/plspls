@@ -2733,9 +2733,6 @@ def handle_gnome(message):
             categoria_errada = cursor.fetchone()[0]
             fechar_conexao(cursor, conn)
             categoria = categoria_errada
-        else:
-            categoria = subcategoria  # Usar a categoria correta se a travessura não estiver ativa
-
 
         # Salvar os resultados no dicionário global para navegação posterior
         globals.resultados_gnome[user_id] = resultados_personagens

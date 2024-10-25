@@ -2892,10 +2892,17 @@ def callback_gnome_navigation(call):
 # Função para criar a navegação com botões de "Anterior" e "Próxima"
 def create_navigation_markup(pagina_atual, total_paginas):
     markup = types.InlineKeyboardMarkup()
+    if pagina_atual == 1:
+        markup.add(types.InlineKeyboardButton("⬅️", callback_data=f"gnomes_prev_{total_paginas}"))
+        markup.add(types.InlineKeyboardButton("➡️", callback_data=f"gnomes_next_{pagina_atual+1}"))
     if pagina_atual > 1:
-        markup.add(types.InlineKeyboardButton("⬅️ Anterior", callback_data=f"gnomes_prev_{pagina_atual-1}"))
+        markup.add(types.InlineKeyboardButton("⬅️", callback_data=f"gnomes_prev_{pagina_atual-1}"))
+        markup.add(types.InlineKeyboardButton("➡️", callback_data=f"gnomes_next_{pagina_atual+1}"))
     if pagina_atual < total_paginas:
-        markup.add(types.InlineKeyboardButton("Próxima ➡️", callback_data=f"gnomes_next_{pagina_atual+1}"))
+        markup.add(types.InlineKeyboardButton("➡️", callback_data=f"gnomes_next_{pagina_atual+1}"))
+    if pagina_atual == total_paginas:
+        markup.add(types.InlineKeyboardButton("⬅️", callback_data=f"gnomes_prev_{total_paginas}"))
+        markup.add(types.InlineKeyboardButton("➡️", callback_data=f"gnomes_next_{1}"))        
     return markup
 
 # Função para salvar o estado dos resultados de pesquisa do usuário

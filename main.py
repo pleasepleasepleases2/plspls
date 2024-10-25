@@ -3226,7 +3226,7 @@ def navigate_messages(call):
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith(('prox_button', 'ant_button')))
 def navigate_gnome_results(call):
-    handle_navigate_gnome_results(call)
+    callback_gnome_navigation(call)
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("cesta_"))
 def callback_query_cesta(call):

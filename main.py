@@ -394,6 +394,7 @@ def callback_query_cesta(call):
     
     try:
         parts = call.data.split('_')
+        print(parts)
         tipo = parts[1]
         pagina = int(parts[2])
         categoria = parts[3]

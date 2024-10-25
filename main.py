@@ -2494,7 +2494,7 @@ def handle_doar(message):
 
 @bot.message_handler(commands=['roseira'])
 def handle_roseira_command(message):
-    verificar_comando_peixes(message)
+    roseira_command(message)
 
 @bot.message_handler(commands=['pedidosubmenu'])
 def handle_pedido_submenu_command(message):

@@ -463,11 +463,11 @@ def processar_callback_banco_pagina(call):
 
 def mostrar_cartas_compradas(chat_id, cartas, id_usuario, pagina_atual=1, message_id=None):
     try:
-        # Ordenar as cartas por ID numericamente, tratando-as adequadamente conforme a estrutura dos dados
-        cartas = sorted(cartas, key=lambda carta: int(carta['id']) if isinstance(carta, dict) else int(carta[1]))
+        # Ordenar as cartas por ID numericamente, assumindo que ID é o segundo item da tupla ou valor da chave 'id'
+        cartas = sorted(cartas, key=lambda carta: int(carta['id']) if isinstance(carta, dict) and 'id' in carta else int(carta[1]) if isinstance(carta, tuple) else float('inf'))
 
         # Definir o número de cartas por página
-        cartas_por_pagina = 10
+        cartas_por_pagina = 5
         total_paginas = (len(cartas) // cartas_por_pagina) + (1 if len(cartas) % cartas_por_pagina > 0 else 0)
         
         # Calcular o intervalo das cartas para a página atual
@@ -516,6 +516,7 @@ def criar_markup_vendinha(pagina_atual, total_paginas, id_usuario):
         markup.add(btn_inicio, btn_anterior, btn_proxima, btn_final)
         return markup
     return None
+
 
 def processar_callback_cartas_compradas(call):
     pagina_atual = int(call.data.split('_')[-1])

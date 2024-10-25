@@ -383,7 +383,20 @@ def troca_invertida(user_id,chat_id):
 
 
 processing_lock = threading.Lock()
+# Função de callback para processar navegação
+@bot.callback_query_handler(func=lambda call: call.data.startswith('vendinha_'))
+def processar_callback_cartas_compradas(call):
+    # Extraímos a página e ID do callback data
+    _, pagina_str, id_usuario_str = call.data.split('_')
+    pagina_atual = int(pagina_str)
+    id_usuario = int(id_usuario_str)
 
+    # Verificar se o usuário tem cartas salvas no cache para navegação
+    if id_usuario in globals.cartas_compradas_dict:
+        cartas = globals.cartas_compradas_dict[id_usuario]
+        mostrar_cartas_compradas(call.message.chat.id, cartas, id_usuario, pagina_atual, call.message.message_id)
+    else:
+        bot.send_message(call.message.chat.id, "Erro ao exibir cartas compradas. Tente novamente.")
 @bot.callback_query_handler(func=lambda call: call.data.startswith("cesta_"))
 def callback_query_cesta(call):
     global processing_lock

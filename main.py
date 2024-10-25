@@ -2988,7 +2988,7 @@ def enviar_mensagem_personagem(chat_id, resultado_personagem, message_id, user_i
     markup.row_width = 1
     markup.add(InlineKeyboardButton("💟", callback_data=f"total_{id_personagem}"))
 
-    gif_url = obter_gif_url(id_personagem, chat_id)
+    gif_url = obter_gif_url(id_personagem, user_id)
     print(gif_url)
     if gif_url:
         imagem_url = gif_url

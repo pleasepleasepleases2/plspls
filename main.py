@@ -2889,21 +2889,26 @@ def callback_gnome_navigation(call):
     except Exception as e:
         bot.answer_callback_query(call.id, "Erro ao processar a navegação.")
         print(f"Erro ao processar callback de navegação: {e}")
+        
 # Função para criar a navegação com botões de "Anterior" e "Próxima"
 def create_navigation_markup(pagina_atual, total_paginas):
-    markup = types.InlineKeyboardMarkup()
-    if pagina_atual == 1:
-        markup.add(types.InlineKeyboardButton("⬅️", callback_data=f"gnomes_prev_{total_paginas}"))
-        markup.add(types.InlineKeyboardButton("➡️", callback_data=f"gnomes_next_{pagina_atual+1}"))
-    if pagina_atual > 1:
-        markup.add(types.InlineKeyboardButton("⬅️", callback_data=f"gnomes_prev_{pagina_atual-1}"))
-        markup.add(types.InlineKeyboardButton("➡️", callback_data=f"gnomes_next_{pagina_atual+1}"))
-    if pagina_atual < total_paginas:
-        markup.add(types.InlineKeyboardButton("➡️", callback_data=f"gnomes_next_{pagina_atual+1}"))
-    if pagina_atual == total_paginas:
-        markup.add(types.InlineKeyboardButton("⬅️", callback_data=f"gnomes_prev_{total_paginas}"))
-        markup.add(types.InlineKeyboardButton("➡️", callback_data=f"gnomes_next_{1}"))        
+    markup = types.InlineKeyboardMarkup(row_width=2)  # Garantir que os botões fiquem na mesma linha
+    
+    if pagina_atual == 1:  # Se estiver na primeira página
+        prev_button = types.InlineKeyboardButton("⬅️", callback_data=f"gnomes_prev_{total_paginas}")  # Volta para a última página
+        next_button = types.InlineKeyboardButton("➡️", callback_data=f"gnomes_next_{pagina_atual+1}")  # Vai para a próxima página
+    elif pagina_atual == total_paginas:  # Se estiver na última página
+        prev_button = types.InlineKeyboardButton("⬅️", callback_data=f"gnomes_prev_{pagina_atual-1}")  # Volta para a página anterior
+        next_button = types.InlineKeyboardButton("➡️", callback_data=f"gnomes_next_1")  # Vai para a primeira página
+    else:  # Qualquer outra página no meio
+        prev_button = types.InlineKeyboardButton("⬅️", callback_data=f"gnomes_prev_{pagina_atual-1}")  # Volta para a página anterior
+        next_button = types.InlineKeyboardButton("➡️", callback_data=f"gnomes_next_{pagina_atual+1}")  # Vai para a próxima página
+
+    # Adiciona os botões na mesma linha
+    markup.add(prev_button, next_button)
+    
     return markup
+
 
 # Função para salvar o estado dos resultados de pesquisa do usuário
 def save_state(user_id, pesquisa, resultados_personagens, chat_id, message_id):

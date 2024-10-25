@@ -465,13 +465,13 @@ from telebot import types
 
 def mostrar_cartas_compradas(chat_id, cartas, id_usuario, pagina_atual=1, message_id=None):
     try:
-        # Depuração: Exibir cada carta antes de ordená-las
+        # Exibir os dados das cartas para depuração
         print("DEBUG: Dados das cartas antes da ordenação:")
         for carta in cartas:
             print(carta)
-
-        # Ordenar as cartas por ID assumindo que cada carta tem um ID numérico válido
-        cartas = sorted(cartas, key=lambda carta: int(carta['id']) if isinstance(carta, dict) else int(carta[1]))
+        
+        # Ordenar as cartas por ID assumindo que o ID está sempre na primeira posição da tupla
+        cartas = sorted(cartas, key=lambda carta: int(carta[0]))
 
         # Definir o número de cartas por página e calcular o total de páginas
         cartas_por_pagina = 5
@@ -485,12 +485,8 @@ def mostrar_cartas_compradas(chat_id, cartas, id_usuario, pagina_atual=1, messag
         # Construir a mensagem com as cartas
         resposta = f"🛍️ Cartas Compradas - Página {pagina_atual}/{total_paginas}\n\n"
         for carta in cartas_pagina:
-            # Verificar se a carta é uma tupla ou um dicionário e acessar os dados adequadamente
-            if isinstance(carta, dict):
-                emoji, id_carta, nome = carta['emoji'], carta['id'], carta['nome']
-            elif isinstance(carta, tuple):
-                emoji, id_carta, nome = carta[0], carta[1], carta[2]
-
+            # Assumindo que cada carta é uma tupla com o formato (ID, Nome, Categoria, URL da Imagem, Emoji)
+            id_carta, nome, categoria, _, emoji = carta
             resposta += f"{emoji} <code>{id_carta}</code> - {nome}\n"
 
         # Criar os botões de navegação, se houver mais de uma página
@@ -509,13 +505,10 @@ def mostrar_cartas_compradas(chat_id, cartas, id_usuario, pagina_atual=1, messag
     except Exception as e:
         print(f"Erro ao mostrar cartas compradas: {e}")
 
-
 def criar_markup_vendinha(pagina_atual, total_paginas, id_usuario):
-    # Verificar se há mais de uma página antes de criar os botões
     if total_paginas > 1:
         markup = types.InlineKeyboardMarkup(row_width=4)
-        # Botões de navegação com callback_data apropriado
-        btn_inicio = types.InlineKeyboardButton("⏪️", callback_data=f"vendinha_{1}_{id_usuario}")
+        btn_inicio = types.InlineKeyboardButton("⏪️", callback_data=f"vendinha_1_{id_usuario}")
         btn_anterior = types.InlineKeyboardButton("⬅️", callback_data=f"vendinha_{max(1, pagina_atual - 1)}_{id_usuario}")
         btn_proxima = types.InlineKeyboardButton("➡️", callback_data=f"vendinha_{min(total_paginas, pagina_atual + 1)}_{id_usuario}")
         btn_final = types.InlineKeyboardButton("⏩️", callback_data=f"vendinha_{total_paginas}_{id_usuario}")

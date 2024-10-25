@@ -82,20 +82,6 @@ def verificar_cesta_vazia(id_usuario, subcategoria, cursor):
         print("Erro ao verificar a cesta:", e)
         return True  # Se houver algum erro, considerar cesta vazia
     
-def excluir_registros_antigos(cursor, conn, usuario, subcategoria_like):
-    try:
-        sql_excluir_cartas = """
-            DELETE FROM temp_cartas
-            WHERE id_usuario = %s AND subcategoria LIKE %s
-        """
-        cursor.execute(sql_excluir_cartas, (usuario, f'%{subcategoria_like}%'))
-        conn.commit()
-        print("Registros antigos excluídos com sucesso.")
-    except Exception as e:
-        print("Erro ao excluir registros antigos:", e)
-        conn.rollback()
-
-
 def quantidade_cartas_usuario(id_usuario, id_personagem):
 
     try:

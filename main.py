@@ -392,9 +392,11 @@ def callback_query_cesta(call):
         print("Processando outra requisição, bloqueio ativo.")
         return
     print(f"Dados recebidos antes do split: {call.data}")
-
+    # Definir `parts` antes de acessar os elementos
+    parts = call.data.split('_')
+    print(f"Dados divididos em partes: {parts}")
     try:
-        parts = call.data.split('_')
+
         tipo = parts[1]
         pagina = int(parts[2])
         categoria = parts[3]

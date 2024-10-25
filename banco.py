@@ -464,7 +464,7 @@ def processar_callback_banco_pagina(call):
 def mostrar_cartas_compradas(chat_id, cartas, id_usuario, pagina_atual=1, message_id=None):
     try:
         # Definir o número de cartas por página
-        cartas_por_pagina = 5
+        cartas_por_pagina = 15
         total_paginas = (len(cartas) // cartas_por_pagina) + (1 if len(cartas) % cartas_por_pagina > 0 else 0)
         
         # Calcular o intervalo das cartas para a página atual
@@ -490,12 +490,32 @@ def mostrar_cartas_compradas(chat_id, cartas, id_usuario, pagina_atual=1, messag
 
         # Enviar ou editar a mensagem com a lista de cartas compradas
         if message_id:
-            bot.edit_message_text(resposta, chat_id=chat_id, message_id=message_id, reply_markup=markup, parse_mode="HTML")
+            # Tentar editar a mensagem se o `message_id` for fornecido
+            try:
+                bot.edit_message_text(resposta, chat_id=chat_id, message_id=message_id, reply_markup=markup, parse_mode="HTML")
+            except Exception as e:
+                print(f"Erro ao editar mensagem: {e}")
+                # Se falhar, enviar uma nova mensagem
+                bot.send_message(chat_id, resposta, reply_markup=markup, parse_mode="HTML")
         else:
+            # Enviar nova mensagem se `message_id` não for fornecido
             bot.send_message(chat_id, resposta, reply_markup=markup, parse_mode="HTML")
 
     except Exception as e:
         print(f"Erro ao mostrar cartas compradas: {e}")
+
+def criar_markup_vendinha(pagina_atual, total_paginas, id_usuario):
+    markup = types.InlineKeyboardMarkup(row_width=4)
+
+    # Botões de navegação com callback_data apropriado
+    btn_inicio = types.InlineKeyboardButton("⏪️", callback_data=f"vendinha_{1}_{id_usuario}")
+    btn_anterior = types.InlineKeyboardButton("⬅️", callback_data=f"vendinha_{max(1, pagina_atual - 1)}_{id_usuario}")
+    btn_proxima = types.InlineKeyboardButton("➡️", callback_data=f"vendinha_{min(total_paginas, pagina_atual + 1)}_{id_usuario}")
+    btn_final = types.InlineKeyboardButton("⏩️", callback_data=f"vendinha_{total_paginas}_{id_usuario}")
+
+    markup.add(btn_inicio, btn_anterior, btn_proxima, btn_final)
+    return markup
+
 
 
 

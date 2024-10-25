@@ -2889,6 +2889,110 @@ def callback_gnome_navigation(call):
     except Exception as e:
         bot.answer_callback_query(call.id, "Erro ao processar a navegação.")
         print(f"Erro ao processar callback de navegação: {e}")
+# Função para criar a navegação com botões de "Anterior" e "Próxima"
+def create_navigation_markup(pagina_atual, total_paginas):
+    markup = types.InlineKeyboardMarkup()
+    if pagina_atual > 1:
+        markup.add(types.InlineKeyboardButton("⬅️ Anterior", callback_data=f"gnome_prev_{pagina_atual-1}"))
+    if pagina_atual < total_paginas:
+        markup.add(types.InlineKeyboardButton("Próxima ➡️", callback_data=f"gnome_next_{pagina_atual+1}"))
+    return markup
+
+# Função para salvar o estado dos resultados de pesquisa do usuário
+def save_state(user_id, pesquisa, resultados_personagens, chat_id, message_id):
+    if not hasattr(globals, 'resultados_gnome'):
+        globals.resultados_gnome = {}
+    globals.resultados_gnome[user_id] = {
+        'resultados': resultados_personagens,
+        'pesquisa': pesquisa,
+        'chat_id': chat_id,
+        'message_id': message_id
+    }
+
+# Função para manusear o comando /gnomes
+def gnomes(message):
+    chat_id = message.chat.id
+    user_id = message.from_user.id
+    conn, cursor = conectar_banco_dados()
+
+    try:
+        nome = message.text.split('/gnomes', 1)[1].strip()
+        if len(nome) <= 2:
+            bot.send_message(chat_id, "Por favor, forneça um nome com mais de 3 letras.", reply_to_message_id=message.message_id)
+            return
+
+        sql_personagens = """
+            SELECT
+                p.emoji,
+                p.id_personagem,
+                p.nome,
+                p.subcategoria
+            FROM personagens p
+            WHERE p.nome LIKE %s
+        """
+        values_personagens = (f"%{nome}%",)
+        cursor.execute(sql_personagens, values_personagens)
+        resultados_personagens = cursor.fetchall()
+
+        if resultados_personagens:
+            total_resultados = len(resultados_personagens)
+            resultados_por_pagina = 15
+            total_paginas = -(-total_resultados // resultados_por_pagina)
+            pagina_solicitada = 1
+
+            if total_resultados > resultados_por_pagina:
+                resultados_pagina_atual = resultados_personagens[(pagina_solicitada - 1) * resultados_por_pagina:pagina_solicitada * resultados_por_pagina]
+                lista_resultados = [f"{emoji} <code>{id_personagem}</code> • {nome}\nde {subcategoria}" for emoji, id_personagem, nome, subcategoria in resultados_pagina_atual]
+
+                mensagem_final = f"🐠 Peixes de nome <b>{nome}</b>:\n\n" + "\n".join(lista_resultados) + f"\n\nPágina {pagina_solicitada}/{total_paginas}:"
+                markup = create_navigation_markup(pagina_solicitada, total_paginas)
+                msg = bot.send_message(chat_id, mensagem_final, reply_markup=markup, reply_to_message_id=message.message_id, parse_mode="HTML")
+
+                save_state(user_id, nome, resultados_personagens, chat_id, msg.message_id)
+            else:
+                lista_resultados = [f"{emoji} <code>{id_personagem}</code> • {nome}\nde {subcategoria}" for emoji, id_personagem, nome, subcategoria in resultados_personagens]
+                mensagem_final = f"🐠 Peixes de nome <b>{nome}</b>:\n\n" + "\n".join(lista_resultados)
+                bot.send_message(chat_id, mensagem_final, reply_to_message_id=message.message_id, parse_mode='HTML')
+
+        else:
+            bot.send_message(chat_id, f"Nenhum resultado encontrado para o nome '{nome}'.", reply_to_message_id=message.message_id)
+    finally:
+        fechar_conexao(cursor, conn)
+
+# Função de callback para manusear os botões de navegação
+@bot.callback_query_handler(func=lambda call: call.data.startswith('gnome_'))
+def callback_gnome_navigation(call):
+    user_id = call.from_user.id
+    chat_id = call.message.chat.id
+    message_id = call.message.message_id
+
+    # Recuperar o estado do usuário
+    if user_id in globals.resultados_gnome:
+        dados = globals.resultados_gnome[user_id]
+        resultados_personagens = dados['resultados']
+        pesquisa = dados['pesquisa']
+        total_resultados = len(resultados_personagens)
+        resultados_por_pagina = 15
+        total_paginas = -(-total_resultados // resultados_por_pagina)
+
+        # Determinar qual página foi solicitada
+        data = call.data.split('_')
+        acao = data[1]  # 'prev' ou 'next'
+        pagina_solicitada = int(data[2])
+
+        # Calcular os resultados da página solicitada
+        resultados_pagina_atual = resultados_personagens[(pagina_solicitada - 1) * resultados_por_pagina:pagina_solicitada * resultados_por_pagina]
+        lista_resultados = [f"{emoji} <code>{id_personagem}</code> • {nome}\nde {subcategoria}" for emoji, id_personagem, nome, subcategoria in resultados_pagina_atual]
+
+        # Criar a mensagem com os resultados
+        mensagem_final = f"🐠 Peixes de nome <b>{pesquisa}</b>:\n\n" + "\n".join(lista_resultados) + f"\n\nPágina {pagina_solicitada}/{total_paginas}:"
+        markup = create_navigation_markup(pagina_solicitada, total_paginas)
+
+        # Editar a mensagem existente
+        bot.edit_message_text(mensagem_final, chat_id=chat_id, message_id=message_id, reply_markup=markup, parse_mode="HTML")
+
+    else:
+        bot.answer_callback_query(call.id, "Erro ao recuperar os resultados. Tente novamente.")
 
 
 @bot.message_handler(commands=['gnomes'])

@@ -244,6 +244,7 @@ def verificar_bloqueio(eu, voce):
 def obter_gif_url(id_personagem, id_usuario):
     conn, cursor = conectar_banco_dados()
     try:
+        print(id_personagem, id_usuario)
         sql_gif = """
             SELECT link
             FROM gif

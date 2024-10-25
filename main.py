@@ -2893,9 +2893,9 @@ def callback_gnome_navigation(call):
 def create_navigation_markup(pagina_atual, total_paginas):
     markup = types.InlineKeyboardMarkup()
     if pagina_atual > 1:
-        markup.add(types.InlineKeyboardButton("⬅️ Anterior", callback_data=f"gnome_prev_{pagina_atual-1}"))
+        markup.add(types.InlineKeyboardButton("⬅️ Anterior", callback_data=f"gnomes_prev_{pagina_atual-1}"))
     if pagina_atual < total_paginas:
-        markup.add(types.InlineKeyboardButton("Próxima ➡️", callback_data=f"gnome_next_{pagina_atual+1}"))
+        markup.add(types.InlineKeyboardButton("Próxima ➡️", callback_data=f"gnomes_next_{pagina_atual+1}"))
     return markup
 
 # Função para salvar o estado dos resultados de pesquisa do usuário
@@ -3034,9 +3034,6 @@ def callback_gnome_navigation(call):
         bot.answer_callback_query(call.id, "Erro ao recuperar os resultados. Tente novamente.")
 
 
-@bot.message_handler(commands=['gnomes'])
-def gnomes_command(message):
-    gnomes(message)
 @bot.message_handler(commands=['gid'])
 def obter_id_e_enviar_info_com_imagem(message):
     try:      

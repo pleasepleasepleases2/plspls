@@ -2815,11 +2815,12 @@ def enviar_primeira_carta(chat_id, user_id, resultados_personagens, index):
         bot.send_message(chat_id, mensagem, reply_markup=keyboard, parse_mode="HTML")
 
 
+# Função para editar a carta com navegação
 def editar_carta(chat_id, user_id, resultados_personagens, index, message_id):
     id_personagem, nome, subcategoria, categoria, quantidade_usuario, imagem_url = resultados_personagens[index]
+
     # Verificar se a travessura de categoria errada está ativa
     if verificar_categoria_errada(user_id):
-        # Selecionar uma categoria incorreta aleatoriamente
         conn, cursor = conectar_banco_dados()
         cursor.execute("SELECT subcategoria FROM personagens ORDER BY RAND() LIMIT 1")
         categoria_errada = cursor.fetchone()[0]
@@ -2848,40 +2849,48 @@ def editar_carta(chat_id, user_id, resultados_personagens, index, message_id):
     # Editar a mensagem existente com a nova carta
     try:
         if imagem_url.lower().endswith(".gif"):
-            bot.edit_message_media(media=types.InputMediaAnimation(media=imagem_url, caption=mensagem, parse_mode="HTML"),
-                                   chat_id=chat_id, message_id=message_id, reply_markup=keyboard)
+            bot.edit_message_media(
+                media=types.InputMediaAnimation(media=imagem_url, caption=mensagem, parse_mode="HTML"),
+                chat_id=chat_id, message_id=message_id, reply_markup=keyboard
+            )
         elif imagem_url.lower().endswith(".mp4"):
-            bot.edit_message_media(media=types.InputMediaVideo(media=imagem_url, caption=mensagem, parse_mode="HTML"),
-                                   chat_id=chat_id, message_id=message_id, reply_markup=keyboard)
+            bot.edit_message_media(
+                media=types.InputMediaVideo(media=imagem_url, caption=mensagem, parse_mode="HTML"),
+                chat_id=chat_id, message_id=message_id, reply_markup=keyboard
+            )
         elif imagem_url.lower().endswith((".jpeg", ".jpg", ".png")):
-            bot.edit_message_media(media=types.InputMediaPhoto(media=imagem_url, caption=mensagem, parse_mode="HTML"),
-                                   chat_id=chat_id, message_id=message_id, reply_markup=keyboard)
+            bot.edit_message_media(
+                media=types.InputMediaPhoto(media=imagem_url, caption=mensagem, parse_mode="HTML"),
+                chat_id=chat_id, message_id=message_id, reply_markup=keyboard
+            )
         else:
             bot.edit_message_text(mensagem, chat_id=chat_id, message_id=message_id, reply_markup=keyboard, parse_mode="HTML")
     except Exception as e:
         print(f"Erro ao editar a mídia: {e}")
         bot.edit_message_text(mensagem, chat_id=chat_id, message_id=message_id, reply_markup=keyboard, parse_mode="HTML")
 
-
+# Função de callback para a navegação
 @bot.callback_query_handler(func=lambda call: call.data.startswith('gnome_'))
 def callback_gnome_navigation(call):
-    data = call.data.split('_')
-    action = data[1]  # 'prev' ou 'next'
-    index = int(data[2])
-    user_id = int(data[3])
+    try:
+        data = call.data.split('_')
+        action = data[1]  # 'prev' ou 'next'
+        index = int(data[2])
+        user_id = int(data[3])
 
-    # Recuperar os resultados da pesquisa original
-    resultados_personagens = globals.resultados_gnome.get(user_id, [])
+        # Recuperar os resultados da pesquisa original
+        resultados_personagens = globals.resultados_gnome.get(user_id, [])
 
-    if resultados_personagens:
-        # Editar a mensagem existente com a nova carta
-        try:
+        if resultados_personagens:
+            # Editar a mensagem existente com a nova carta
             editar_carta(call.message.chat.id, user_id, resultados_personagens, index, call.message.message_id)
-        except Exception as e:
-            bot.answer_callback_query(call.id, "Erro ao processar a navegação.")
-            print(f"Erro ao processar callback de navegação: {e}")
-    else:
-        bot.answer_callback_query(call.id, "Não foi possível encontrar os resultados. Tente novamente.")
+        else:
+            bot.answer_callback_query(call.id, "Não foi possível encontrar os resultados. Tente novamente.")
+    except Exception as e:
+        bot.answer_callback_query(call.id, "Erro ao processar a navegação.")
+        print(f"Erro ao processar callback de navegação: {e}")
+
+
 @bot.message_handler(commands=['gnomes'])
 def gnomes_command(message):
     gnomes(message)
@@ -3223,10 +3232,6 @@ def callback_handler(call):
 @bot.callback_query_handler(func=lambda call: call.data.startswith(('next_button', 'prev_button')))
 def navigate_messages(call):
     handle_navigate_messages(call)
-
-@bot.callback_query_handler(func=lambda call: call.data.startswith(('prox_button', 'ant_button')))
-def navigate_gnome_results(call):
-    callback_gnome_navigation(call)
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("cesta_"))
 def callback_query_cesta(call):

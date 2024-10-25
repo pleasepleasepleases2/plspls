@@ -394,7 +394,7 @@ def callback_query_cesta(call):
     print(f"Dados recebidos antes do split: {call.data}")
 
     try:
-  
+        parts = call.data.split('_')
         tipo = parts[1]
         pagina = int(parts[2])
         categoria = parts[3]

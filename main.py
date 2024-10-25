@@ -393,8 +393,14 @@ def callback_query_cesta(call):
         return
     
     try:
-        parts = call.data.split('_')
-        print(parts)
+        try:
+            parts = call.data.split('_')
+            print(parts)
+        except Exception as e:
+            print(f"Erro ao dividir call.data: {e}")
+            bot.answer_callback_query(call.id, "Erro ao processar a navegação.")
+            return
+            
         tipo = parts[1]
         pagina = int(parts[2])
         categoria = parts[3]

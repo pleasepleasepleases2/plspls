@@ -2959,9 +2959,9 @@ def gnomes(message):
     finally:
         fechar_conexao(cursor, conn)
 
-# Função de callback para manusear os botões de navegação
-@bot.callback_query_handler(func=lambda call: call.data.startswith('gnome_'))
-def callback_gnome_navigation(call):
+# Função de callback para manusear os botões de navegação da lista de /gnomes
+@bot.callback_query_handler(func=lambda call: call.data.startswith('gnomes_'))
+def callback_gnomes_navigation(call):
     user_id = call.from_user.id
     chat_id = call.message.chat.id
     message_id = call.message.message_id
@@ -2972,7 +2972,7 @@ def callback_gnome_navigation(call):
         resultados_personagens = dados['resultados']
         pesquisa = dados['pesquisa']
         total_resultados = len(resultados_personagens)
-        resultados_por_pagina = 15
+        resultados_por_pagina = 10  # Mesmo número que foi usado na função /gnomes
         total_paginas = -(-total_resultados // resultados_por_pagina)
 
         # Determinar qual página foi solicitada
@@ -2988,12 +2988,11 @@ def callback_gnome_navigation(call):
         mensagem_final = f"🐠 Peixes de nome <b>{pesquisa}</b>:\n\n" + "\n".join(lista_resultados) + f"\n\nPágina {pagina_solicitada}/{total_paginas}:"
         markup = create_navigation_markup(pagina_solicitada, total_paginas)
 
-        # Editar a mensagem existente
+        # Editar a mensagem existente para exibir os resultados da nova página
         bot.edit_message_text(mensagem_final, chat_id=chat_id, message_id=message_id, reply_markup=markup, parse_mode="HTML")
 
     else:
         bot.answer_callback_query(call.id, "Erro ao recuperar os resultados. Tente novamente.")
-
 
 @bot.message_handler(commands=['gnomes'])
 def gnomes_command(message):

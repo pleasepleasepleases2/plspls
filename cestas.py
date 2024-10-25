@@ -748,25 +748,12 @@ def processar_cesta(message):
 
     except Exception as e:
         print(f"Erro ao processar comando /cesta: {e}")
-def criar_markup_cesta(pagina_atual, total_paginas, subcategoria, tipo, id_usuario_original):
-    markup = telebot.types.InlineKeyboardMarkup(row_width=4)
-
-    # Navegação circular
-    pagina_anterior = total_paginas if pagina_atual == 1 else pagina_atual - 1
-    pagina_proxima = 1 if pagina_atual == total_paginas else pagina_atual + 1
-
-    # Criar botões de navegação
-    btn_inicio = telebot.types.InlineKeyboardButton(text="⏪️", callback_data=f"cesta_{tipo}_1_{subcategoria}_{id_usuario_original}")
-    btn_anterior = telebot.types.InlineKeyboardButton(text="⬅️", callback_data=f"cesta_{tipo}_{pagina_anterior}_{subcategoria}_{id_usuario_original}")
-    btn_proxima = telebot.types.InlineKeyboardButton(text="➡️", callback_data=f"cesta_{tipo}_{pagina_proxima}_{subcategoria}_{id_usuario_original}")
-    btn_final = telebot.types.InlineKeyboardButton(text="⏩️", callback_data=f"cesta_{tipo}_{total_paginas}_{subcategoria}_{id_usuario_original}")
-
-    # Log para debug
-    print(f"Botões de navegação criados: Inicio={btn_inicio.callback_data}, Anterior={btn_anterior.callback_data}, Próxima={btn_proxima.callback_data}, Final={btn_final.callback_data}")
-
-    # Adicionar os botões na mesma linha
-    markup.row(btn_inicio, btn_anterior, btn_proxima, btn_final)
-
+def criar_markup_cesta(pagina_atual, total_paginas, categoria, tipo, id_usuario):
+    markup = types.InlineKeyboardMarkup()
+    if pagina_atual > 1:
+        markup.add(types.InlineKeyboardButton("⬅️ Anterior", callback_data=f"cesta_{tipo}_{pagina_atual-1}_{categoria}_{id_usuario}"))
+    if pagina_atual < total_paginas:
+        markup.add(types.InlineKeyboardButton("Próxima ➡️", callback_data=f"cesta_{tipo}_{pagina_atual+1}_{categoria}_{id_usuario}"))
     return markup
 
 

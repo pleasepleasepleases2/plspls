@@ -469,7 +469,7 @@ def mostrar_cartas_compradas(chat_id, cartas, id_usuario, pagina_atual=1, messag
         cartas = sorted(cartas, key=lambda carta: int(carta[0]))
 
         # Definir o número de cartas por página e calcular o total de páginas
-        cartas_por_pagina = 5
+        cartas_por_pagina = 15
         total_paginas = (len(cartas) // cartas_por_pagina) + (1 if len(cartas) % cartas_por_pagina > 0 else 0)
         
         # Garantir que a página atual está dentro do intervalo de páginas disponíveis

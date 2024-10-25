@@ -381,20 +381,7 @@ def troca_invertida(user_id,chat_id):
     finally:
         fechar_conexao(cursor, conn)
 
-@bot.callback_query_handler(func=lambda call: call.data.startswith("cesta_"))
-def callback_query_cesta(call):
-    global processing_lock
 
-    # Log para confirmar que o callback foi chamado
-    print(f"Callback acionado com dados: {call.data}")
-
-    if not processing_lock.acquire(blocking=False):
-        print("Processando outra requisição, bloqueio ativo.")
-        return
-    print(f"Dados recebidos antes do split: {call.data}")
-    # Definir `parts` antes de acessar os elementos
-    parts = call.data.split('_')
-    print(f"Dados divididos em partes: {parts}")
 @bot.callback_query_handler(func=lambda call: call.data.startswith("cesta_"))
 def callback_query_cesta(call):
     global processing_lock

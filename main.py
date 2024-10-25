@@ -391,21 +391,19 @@ def callback_query_cesta(call):
     if not processing_lock.acquire(blocking=False):
         print("Processando outra requisição, bloqueio ativo.")
         return
-    
+    print(f"Dados recebidos antes do split: {call.data}")
+
     try:
-        try:
-            parts = call.data.split('_')
-            print(parts)
-        except Exception as e:
-            print(f"Erro ao dividir call.data: {e}")
-            bot.answer_callback_query(call.id, "Erro ao processar a navegação.")
-            return
-            
+  
         tipo = parts[1]
         pagina = int(parts[2])
         categoria = parts[3]
         id_usuario_original = int(parts[4])
         nome_usuario = bot.get_chat(id_usuario_original).first_name
+        print(f"Tipo: {parts[1]}")
+        print(f"Página: {parts[2]}")
+        print(f"Categoria: {parts[3]}")
+        print(f"ID do Usuário: {parts[4]}")
 
         # Log de informação para debug
         print(f"Tipo: {tipo}, Página: {pagina}, Categoria: {categoria}, ID Usuário: {id_usuario_original}")

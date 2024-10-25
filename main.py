@@ -382,6 +382,8 @@ def troca_invertida(user_id,chat_id):
         fechar_conexao(cursor, conn)
 
 
+processing_lock = threading.Lock()
+
 @bot.callback_query_handler(func=lambda call: call.data.startswith("cesta_"))
 def callback_query_cesta(call):
     global processing_lock
@@ -393,16 +395,18 @@ def callback_query_cesta(call):
         print("Processando outra requisição, bloqueio ativo.")
         return
 
-    # Definir `parts` antes de acessar os elementos
-    parts = call.data.split('_')
-    print(f"Dados divididos em partes: {parts}")
-
     try:
+        # Dividir o callback data em partes
+        parts = call.data.split('_')
+        print(f"Dados divididos em partes: {parts}")
+
+        # Verificar se todas as partes necessárias estão presentes
         if len(parts) < 5:
             print("Erro: Dados insuficientes em parts.")
             bot.answer_callback_query(call.id, "Erro ao processar a navegação.")
             return
 
+        # Extrair informações da mensagem
         tipo = parts[1]
         pagina = int(parts[2])
         categoria = parts[3]
@@ -410,30 +414,30 @@ def callback_query_cesta(call):
         nome_usuario = bot.get_chat(id_usuario_original).first_name
         print(f"Tipo: {tipo}, Página: {pagina}, Categoria: {categoria}, ID Usuário: {id_usuario_original}")
 
+        # Lógica de navegação baseada no tipo de consulta
         if tipo == 's':
             ids_personagens = obter_ids_personagens_inventario_sem_evento(id_usuario_original, categoria)
             total_personagens_subcategoria = obter_total_personagens_subcategoria(categoria)
             total_registros = len(ids_personagens)
-  
+
             if total_registros > 0:
                 total_paginas = (total_registros // 15) + (1 if total_registros % 15 > 0 else 0)
                 mostrar_pagina_cesta_s(call.message, categoria, id_usuario_original, pagina, total_paginas, ids_personagens, total_personagens_subcategoria, nome_usuario, call=call)
             else:
                 bot.answer_callback_query(call.id, f"Nenhum personagem encontrado na cesta '{categoria}'.")
 
-        # Outros tipos de tratamento com logs em cada caso
         elif tipo == 'f':
             ids_personagens_faltantes = obter_ids_personagens_faltantes_sem_evento(id_usuario_original, categoria)
             total_personagens_subcategoria = obter_total_personagens_subcategoria(categoria)
             total_registros = len(ids_personagens_faltantes)
-  
+
             if total_registros > 0:
                 total_paginas = (total_registros // 15) + (1 if total_registros % 15 > 0 else 0)
                 mostrar_pagina_cesta_f(call.message, categoria, id_usuario_original, pagina, total_paginas, ids_personagens_faltantes, total_personagens_subcategoria, nome_usuario, call=call)
             else:
                 bot.answer_callback_query(call.id, f"Todos os personagens na subcategoria '{categoria}' estão no seu inventário.")
 
-        # Identificação da página para exibição
+        # Outros tipos de tratamento de navegação
         elif tipo == 'se':
             ids_personagens = obter_ids_personagens_inventario_com_evento(id_usuario_original, categoria)
             total_personagens_com_evento = obter_total_personagens_subcategoria(categoria)
@@ -480,9 +484,10 @@ def callback_query_cesta(call):
 
     except Exception as e:
         print(f"Erro ao processar callback da cesta: {e}")
+        bot.answer_callback_query(call.id, "Erro ao processar o callback.")
     finally:
         processing_lock.release()
-
+        
 def aplicar_praga(user_id):
     try:
         conn, cursor = conectar_banco_dados()

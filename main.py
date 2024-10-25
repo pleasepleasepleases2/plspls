@@ -3384,10 +3384,6 @@ def callback_handler(call):
 @bot.callback_query_handler(func=lambda call: call.data.startswith(('next_button', 'prev_button')))
 def navigate_messages(call):
     handle_navigate_messages(call)
-
-@bot.callback_query_handler(func=lambda call: call.data.startswith("cesta_"))
-def callback_query_cesta(call):
-    handle_callback_query_cesta(call)
         
 @bot.callback_query_handler(func=lambda call: call.data.startswith('total_'))
 def callback_total_personagem(call):
@@ -3562,87 +3558,75 @@ def verificar_cesta(message):
 @bot.callback_query_handler(func=lambda call: call.data.startswith("cesta_"))
 def callback_query_cesta(call):
     global processing_lock
-  
+
+    # Tenta adquirir o lock para evitar múltiplos processamentos simultâneos
     if not processing_lock.acquire(blocking=False):
-        return
+        return  # Sai se já estiver processando outra requisição
+
     try:
+        # Parseia os dados do callback
         parts = call.data.split('_')
+        if len(parts) < 5:
+            print("Formato de dados do callback incorreto.")
+            return
+
         tipo = parts[1]
         pagina = int(parts[2])
         categoria = parts[3]
         id_usuario_original = int(parts[4])
+
+        # Pega o nome do usuário para exibição
         nome_usuario = bot.get_chat(id_usuario_original).first_name
 
+        # Controle de página baseado no tipo de callback
         if tipo == 's':
             ids_personagens = obter_ids_personagens_inventario_sem_evento(id_usuario_original, categoria)
             total_personagens_subcategoria = obter_total_personagens_subcategoria(categoria)
-            total_registros = len(ids_personagens)
-  
-            if total_registros > 0:
-                total_paginas = (total_registros // 15) + (1 if total_registros % 15 > 0 else 0)
-                mostrar_pagina_cesta_s(call.message, categoria, id_usuario_original, pagina, total_paginas, ids_personagens, total_personagens_subcategoria, nome_usuario, call=call)
-            else:
-                bot.reply_to(call.message, f"Nenhum personagem encontrado na cesta '{categoria}'.")
+            total_paginas = (len(ids_personagens) + 14) // 15  # Calcula total de páginas
+
+            # Chama a função de exibição para o tipo 's'
+            mostrar_pagina_cesta_s(call.message, categoria, id_usuario_original, pagina, total_paginas, ids_personagens, total_personagens_subcategoria, nome_usuario, call=call)
 
         elif tipo == 'f':
             ids_personagens_faltantes = obter_ids_personagens_faltantes_sem_evento(id_usuario_original, categoria)
             total_personagens_subcategoria = obter_total_personagens_subcategoria(categoria)
-            total_registros = len(ids_personagens_faltantes)
-  
-            if total_registros > 0:
-                total_paginas = (total_registros // 15) + (1 if total_registros % 15 > 0 else 0)
-                mostrar_pagina_cesta_f(call.message, categoria, id_usuario_original, pagina, total_paginas, ids_personagens_faltantes, total_personagens_subcategoria, nome_usuario, call=call)
-            else:
-                bot.reply_to(call.message, f"Todos os personagens na subcategoria '{categoria}' estão no seu inventário.")
+            total_paginas = (len(ids_personagens_faltantes) + 14) // 15
+
+            mostrar_pagina_cesta_f(call.message, categoria, id_usuario_original, pagina, total_paginas, ids_personagens_faltantes, total_personagens_subcategoria, nome_usuario, call=call)
 
         elif tipo == 'se':
             ids_personagens = obter_ids_personagens_inventario_com_evento(id_usuario_original, categoria)
             total_personagens_com_evento = obter_total_personagens_subcategoria(categoria)
-            total_registros = len(ids_personagens)
+            total_paginas = (len(ids_personagens) + 14) // 15
 
-            if total_registros > 0:
-                total_paginas = (total_registros // 15) + (1 if total_registros % 15 > 0 else 0)
-                mostrar_pagina_cesta_s(call.message, categoria, id_usuario_original, pagina, total_paginas, ids_personagens, total_personagens_com_evento, nome_usuario, call=call)
-            else:
-                bot.reply_to(call.message, f"Nenhum personagem encontrado na cesta '{categoria}'.")
+            mostrar_pagina_cesta_s(call.message, categoria, id_usuario_original, pagina, total_paginas, ids_personagens, total_personagens_com_evento, nome_usuario, call=call)
 
         elif tipo == 'fe':
             ids_personagens_faltantes = obter_ids_personagens_faltantes_com_evento(id_usuario_original, categoria)
             total_personagens_subcategoria = obter_total_personagens_subcategoria(categoria)
-            total_registros = len(ids_personagens_faltantes)
+            total_paginas = (len(ids_personagens_faltantes) + 14) // 15
 
-            if total_registros > 0:
-                total_paginas = (total_registros // 15) + (1 if total_registros % 15 > 0 else 0)
-                mostrar_pagina_cesta_f(call.message, categoria, id_usuario_original, pagina, total_paginas, ids_personagens_faltantes, total_personagens_subcategoria, nome_usuario, call=call)
-            else:
-                bot.reply_to(call.message, f"Todos os personagens na subcategoria '{categoria}' estão no seu inventário.")
+            mostrar_pagina_cesta_f(call.message, categoria, id_usuario_original, pagina, total_paginas, ids_personagens_faltantes, total_personagens_subcategoria, nome_usuario, call=call)
 
         elif tipo == 'c':
             ids_personagens = obter_ids_personagens_categoria(id_usuario_original, categoria)
             total_personagens_categoria = obter_total_personagens_categoria(categoria)
-            total_registros = len(ids_personagens)
+            total_paginas = (len(ids_personagens) + 14) // 15
 
-            if total_registros > 0:
-                total_paginas = (total_registros // 15) + (1 if total_registros % 15 > 0 else 0)
-                mostrar_pagina_cesta_c(call.message, categoria, id_usuario_original, pagina, total_paginas, ids_personagens, total_personagens_categoria, nome_usuario, call=call)
-            else:
-                bot.reply_to(call.message, f"Nenhum personagem encontrado na categoria '{categoria}'.")
+            mostrar_pagina_cesta_c(call.message, categoria, id_usuario_original, pagina, total_paginas, ids_personagens, total_personagens_categoria, nome_usuario, call=call)
 
         elif tipo == 'cf':
             ids_personagens_faltantes = obter_ids_personagens_faltantes_categoria(id_usuario_original, categoria)
             total_personagens_categoria = obter_total_personagens_categoria(categoria)
-            total_registros = len(ids_personagens_faltantes)
+            total_paginas = (len(ids_personagens_faltantes) + 14) // 15
 
-            if total_registros > 0:
-                total_paginas = (total_registros // 15) + (1 if total_registros % 15 > 0 else 0)
-                mostrar_pagina_cesta_cf(call.message, categoria, id_usuario_original, pagina, total_paginas, ids_personagens_faltantes, total_personagens_categoria, nome_usuario, call=call)
-            else:
-                bot.reply_to(call.message, f"Você possui todos os personagens na categoria '{categoria}'.")
+            mostrar_pagina_cesta_cf(call.message, categoria, id_usuario_original, pagina, total_paginas, ids_personagens_faltantes, total_personagens_categoria, nome_usuario, call=call)
 
     except Exception as e:
         print(f"Erro ao processar callback da cesta: {e}")
     finally:
-        processing_lock.release()    
+        processing_lock.release()
+
 @bot.message_handler(commands=['submenus'])
 def submenus_command(message):
     processar_submenus_command(message)

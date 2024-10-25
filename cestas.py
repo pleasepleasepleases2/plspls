@@ -751,27 +751,17 @@ def processar_cesta(message):
 def criar_markup_cesta(pagina_atual, total_paginas, categoria, tipo, id_usuario):
     markup = types.InlineKeyboardMarkup(row_width=4)
 
-    # Botão de início (primeira página)
-    if pagina_atual > 1:
-        btn_inicio = types.InlineKeyboardButton("⏪️", callback_data=f"cesta_{tipo}_1_{categoria}_{id_usuario}")
-        markup.add(btn_inicio)
+    # Criar botões de navegação com callback_data
+    btn_inicio = types.InlineKeyboardButton("⏪️", callback_data=f"cesta_{tipo}_1_{categoria}_{id_usuario}")
+    btn_anterior = types.InlineKeyboardButton("⬅️", callback_data=f"cesta_{tipo}_{max(1, pagina_atual - 1)}_{categoria}_{id_usuario}")
+    btn_proxima = types.InlineKeyboardButton("➡️", callback_data=f"cesta_{tipo}_{min(total_paginas, pagina_atual + 1)}_{categoria}_{id_usuario}")
+    btn_final = types.InlineKeyboardButton("⏩️", callback_data=f"cesta_{tipo}_{total_paginas}_{categoria}_{id_usuario}")
 
-    # Botão de página anterior
-    if pagina_atual > 1:
-        btn_anterior = types.InlineKeyboardButton("⬅️", callback_data=f"cesta_{tipo}_{pagina_atual - 1}_{categoria}_{id_usuario}")
-        markup.add(btn_anterior)
-
-    # Botão de página seguinte
-    if pagina_atual < total_paginas:
-        btn_proxima = types.InlineKeyboardButton("➡️", callback_data=f"cesta_{tipo}_{pagina_atual + 1}_{categoria}_{id_usuario}")
-        markup.add(btn_proxima)
-
-    # Botão de última página
-    if pagina_atual < total_paginas:
-        btn_final = types.InlineKeyboardButton("⏩️", callback_data=f"cesta_{tipo}_{total_paginas}_{categoria}_{id_usuario}")
-        markup.add(btn_final)
+    # Adicionar todos os botões em uma linha, sempre visíveis
+    markup.add(btn_inicio, btn_anterior, btn_proxima, btn_final)
 
     return markup
+
 
 
 def apagar_cartas_quantidade_zero_ou_negativa():

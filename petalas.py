@@ -204,6 +204,29 @@ def atualizar_petalas(id_usuario):
 def handle_roseira_command(message):
     roseira_command(message)
 
+import random
+from concurrent.futures import ThreadPoolExecutor
+import tempfile
+
+# Definir algumas combinações de cartas aleatórias e armazená-las em cache
+cache_combinacoes_cartas = []
+
+def carregar_combinacoes_cartas():
+    global cache_combinacoes_cartas
+    conn, cursor = conectar_banco_dados()
+    cursor.execute("SELECT id_personagem, nome, imagem FROM personagens")
+    todas_cartas = cursor.fetchall()
+    fechar_conexao(cursor, conn)
+    
+    # Gerar combinações únicas e aleatórias
+    cache_combinacoes_cartas = [random.sample(todas_cartas, 3) for _ in range(50)]
+
+carregar_combinacoes_cartas()
+
+@bot.message_handler(commands=['roseira'])
+def handle_roseira_command(message):
+    roseira_command(message)
+
 def roseira_command(message):
     try:
         id_usuario = message.from_user.id
@@ -227,19 +250,8 @@ def roseira_command(message):
             cursor.execute("UPDATE usuarios SET petalas = petalas - 1 WHERE id_usuario = %s", (id_usuario,))
             conn.commit()
 
-            args = message.text.split(maxsplit=1)
-            if len(args) < 2:
-                bot.reply_to(message, "Por favor, forneça uma subcategoria válida.")
-                return
-            subcategoria = args[1].strip()
-
-            # Buscar três cartas aleatórias
-            cursor.execute("SELECT id_personagem, nome, imagem FROM personagens WHERE subcategoria = %s LIMIT 3", (subcategoria,))
-            cartas_aleatorias = cursor.fetchall()
-
-            if len(cartas_aleatorias) < 3:
-                bot.reply_to(message, "Subcategoria não encontrada ou não há cartas suficientes.")
-                return
+            # Selecionar uma combinação aleatória de cartas
+            cartas_aleatorias = random.choice(cache_combinacoes_cartas)
 
             # Função auxiliar para baixar e aplicar borda nas imagens
             def processar_imagem(carta):
@@ -287,8 +299,11 @@ def roseira_command(message):
                         f"\n\n🌺 Pétalas disponíveis: {petalas_disponiveis}")
 
             markup = types.InlineKeyboardMarkup()
-            for i, carta in enumerate(cartas_aleatorias, start=1):
-                markup.add(types.InlineKeyboardButton(f"{i}️⃣", callback_data=f"escolher_{carta[0]}"))
+            markup.row(
+                types.InlineKeyboardButton("1️⃣", callback_data=f"escolher_{cartas_aleatorias[0][0]}"),
+                types.InlineKeyboardButton("2⃣", callback_data=f"escolher_{cartas_aleatorias[1][0]}"),
+                types.InlineKeyboardButton("3️⃣", callback_data=f"escolher_{cartas_aleatorias[2][0]}")
+            )
 
             bot.send_photo(message.chat.id, open(caminho_imagem, 'rb'), caption=mensagem, reply_markup=markup, reply_to_message_id=message.message_id)
 

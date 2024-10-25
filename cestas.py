@@ -749,11 +749,28 @@ def processar_cesta(message):
     except Exception as e:
         print(f"Erro ao processar comando /cesta: {e}")
 def criar_markup_cesta(pagina_atual, total_paginas, categoria, tipo, id_usuario):
-    markup = types.InlineKeyboardMarkup()
+    markup = types.InlineKeyboardMarkup(row_width=4)
+
+    # Botão de início (primeira página)
     if pagina_atual > 1:
-        markup.add(types.InlineKeyboardButton("⬅️ Anterior", callback_data=f"cesta_{tipo}_{pagina_atual-1}_{categoria}_{id_usuario}"))
+        btn_inicio = types.InlineKeyboardButton("⏪️", callback_data=f"cesta_{tipo}_1_{categoria}_{id_usuario}")
+        markup.add(btn_inicio)
+
+    # Botão de página anterior
+    if pagina_atual > 1:
+        btn_anterior = types.InlineKeyboardButton("⬅️", callback_data=f"cesta_{tipo}_{pagina_atual - 1}_{categoria}_{id_usuario}")
+        markup.add(btn_anterior)
+
+    # Botão de página seguinte
     if pagina_atual < total_paginas:
-        markup.add(types.InlineKeyboardButton("Próxima ➡️", callback_data=f"cesta_{tipo}_{pagina_atual+1}_{categoria}_{id_usuario}"))
+        btn_proxima = types.InlineKeyboardButton("➡️", callback_data=f"cesta_{tipo}_{pagina_atual + 1}_{categoria}_{id_usuario}")
+        markup.add(btn_proxima)
+
+    # Botão de última página
+    if pagina_atual < total_paginas:
+        btn_final = types.InlineKeyboardButton("⏩️", callback_data=f"cesta_{tipo}_{total_paginas}_{categoria}_{id_usuario}")
+        markup.add(btn_final)
+
     return markup
 
 

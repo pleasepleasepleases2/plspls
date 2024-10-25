@@ -501,9 +501,6 @@ def loja(message):
         print(f"Erro: {e}")
         mensagem_banido = "Você foi banido permanentemente do garden. Entre em contato com o suporte caso haja dúvidas."
         bot.send_message(message.chat.id, mensagem_banido, reply_to_message_id=message.message_id)
-import telebot
-from datetime import datetime
-import newrelic.agent
 
 def handle_callback_loja_loja(call):
     try:
@@ -645,3 +642,63 @@ def obter_informacoes_loja(ids_do_dia):
     finally:
         cursor.close()
         conn.close()
+import telebot
+import newrelic.agent
+
+# Função para exibir pacotes de ações disponíveis
+def exibir_acoes_vendinha(call):
+    try:
+        mensagem = "📦 Pacotes de Ações disponíveis:\n\n"
+        mensagem += "🥕 Pacote Básico: 10 cartas\n"
+        mensagem += "💸 Pacote Médio: 25 cartas\n"
+        mensagem += "💳 Pacote Premium: 80 cartas\n\n"
+        
+        keyboard = telebot.types.InlineKeyboardMarkup()
+        keyboard.row(
+            telebot.types.InlineKeyboardButton(text="🥕", callback_data='comprar_acao_vendinha_basico'),
+            telebot.types.InlineKeyboardButton(text="💸", callback_data='comprar_acao_vendinha_prata'),
+            telebot.types.InlineKeyboardButton(text="💳", callback_data='comprar_acao_vendinha_ouro')
+        )
+        
+        bot.edit_message_caption(caption=mensagem, chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=keyboard)
+    except Exception as e:
+        print(f"Erro ao exibir pacotes de ações: {e}")
+        newrelic.agent.record_exception()    
+        bot.send_message(call.message.chat.id, "Erro ao exibir pacotes de ações.")
+
+# Função para confirmar a compra de um pacote de ações
+def confirmar_compra_vendinha(call):
+    pacote = call.data.split('_')[3]
+    pacotes = {
+        'basico': ('Pacote Básico', 50),
+        'prata': ('Pacote Médio', 100),
+        'ouro': ('Pacote Premium', 200)
+    }
+
+    if pacote in pacotes:
+        nome_pacote, preco = pacotes[pacote]
+        mensagem = f"Selecione a categoria para o {nome_pacote}:\n\n"
+        mensagem += f"★ Geral - {preco} cenouras\n"
+        mensagem += f"★ Por categoria - {preco * 2} cenouras\n"
+
+        # Criação do teclado com categorias
+        keyboard = telebot.types.InlineKeyboardMarkup()
+        primeira_coluna = [
+            telebot.types.InlineKeyboardButton(text="☁ Música", callback_data=f'confirmar_categoria_{pacote}_musica'),
+            telebot.types.InlineKeyboardButton(text="🌷 Anime", callback_data=f'confirmar_categoria_{pacote}_animanga'),
+            telebot.types.InlineKeyboardButton(text="🧶 Jogos", callback_data=f'confirmar_categoria_{pacote}_jogos')
+        ]
+        segunda_coluna = [
+            telebot.types.InlineKeyboardButton(text="🍰 Filmes", callback_data=f'confirmar_categoria_{pacote}_filmes'),
+            telebot.types.InlineKeyboardButton(text="🍄 Séries", callback_data=f'confirmar_categoria_{pacote}_series'),
+            telebot.types.InlineKeyboardButton(text="🍂 Misc", callback_data=f'confirmar_categoria_{pacote}_miscelanea')
+        ]
+        geral = telebot.types.InlineKeyboardButton(text="🫧 Geral", callback_data=f'confirmar_categoria_{pacote}_geral')
+        cancel = telebot.types.InlineKeyboardButton(text="Cancelar Compra", callback_data=f'cancelar_compra_vendinha')
+        
+        keyboard.add(*primeira_coluna)
+        keyboard.add(*segunda_coluna)
+        keyboard.row(geral)
+        keyboard.row(cancel)
+        
+        bot.edit_message_caption(caption=mensagem, chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=keyboard)

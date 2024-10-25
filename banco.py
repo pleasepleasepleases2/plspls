@@ -464,8 +464,8 @@ def processar_callback_banco_pagina(call):
 # Função para exibir as cartas compradas
 def mostrar_cartas_compradas(chat_id, cartas, id_usuario, pagina_atual=1, message_id=None):
     try:
-        # Ordenar as cartas por ID, assumindo que ID é o segundo item da tupla ou a chave 'id' do dicionário
-        cartas = sorted(cartas, key=lambda carta: int(carta['id']) if isinstance(carta, dict) and 'id' in carta else int(carta[1]) if isinstance(carta, tuple) else float('inf'))
+        # Ordenar as cartas por ID assumindo que cada carta tem um ID numérico válido
+        cartas = sorted(cartas, key=lambda carta: int(carta['id']) if isinstance(carta, dict) else int(carta[1]))
 
         # Definir o número de cartas por página e calcular o total de páginas
         cartas_por_pagina = 5
@@ -479,13 +479,12 @@ def mostrar_cartas_compradas(chat_id, cartas, id_usuario, pagina_atual=1, messag
         # Construir a mensagem com as cartas
         resposta = f"🛍️ Cartas Compradas - Página {pagina_atual}/{total_paginas}\n\n"
         for carta in cartas_pagina:
-            # Verificar o tipo da carta (tupla ou dicionário) e acessar os dados adequadamente
+            # Verificar se a carta é uma tupla ou um dicionário e acessar os dados adequadamente
             if isinstance(carta, dict):
-                emoji, id_carta, nome = carta.get('emoji', ''), carta.get('id', ''), carta.get('nome', '')
+                emoji, id_carta, nome = carta['emoji'], carta['id'], carta['nome']
             elif isinstance(carta, tuple):
                 emoji, id_carta, nome = carta[0], carta[1], carta[2]
-            else:
-                continue  # Ignorar caso o formato seja inesperado
+
             resposta += f"{emoji} <code>{id_carta}</code> - {nome}\n"
 
         # Criar os botões de navegação, se houver mais de uma página

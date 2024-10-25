@@ -385,7 +385,11 @@ def troca_invertida(user_id,chat_id):
 def callback_query_cesta(call):
     global processing_lock
 
+    # Log para confirmar que o callback foi chamado
+    print(f"Callback acionado com dados: {call.data}")
+
     if not processing_lock.acquire(blocking=False):
+        print("Processando outra requisição, bloqueio ativo.")
         return
     
     try:
@@ -396,7 +400,9 @@ def callback_query_cesta(call):
         id_usuario_original = int(parts[4])
         nome_usuario = bot.get_chat(id_usuario_original).first_name
 
-        # Identificação da página para exibição
+        # Log de informação para debug
+        print(f"Tipo: {tipo}, Página: {pagina}, Categoria: {categoria}, ID Usuário: {id_usuario_original}")
+
         if tipo == 's':
             ids_personagens = obter_ids_personagens_inventario_sem_evento(id_usuario_original, categoria)
             total_personagens_subcategoria = obter_total_personagens_subcategoria(categoria)
@@ -408,6 +414,7 @@ def callback_query_cesta(call):
             else:
                 bot.answer_callback_query(call.id, f"Nenhum personagem encontrado na cesta '{categoria}'.")
 
+        # Outros tipos de tratamento com logs em cada caso
         elif tipo == 'f':
             ids_personagens_faltantes = obter_ids_personagens_faltantes_sem_evento(id_usuario_original, categoria)
             total_personagens_subcategoria = obter_total_personagens_subcategoria(categoria)
@@ -419,6 +426,7 @@ def callback_query_cesta(call):
             else:
                 bot.answer_callback_query(call.id, f"Todos os personagens na subcategoria '{categoria}' estão no seu inventário.")
 
+        # Identificação da página para exibição
         elif tipo == 'se':
             ids_personagens = obter_ids_personagens_inventario_com_evento(id_usuario_original, categoria)
             total_personagens_com_evento = obter_total_personagens_subcategoria(categoria)
@@ -1600,23 +1608,6 @@ def processar_fonte_extra(message):
         bot.send_message(message.chat.id, "Ocorreu um erro ao processar a sua Fonte Extra. Tente novamente.")
 
 
-# Função para criar a navegação com botões de "⏪️", "⬅️", "➡️" e "⏩️"
-def criar_markup_cesta(pagina_atual, total_paginas, subcategoria, tipo, id_usuario_original):
-    markup = telebot.types.InlineKeyboardMarkup(row_width=4)
-
-    # Navegação circular
-    pagina_anterior = total_paginas if pagina_atual == 1 else pagina_atual - 1
-    pagina_proxima = 1 if pagina_atual == total_paginas else pagina_atual + 1
-
-    # Botões de navegação
-    markup.row(
-        telebot.types.InlineKeyboardButton(text="⏪️", callback_data=f"cesta_{tipo}_1_{subcategoria}_{id_usuario_original}"),
-        telebot.types.InlineKeyboardButton(text="⬅️", callback_data=f"cesta_{tipo}_{pagina_anterior}_{subcategoria}_{id_usuario_original}"),
-        telebot.types.InlineKeyboardButton(text="➡️", callback_data=f"cesta_{tipo}_{pagina_proxima}_{subcategoria}_{id_usuario_original}"),
-        telebot.types.InlineKeyboardButton(text="⏩️", callback_data=f"cesta_{tipo}_{total_paginas}_{subcategoria}_{id_usuario_original}")
-    )
-
-    return markup
         
 url_imagem = "https://pub-6f23ef52e8614212a14d24b0cf55ae4a.r2.dev/BQACAgEAAxkBAAIcfGcVeT6gaLXd0DKA7aihUQJfV62hAAJMBQACSV6xRD2puYHoSyajNgQ.jpg"
 

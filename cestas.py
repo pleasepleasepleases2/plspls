@@ -3,7 +3,7 @@ from user import *
 from bd import *
 from loja import *
 from gnome import *
-
+from main import criar_markup_cesta
 user_data = {}
 
 import diskcache as dc

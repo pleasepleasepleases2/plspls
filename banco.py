@@ -461,9 +461,15 @@ def processar_callback_banco_pagina(call):
 
     fechar_conexao(cursor, conn)
 
-# Função para exibir as cartas compradas
+from telebot import types
+
 def mostrar_cartas_compradas(chat_id, cartas, id_usuario, pagina_atual=1, message_id=None):
     try:
+        # Depuração: Exibir cada carta antes de ordená-las
+        print("DEBUG: Dados das cartas antes da ordenação:")
+        for carta in cartas:
+            print(carta)
+
         # Ordenar as cartas por ID assumindo que cada carta tem um ID numérico válido
         cartas = sorted(cartas, key=lambda carta: int(carta['id']) if isinstance(carta, dict) else int(carta[1]))
 

@@ -2882,7 +2882,7 @@ def callback_gnome_navigation(call):
             print(f"Erro ao processar callback de navegação: {e}")
     else:
         bot.answer_callback_query(call.id, "Não foi possível encontrar os resultados. Tente novamente.")
-
+@bot.message_handler(commands=['gnomes'])
 def gnomes_command(message):
     gnomes(message)
 @bot.message_handler(commands=['gid'])

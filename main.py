@@ -2998,6 +2998,46 @@ def callback_gnome_navigation(call):
 @bot.message_handler(commands=['gnomes'])
 def gnomes_command(message):
     gnomes(message)
+
+# Função de callback para manusear os botões de navegação
+@bot.callback_query_handler(func=lambda call: call.data.startswith('gnome_'))
+def callback_gnome_navigation(call):
+    user_id = call.from_user.id
+    chat_id = call.message.chat.id
+    message_id = call.message.message_id
+
+    # Recuperar o estado do usuário
+    if user_id in globals.resultados_gnome:
+        dados = globals.resultados_gnome[user_id]
+        resultados_personagens = dados['resultados']
+        pesquisa = dados['pesquisa']
+        total_resultados = len(resultados_personagens)
+        resultados_por_pagina = 15
+        total_paginas = -(-total_resultados // resultados_por_pagina)
+
+        # Determinar qual página foi solicitada
+        data = call.data.split('_')
+        acao = data[1]  # 'prev' ou 'next'
+        pagina_solicitada = int(data[2])
+
+        # Calcular os resultados da página solicitada
+        resultados_pagina_atual = resultados_personagens[(pagina_solicitada - 1) * resultados_por_pagina:pagina_solicitada * resultados_por_pagina]
+        lista_resultados = [f"{emoji} <code>{id_personagem}</code> • {nome}\nde {subcategoria}" for emoji, id_personagem, nome, subcategoria in resultados_pagina_atual]
+
+        # Criar a mensagem com os resultados
+        mensagem_final = f"🐠 Peixes de nome <b>{pesquisa}</b>:\n\n" + "\n".join(lista_resultados) + f"\n\nPágina {pagina_solicitada}/{total_paginas}:"
+        markup = create_navigation_markup(pagina_solicitada, total_paginas)
+
+        # Editar a mensagem existente
+        bot.edit_message_text(mensagem_final, chat_id=chat_id, message_id=message_id, reply_markup=markup, parse_mode="HTML")
+
+    else:
+        bot.answer_callback_query(call.id, "Erro ao recuperar os resultados. Tente novamente.")
+
+
+@bot.message_handler(commands=['gnomes'])
+def gnomes_command(message):
+    gnomes(message)
 @bot.message_handler(commands=['gid'])
 def obter_id_e_enviar_info_com_imagem(message):
     try:      

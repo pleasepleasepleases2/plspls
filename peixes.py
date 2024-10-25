@@ -325,38 +325,6 @@ def handle_callback_total_personagem(call):
         cursor.close()
         conn.close()
 
-def enviar_carta_individual(chat_id, user_id, resultados_personagens, index):
-    id_personagem, nome, subcategoria, categoria, quantidade_usuario, imagem_url = resultados_personagens[index]
-
-    # Criação da mensagem para a carta
-    mensagem = f"💌 | Personagem:\n\n<code>{id_personagem}</code> • {nome}\nde {subcategoria}\n"
-    if quantidade_usuario > 0:
-        mensagem += f"☀ | {quantidade_usuario}⤫"
-    else:
-        mensagem += f"🌧 | Tempo fechado..."
-
-    # Botões de navegação
-    keyboard = types.InlineKeyboardMarkup()
-    if index > 0:
-        keyboard.add(types.InlineKeyboardButton("⬅️ Anterior", callback_data=f"gnome_prev_{index-1}_{user_id}"))
-    if index < len(resultados_personagens) - 1:
-        keyboard.add(types.InlineKeyboardButton("Próxima ➡️", callback_data=f"gnome_next_{index+1}_{user_id}"))
-
-    # Verificar se existe uma imagem GIF ou URL para a carta
-    gif_url = obter_gif_url(id_personagem, user_id)
-    if gif_url:
-        imagem_url = gif_url
-
-    # Envio da imagem e mensagem
-    if imagem_url.lower().endswith(".gif"):
-        bot.send_animation(chat_id, imagem_url, caption=mensagem, reply_markup=keyboard, parse_mode="HTML")
-    elif imagem_url.lower().endswith(".mp4"):
-        bot.send_video(chat_id, imagem_url, caption=mensagem, reply_markup=keyboard, parse_mode="HTML")
-    elif imagem_url.lower().endswith((".jpeg", ".jpg", ".png")):
-        bot.send_photo(chat_id, imagem_url, caption=mensagem, reply_markup=keyboard, parse_mode="HTML")
-    else:
-        bot.send_message(chat_id, mensagem, reply_markup=keyboard, parse_mode="HTML")
-
 def gnomes(message):
     chat_id = message.chat.id
     user_id = message.from_user.id

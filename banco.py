@@ -464,7 +464,7 @@ def processar_callback_banco_pagina(call):
 def mostrar_cartas_compradas(chat_id, cartas, id_usuario, pagina_atual=1, message_id=None):
     try:
         # Definir o número de cartas por página
-        cartas_por_pagina = 15
+        cartas_por_pagina = 5
         total_paginas = (len(cartas) // cartas_por_pagina) + (1 if len(cartas) % cartas_por_pagina > 0 else 0)
         
         # Calcular o intervalo das cartas para a página atual
@@ -475,7 +475,15 @@ def mostrar_cartas_compradas(chat_id, cartas, id_usuario, pagina_atual=1, messag
         # Construir a mensagem com as cartas
         resposta = f"🛍️ Cartas Compradas - Página {pagina_atual}/{total_paginas}\n\n"
         for carta in cartas_pagina:
-            resposta += f"{carta['emoji']} <code>{carta['id']}</code> - {carta['nome']}\n"
+            # Verificar se a carta é uma tupla ou um dicionário e acessar os dados adequadamente
+            if isinstance(carta, dict):
+                emoji, id_carta, nome = carta['emoji'], carta['id'], carta['nome']
+            elif isinstance(carta, tuple):
+                emoji, id_carta, nome = carta[0], carta[1], carta[2]
+            else:
+                continue  # Ignorar caso o formato seja inesperado
+
+            resposta += f"{emoji} <code>{id_carta}</code> - {nome}\n"
 
         # Criar os botões de navegação
         markup = criar_markup_vendinha(pagina_atual, total_paginas, id_usuario)
@@ -488,6 +496,8 @@ def mostrar_cartas_compradas(chat_id, cartas, id_usuario, pagina_atual=1, messag
 
     except Exception as e:
         print(f"Erro ao mostrar cartas compradas: {e}")
+
+
 
 def criar_markup_vendinha(pagina_atual, total_paginas, id_usuario):
     markup = types.InlineKeyboardMarkup(row_width=4)

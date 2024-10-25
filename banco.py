@@ -465,18 +465,17 @@ from telebot import types
 
 def mostrar_cartas_compradas(chat_id, cartas, id_usuario, pagina_atual=1, message_id=None):
     try:
-        # Exibir os dados das cartas para depuração
-        print("DEBUG: Dados das cartas antes da ordenação:")
-        for carta in cartas:
-            print(carta)
-        
-        # Ordenar as cartas por ID assumindo que o ID está sempre na primeira posição da tupla
+        # Ordenar as cartas por ID, assumindo que o ID está sempre na primeira posição da tupla
         cartas = sorted(cartas, key=lambda carta: int(carta[0]))
 
         # Definir o número de cartas por página e calcular o total de páginas
         cartas_por_pagina = 5
         total_paginas = (len(cartas) // cartas_por_pagina) + (1 if len(cartas) % cartas_por_pagina > 0 else 0)
         
+        # Garantir que a página atual está dentro do intervalo de páginas disponíveis
+        if pagina_atual > total_paginas or pagina_atual < 1:
+            pagina_atual = 1  # Redefinir para a primeira página caso a página solicitada não exista
+
         # Calcular o intervalo das cartas para a página atual
         inicio = (pagina_atual - 1) * cartas_por_pagina
         fim = inicio + cartas_por_pagina
@@ -485,22 +484,26 @@ def mostrar_cartas_compradas(chat_id, cartas, id_usuario, pagina_atual=1, messag
         # Construir a mensagem com as cartas
         resposta = f"🛍️ Cartas Compradas - Página {pagina_atual}/{total_paginas}\n\n"
         for carta in cartas_pagina:
-            # Assumindo que cada carta é uma tupla com o formato (ID, Nome, Categoria, URL da Imagem, Emoji)
+            # Cada carta é uma tupla com o formato (ID, Nome, Categoria, URL da Imagem, Emoji)
             id_carta, nome, categoria, _, emoji = carta
             resposta += f"{emoji} <code>{id_carta}</code> - {nome}\n"
 
-        # Criar os botões de navegação, se houver mais de uma página
-        markup = criar_markup_vendinha(pagina_atual, total_paginas, id_usuario) if total_paginas > 1 else None
+        # Verificar se a mensagem tem conteúdo antes de tentar enviar ou editar
+        if resposta.strip():
+            # Criar os botões de navegação, se houver mais de uma página
+            markup = criar_markup_vendinha(pagina_atual, total_paginas, id_usuario) if total_paginas > 1 else None
 
-        # Enviar ou editar a mensagem com a lista de cartas compradas
-        if message_id:
-            try:
-                bot.edit_message_text(resposta, chat_id=chat_id, message_id=message_id, reply_markup=markup, parse_mode="HTML")
-            except Exception as e:
-                print(f"Erro ao editar mensagem, enviando nova: {e}")
+            # Enviar ou editar a mensagem com a lista de cartas compradas
+            if message_id:
+                try:
+                    bot.edit_message_text(resposta, chat_id=chat_id, message_id=message_id, reply_markup=markup, parse_mode="HTML")
+                except Exception as e:
+                    print(f"Erro ao editar mensagem, enviando nova: {e}")
+                    bot.send_message(chat_id, resposta, reply_markup=markup, parse_mode="HTML")
+            else:
                 bot.send_message(chat_id, resposta, reply_markup=markup, parse_mode="HTML")
         else:
-            bot.send_message(chat_id, resposta, reply_markup=markup, parse_mode="HTML")
+            print("DEBUG: Resposta vazia ao tentar mostrar cartas compradas.")
 
     except Exception as e:
         print(f"Erro ao mostrar cartas compradas: {e}")

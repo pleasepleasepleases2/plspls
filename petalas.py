@@ -200,8 +200,9 @@ def atualizar_petalas(id_usuario):
 
     fechar_conexao(cursor, conn)
 
-
-
+@bot.message_handler(commands=['roseira'])
+def handle_roseira_command(message):
+    roseira_command(message)
 
 def roseira_command(message):
     try:
@@ -217,9 +218,9 @@ def roseira_command(message):
         atualizar_petalas(id_usuario)
         conn, cursor = conectar_banco_dados()
         
-        # Unir as consultas em uma para reduzir chamadas
-        cursor.execute("SELECT petalas, subcategoria FROM usuarios WHERE id_usuario = %s", (id_usuario,))
-        petalas_disponiveis, subcategoria = cursor.fetchone()
+        # Seleciona apenas a coluna `petalas`
+        cursor.execute("SELECT petalas FROM usuarios WHERE id_usuario = %s", (id_usuario,))
+        petalas_disponiveis = cursor.fetchone()[0]
 
         if petalas_disponiveis > 0:
             # Reduzir pétalas e fazer commit

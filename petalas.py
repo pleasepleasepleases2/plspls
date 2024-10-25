@@ -76,7 +76,132 @@ import requests
 from io import BytesIO
 from concurrent.futures import ThreadPoolExecutor
 import tempfile
+import random
+from concurrent.futures import ThreadPoolExecutor
+import tempfile
+from cachetools import cached, TTLCache
 
+# Cache de 1 hora para armazenar combinações de cartas por subcategoria
+subcategoria_cache = TTLCache(maxsize=100, ttl=3600)
+
+@bot.message_handler(commands=['roseira'])
+def handle_roseira_command(message):
+    roseira_command(message)
+
+@cached(subcategoria_cache)
+def obter_cartas_subcategoria(subcategoria):
+    conn, cursor = conectar_banco_dados()
+    cursor.execute("SELECT id_personagem, nome, imagem FROM personagens WHERE subcategoria = %s", (subcategoria,))
+    cartas = cursor.fetchall()
+    fechar_conexao(cursor, conn)
+    return cartas
+
+def roseira_command(message):
+    try:
+        id_usuario = message.from_user.id
+        print(f"DEBUG: Comando /roseira acionado pelo usuário {id_usuario}")
+
+        # Checar se é VIP diretamente
+        if not is_vip(id_usuario):
+            bot.reply_to(message, "Este comando está em teste e só pode ser usado por usuários VIP.")
+            return
+
+        # Atualizar pétalas e verificar quantidade
+        atualizar_petalas(id_usuario)
+        conn, cursor = conectar_banco_dados()
+        
+        # Seleciona apenas a coluna `petalas`
+        cursor.execute("SELECT petalas FROM usuarios WHERE id_usuario = %s", (id_usuario,))
+        petalas_disponiveis = cursor.fetchone()[0]
+
+        if petalas_disponiveis > 0:
+            # Reduzir pétalas e fazer commit
+            cursor.execute("UPDATE usuarios SET petalas = petalas - 1 WHERE id_usuario = %s", (id_usuario,))
+            conn.commit()
+
+            args = message.text.split(maxsplit=1)
+            if len(args) < 2:
+                bot.reply_to(message, "Por favor, forneça uma subcategoria válida.")
+                return
+            subcategoria = args[1].strip()
+
+            # Obter cartas da subcategoria, com caching
+            todas_cartas_subcategoria = obter_cartas_subcategoria(subcategoria)
+
+            # Verificar se há cartas suficientes na subcategoria
+            if len(todas_cartas_subcategoria) < 3:
+                bot.reply_to(message, "Subcategoria não encontrada ou não há cartas suficientes.")
+                return
+
+            # Selecionar três cartas aleatórias dentro da subcategoria
+            cartas_aleatorias = random.sample(todas_cartas_subcategoria, 3)
+
+            # Função auxiliar para baixar e aplicar borda nas imagens
+            def processar_imagem(carta):
+                carta_id, _, url_imagem = carta
+                if carta_id in globals.cache_imagens_com_bordas:
+                    return globals.cache_imagens_com_bordas[carta_id]
+
+                try:
+                    response = requests.get(url_imagem)
+                    img = Image.open(BytesIO(response.content))
+
+                    # Baixar e aplicar uma borda aleatória
+                    borda_aleatoria = Image.open(BytesIO(requests.get(random.choice(globals.bordas_urls)).content))
+                    img_com_borda = aplicar_borda(img, borda_aleatoria)
+                    globals.cache_imagens_com_bordas[carta_id] = img_com_borda
+                    return img_com_borda
+                except Exception as e:
+                    print(f"Erro ao processar imagem para carta {carta_id}: {e}")
+                    return None
+
+            # Processar imagens em paralelo
+            with ThreadPoolExecutor() as executor:
+                imagens_cartas = list(filter(None, executor.map(processar_imagem, cartas_aleatorias)))
+
+            # Compor imagem final
+            largura_individual, altura_individual, espaco_entre = 300, 400, 10
+            largura_total = 3 * largura_individual + 2 * espaco_entre
+            imagem_final = Image.new("RGBA", (largura_total, altura_individual), (255, 255, 255, 0))
+
+            x_offset = 0
+            for img in imagens_cartas:
+                img_resized = img.resize((largura_individual, altura_individual))
+                imagem_final.paste(img_resized, (x_offset, 0))
+                x_offset += largura_individual + espaco_entre
+
+            # Salvar a imagem temporária
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as temp_img_file:
+                caminho_imagem = temp_img_file.name
+                imagem_final.save(caminho_imagem)
+
+            # Mensagem personalizada e botões
+            nomes_cartas = [f"1️⃣ {cartas_aleatorias[0][1]}", f"2⃣ {cartas_aleatorias[1][1]}", f"3⃣ {cartas_aleatorias[2][1]}"]
+            mensagem = (f"🌹 Você balança a roseira, fazendo ela derrubar algumas pétalas.\n"
+                        f"Qual dessas você vai levar?\n\n" + "\n".join(nomes_cartas) +
+                        f"\n\n🌺 Pétalas disponíveis: {petalas_disponiveis}")
+
+            markup = types.InlineKeyboardMarkup()
+            markup.row(
+                types.InlineKeyboardButton("1️⃣", callback_data=f"escolher_{cartas_aleatorias[0][0]}"),
+                types.InlineKeyboardButton("2⃣", callback_data=f"escolher_{cartas_aleatorias[1][0]}"),
+                types.InlineKeyboardButton("3️⃣", callback_data=f"escolher_{cartas_aleatorias[2][0]}")
+            )
+
+            bot.send_photo(message.chat.id, open(caminho_imagem, 'rb'), caption=mensagem, reply_markup=markup, reply_to_message_id=message.message_id)
+
+        else:
+            tempo_restante = calcular_tempo_restante(id_usuario)
+            bot.reply_to(message, f"🥀 Ainda não tem pétalas disponíveis na sua roseira... Volte em: {tempo_restante}")
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+
+    finally:
+        fechar_conexao(cursor, conn)
+        if os.path.exists(caminho_imagem):
+            os.remove(caminho_imagem)
 def aplicar_borda(imagem, borda):
     """Aplica uma borda PNG sobre uma imagem e usa a imagem original desfocada como fundo, com borda menor."""
     # Garantir que a imagem tenha o modo RGBA (suporte a transparência)
@@ -200,125 +325,7 @@ def atualizar_petalas(id_usuario):
 
     fechar_conexao(cursor, conn)
 
-@bot.message_handler(commands=['roseira'])
-def handle_roseira_command(message):
-    roseira_command(message)
 
-import random
-from concurrent.futures import ThreadPoolExecutor
-import tempfile
-
-# Definir algumas combinações de cartas aleatórias e armazená-las em cache
-cache_combinacoes_cartas = []
-
-def carregar_combinacoes_cartas():
-    global cache_combinacoes_cartas
-    conn, cursor = conectar_banco_dados()
-    cursor.execute("SELECT id_personagem, nome, imagem FROM personagens")
-    todas_cartas = cursor.fetchall()
-    fechar_conexao(cursor, conn)
-    
-    # Gerar combinações únicas e aleatórias
-    cache_combinacoes_cartas = [random.sample(todas_cartas, 3) for _ in range(50)]
-
-carregar_combinacoes_cartas()
-
-@bot.message_handler(commands=['roseira'])
-def handle_roseira_command(message):
-    roseira_command(message)
-
-def roseira_command(message):
-    try:
-        id_usuario = message.from_user.id
-        print(f"DEBUG: Comando /roseira acionado pelo usuário {id_usuario}")
-
-        # Checar se é VIP diretamente
-        if not is_vip(id_usuario):
-            bot.reply_to(message, "Este comando está em teste e só pode ser usado por usuários VIP.")
-            return
-
-        # Atualizar pétalas e verificar quantidade
-        atualizar_petalas(id_usuario)
-        conn, cursor = conectar_banco_dados()
-        
-        # Seleciona apenas a coluna `petalas`
-        cursor.execute("SELECT petalas FROM usuarios WHERE id_usuario = %s", (id_usuario,))
-        petalas_disponiveis = cursor.fetchone()[0]
-
-        if petalas_disponiveis > 0:
-            # Reduzir pétalas e fazer commit
-            cursor.execute("UPDATE usuarios SET petalas = petalas - 1 WHERE id_usuario = %s", (id_usuario,))
-            conn.commit()
-
-            # Selecionar uma combinação aleatória de cartas
-            cartas_aleatorias = random.choice(cache_combinacoes_cartas)
-
-            # Função auxiliar para baixar e aplicar borda nas imagens
-            def processar_imagem(carta):
-                carta_id, _, url_imagem = carta
-                if carta_id in globals.cache_imagens_com_bordas:
-                    return globals.cache_imagens_com_bordas[carta_id]
-
-                try:
-                    response = requests.get(url_imagem)
-                    img = Image.open(BytesIO(response.content))
-
-                    # Baixar e aplicar uma borda aleatória
-                    borda_aleatoria = Image.open(BytesIO(requests.get(random.choice(globals.bordas_urls)).content))
-                    img_com_borda = aplicar_borda(img, borda_aleatoria)
-                    globals.cache_imagens_com_bordas[carta_id] = img_com_borda
-                    return img_com_borda
-                except Exception as e:
-                    print(f"Erro ao processar imagem para carta {carta_id}: {e}")
-                    return None
-
-            # Processar imagens em paralelo
-            with ThreadPoolExecutor() as executor:
-                imagens_cartas = list(filter(None, executor.map(processar_imagem, cartas_aleatorias)))
-
-            # Compor imagem final
-            largura_individual, altura_individual, espaco_entre = 300, 400, 10
-            largura_total = 3 * largura_individual + 2 * espaco_entre
-            imagem_final = Image.new("RGBA", (largura_total, altura_individual), (255, 255, 255, 0))
-
-            x_offset = 0
-            for img in imagens_cartas:
-                img_resized = img.resize((largura_individual, altura_individual))
-                imagem_final.paste(img_resized, (x_offset, 0))
-                x_offset += largura_individual + espaco_entre
-
-            # Salvar a imagem temporária
-            with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as temp_img_file:
-                caminho_imagem = temp_img_file.name
-                imagem_final.save(caminho_imagem)
-
-            # Mensagem personalizada e botões
-            nomes_cartas = [f"1️⃣ {cartas_aleatorias[0][1]}", f"2⃣ {cartas_aleatorias[1][1]}", f"3⃣ {cartas_aleatorias[2][1]}"]
-            mensagem = (f"🌹 Você balança a roseira, fazendo ela derrubar algumas pétalas.\n"
-                        f"Qual dessas você vai levar?\n\n" + "\n".join(nomes_cartas) +
-                        f"\n\n🌺 Pétalas disponíveis: {petalas_disponiveis}")
-
-            markup = types.InlineKeyboardMarkup()
-            markup.row(
-                types.InlineKeyboardButton("1️⃣", callback_data=f"escolher_{cartas_aleatorias[0][0]}"),
-                types.InlineKeyboardButton("2⃣", callback_data=f"escolher_{cartas_aleatorias[1][0]}"),
-                types.InlineKeyboardButton("3️⃣", callback_data=f"escolher_{cartas_aleatorias[2][0]}")
-            )
-
-            bot.send_photo(message.chat.id, open(caminho_imagem, 'rb'), caption=mensagem, reply_markup=markup, reply_to_message_id=message.message_id)
-
-        else:
-            tempo_restante = calcular_tempo_restante(id_usuario)
-            bot.reply_to(message, f"🥀 Ainda não tem pétalas disponíveis na sua roseira... Volte em: {tempo_restante}")
-
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
-
-    finally:
-        fechar_conexao(cursor, conn)
-        if os.path.exists(caminho_imagem):
-            os.remove(caminho_imagem)
 
 def callback_escolher_carta(call):
     try:

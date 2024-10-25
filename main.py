@@ -2959,7 +2959,6 @@ def obter_id_e_enviar_info_com_imagem(message):
     finally:
         fechar_conexao(cursor, conn)
 
-
 def enviar_mensagem_personagem(chat_id, resultado_personagem, message_id, user_id):
     id_personagem, nome, subcategoria, quantidade_usuario, imagem_url = resultado_personagem[:5]
     cr = resultado_personagem[5] if len(resultado_personagem) > 5 else None
@@ -2997,16 +2996,25 @@ def enviar_mensagem_personagem(chat_id, resultado_personagem, message_id, user_i
     # Enviar mídia
     try:
         if imagem_url.lower().endswith(".gif"):
+            # Tenta enviar como animação
             bot.send_animation(chat_id, imagem_url, caption=mensagem, reply_markup=markup, reply_to_message_id=message_id, parse_mode="HTML")
         elif imagem_url.lower().endswith(".mp4"):
+            # Tenta enviar como vídeo
             bot.send_video(chat_id, imagem_url, caption=mensagem, reply_markup=markup, reply_to_message_id=message_id, parse_mode="HTML")
         elif imagem_url.lower().endswith((".jpeg", ".jpg", ".png")):
+            # Envia como foto
             bot.send_photo(chat_id, imagem_url, caption=mensagem, reply_markup=markup, reply_to_message_id=message_id, parse_mode="HTML")
         else:
+            # Se o arquivo não for suportado, envia a mensagem sem mídia
             bot.send_message(chat_id, mensagem, reply_markup=markup, parse_mode="HTML")
     except Exception as e:
         print(f"Erro ao enviar a mídia: {e}")
-        bot.send_message(chat_id, mensagem, reply_markup=markup, parse_mode="HTML")
+        try:
+            # Se houver erro, tenta enviar como documento
+            bot.send_document(chat_id, imagem_url, caption=mensagem, reply_markup=markup, reply_to_message_id=message_id, parse_mode="HTML")
+        except Exception as e2:
+            print(f"Erro ao enviar como documento: {e2}")
+            bot.send_message(chat_id, mensagem, reply_markup=markup, parse_mode="HTML")
 
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith('toggle_'))

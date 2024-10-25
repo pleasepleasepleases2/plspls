@@ -455,14 +455,15 @@ def mostrar_pagina_cesta_cf(message, categoria, id_usuario, pagina_atual, total_
     finally:
         fechar_conexao(cursor, conn)
 
+# Função para criar a navegação com botões de "⏪️", "⬅️", "➡️" e "⏩️"
 def criar_markup_cesta(pagina_atual, total_paginas, subcategoria, tipo, id_usuario_original):
-    markup = telebot.types.InlineKeyboardMarkup()
+    markup = telebot.types.InlineKeyboardMarkup(row_width=4)
 
     # Navegação circular
     pagina_anterior = total_paginas if pagina_atual == 1 else pagina_atual - 1
     pagina_proxima = 1 if pagina_atual == total_paginas else pagina_atual + 1
 
-    # Botões de navegação na mesma linha
+    # Botões de navegação
     markup.row(
         telebot.types.InlineKeyboardButton(text="⏪️", callback_data=f"cesta_{tipo}_1_{subcategoria}_{id_usuario_original}"),
         telebot.types.InlineKeyboardButton(text="⬅️", callback_data=f"cesta_{tipo}_{pagina_anterior}_{subcategoria}_{id_usuario_original}"),
@@ -471,6 +472,7 @@ def criar_markup_cesta(pagina_atual, total_paginas, subcategoria, tipo, id_usuar
     )
 
     return markup
+
 
 def adicionar_quantidade_cartas(quantidade_carta):
     if isinstance(quantidade_carta, str):

@@ -4317,7 +4317,8 @@ def criar_colagem(message):
     except Exception as e:
         print(f"Erro ao criar colagem: {e}")
         bot.send_message(message.chat.id, "Erro ao criar colagem.")
-esses em admin @bot.message_handler(commands=['gift'])
+
+@bot.message_handler(commands=['gift'])
 def handle_gift_cards(message):
     conn, cursor = conectar_banco_dados()
     if message.from_user.id != 5532809878 and message.from_user.id != 1805086442:

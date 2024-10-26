@@ -4317,7 +4317,22 @@ def criar_colagem(message):
     except Exception as e:
         print(f"Erro ao criar colagem: {e}")
         bot.send_message(message.chat.id, "Erro ao criar colagem.")
-
+esses em admin @bot.message_handler(commands=['gift'])
+def handle_gift_cards(message):
+    conn, cursor = conectar_banco_dados()
+    if message.from_user.id != 5532809878 and message.from_user.id != 1805086442:
+        bot.reply_to(message, "Você não é a Hashi ou a Skar para usar esse comando.")
+        return
+    try:
+        _, quantity, card_id, user_id = message.text.split()
+        quantity = int(quantity)
+        card_id = int(card_id)
+        user_id = int(user_id)
+    except (ValueError, IndexError):
+        bot.reply_to(message, "Por favor, use o formato correto: /gift quantidade card_id user_id")
+        return
+    gift_cards(quantity, card_id, user_id)
+    bot.reply_to(message, f"{quantity} cartas adicionadas com sucesso!")
 if __name__ == "__main__":
     app.run(host=WEBHOOK_LISTEN, port=int(WEBHOOK_PORT), debug=False)
 

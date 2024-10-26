@@ -2098,6 +2098,15 @@ def callback_descartar_caixa(call):
     numero_caixa = int(call.data.split("_")[-1])
 
     descartar_caixa_misteriosa(user_id, numero_caixa)
+
+@bot.callback_query_handler(func=lambda call: call.data.startswith("pronomes_"))
+def pronomes(call):
+    atualizar_pronomes(call)
+    
+@bot.callback_query_handler(func=lambda call: call.data.startswith("bpronomes_"))
+def bpronomes(call):
+    mostrar_opcoes_pronome(call)
+
 @bot.callback_query_handler(func=lambda call: call.data.startswith("escolha_porta_"))
 def callback_escolha_porta(call):
     user_id = int(call.data.split("_")[-1])

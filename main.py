@@ -2520,7 +2520,7 @@ def handle_pedidovip_command(message):
 @bot.message_handler(commands=['gift'])
 def handle_gift_cards(message):
     conn, cursor = conectar_banco_dados()
-    if message.from_user.id != 5532809878 and message.from_user.id != 1805086442 or message.from_user.id != 5121550670:
+    if message.from_user.id != 5532809878 and message.from_user.id != 1805086442:
         bot.reply_to(message, "Você não é a Hashi ou a Skar para usar esse comando.")
         return
     try:

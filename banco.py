@@ -465,11 +465,11 @@ from telebot import types
 
 def mostrar_cartas_compradas(chat_id, cartas, id_usuario, pagina_atual=1, message_id=None):
     try:
-        # Ordenar as cartas por ID, assumindo que o ID está sempre na primeira posição da tupla
+        # Ordenar as cartas por ID
         cartas = sorted(cartas, key=lambda carta: int(carta[0]))
 
         # Definir o número de cartas por página e calcular o total de páginas
-        cartas_por_pagina = 15
+        cartas_por_pagina = 5
         total_paginas = (len(cartas) // cartas_por_pagina) + (1 if len(cartas) % cartas_por_pagina > 0 else 0)
         
         # Garantir que a página atual está dentro do intervalo de páginas disponíveis
@@ -484,9 +484,12 @@ def mostrar_cartas_compradas(chat_id, cartas, id_usuario, pagina_atual=1, messag
         # Construir a mensagem com as cartas
         resposta = f"🛍️ Cartas Compradas - Página {pagina_atual}/{total_paginas}\n\n"
         for carta in cartas_pagina:
-            # Cada carta é uma tupla com o formato (ID, Nome, Categoria, URL da Imagem, Emoji)
-            id_carta, nome, categoria, _, emoji = carta
-            resposta += f"{emoji} <code>{id_carta}</code> - {nome}\n"
+            # Cada carta é uma tupla com o formato (ID, Nome, Subcategoria, URL da Imagem, Emoji)
+            id_carta, nome, subcategoria, _, emoji = carta
+
+            # Consultar a quantidade no inventário do usuário
+            quantidade = obter_quantidade_carta(id_usuario, id_carta)
+            resposta += f"{emoji} <code>{id_carta}</code> - {nome} de {subcategoria} — {quantidade} no inventário\n"
 
         # Verificar se a mensagem tem conteúdo antes de tentar enviar ou editar
         if resposta.strip():
@@ -519,6 +522,18 @@ def criar_markup_vendinha(pagina_atual, total_paginas, id_usuario):
         return markup
     return None
 
+def obter_quantidade_carta(id_usuario, id_carta):
+    # Consulta para obter a quantidade de uma carta específica no inventário do usuário
+    try:
+        conn, cursor = conectar_banco_dados()
+        cursor.execute("SELECT quantidade FROM inventario WHERE id_usuario = %s AND id_personagem = %s", (id_usuario, id_carta))
+        resultado = cursor.fetchone()
+        return resultado[0] if resultado else 0
+    except Exception as e:
+        print(f"Erro ao obter quantidade da carta {id_carta} para o usuário {id_usuario}: {e}")
+        return 0
+    finally:
+        fechar_conexao(cursor, conn)
 
 def processar_callback_cartas_compradas(call):
     pagina_atual = int(call.data.split('_')[-1])

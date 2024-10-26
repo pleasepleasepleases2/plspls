@@ -64,22 +64,6 @@ def rev_cards(message, quantity, card_id, user_id):
     conn.commit()
     return True
 
-@bot.message_handler(commands=['gift'])
-def handle_gift_cards(message):
-    conn, cursor = conectar_banco_dados()
-    if message.from_user.id != 1112853187:
-        bot.reply_to(message, "Você não é a Hashi para usar esse comando.")
-        return
-    try:
-        _, quantity, card_id, user_id = message.text.split()
-        quantity = int(quantity)
-        card_id = int(card_id)
-        user_id = int(user_id)
-    except (ValueError, IndexError):
-        bot.reply_to(message, "Por favor, use o formato correto: /gift quantidade card_id user_id")
-        return
-    gift_cards(quantity, card_id, user_id)
-    bot.reply_to(message, f"{quantity} cartas adicionadas com sucesso!")
 
 def gift_cards(quantity, card_id, user_id):
     for _ in range(quantity):
@@ -93,7 +77,7 @@ def gift_cards(quantity, card_id, user_id):
             update_query = "UPDATE inventario SET quantidade = %s WHERE id_personagem = %s AND id_usuario = %s"
             cursor.execute(update_query, (new_quantity, card_id, user_id))
         else:
-            insert_query = "INSERT INTO inventario (id_personagem, id_usuario, quantidade) VALUES (%s, %s, 1)"
+            insert_query = "INSERT INTO inventario (id_personagem, id_usuario, quantidade) VALUES (%s, %s, %s)"
             cursor.execute(insert_query, (card_id, user_id))
 
         update_total_query = "UPDATE personagens SET total = total + 1 WHERE id_personagem = %s"

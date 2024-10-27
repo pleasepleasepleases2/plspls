@@ -138,30 +138,47 @@ def mostrar_primeira_pagina_tag(message, nometag, id_usuario):
 # Função para lidar com o comando /tag
 def verificar_comando_tag(message):
     try:
-        parametros = message.text.split(' ', 1)[1:] 
-
-        if not parametros:
-            conn, cursor = conectar_banco_dados()
-            id_usuario = message.from_user.id
-            cursor.execute("SELECT DISTINCT nometag FROM tags WHERE id_usuario = %s", (id_usuario,))
-            tags = cursor.fetchall()
+        parametros = message.text.split(' ', 1)[1:]
+        conn, cursor = conectar_banco_dados()
+        id_usuario = message.from_user.id
+        nome_usuario = message.from_user.first_name
+        # Obter todas as tags do usuário, em ordem alfabética
+        cursor.execute("SELECT DISTINCT nometag FROM tags WHERE id_usuario = %s ORDER BY nometag ASC", (id_usuario,))
+        tags = cursor.fetchall()
+        
+        if not parametros:  # Exibir todas as tags com numeração
             if tags:
-                resposta = "🔖| Suas tags:\n\n"
-                for tag in tags:
-                    resposta += f"• {tag[0]}\n"
-                bot.reply_to(message, resposta)
+                resposta = f"<b>📚 | Tags de {nome_usuario}:\n\n</b>"
+                for i, tag in enumerate(tags, start=1):
+                    resposta += f"{i} |<i> {tag[0]}</i>\n"
+                bot.reply_to(message, resposta,parse_mode="HTML")
             else:
                 bot.reply_to(message, "Você não possui nenhuma tag.")
             fechar_conexao(cursor, conn)
             return
 
-        # Se uma tag foi fornecida, mostrar a primeira página da tag
-        nometag = parametros[0] 
-        id_usuario = message.from_user.id
+        # Determinar se o parâmetro fornecido é um número (índice da tag) ou o nome da tag
+        nometag = parametros[0].strip()
+        
+        # Verificar se o parâmetro é um número para obter a tag correspondente
+        if nometag.isdigit():
+            index = int(nometag) - 1
+            if 0 <= index < len(tags):
+                nometag = tags[index][0]  # Nome da tag correspondente ao índice
+            else:
+                bot.reply_to(message, "Número de tag inválido. Verifique a lista de tags e tente novamente.")
+                fechar_conexao(cursor, conn)
+                return
+        
+        # Mostrar a primeira página da tag com o nome identificado (por índice ou nome direto)
         mostrar_primeira_pagina_tag(message, nometag, id_usuario)
 
     except Exception as e:
         print(f"Erro ao processar comando /tag: {e}")
+        bot.reply_to(message, "Ocorreu um erro ao processar sua solicitação.")
+    finally:
+        fechar_conexao(cursor, conn)
+
 
 # Função para adicionar tags com o comando /addtag
 def adicionar_tag(message):

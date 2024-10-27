@@ -2297,7 +2297,7 @@ def trade(message):
         # Verificação se a travessura "troca invertida" está ativa
         if verificar_travessura_ativa(eu, 'troca_invertida'):
             minhacarta, suacarta = suacarta, minhacarta  # Inverte as cartas na troca
-            bot.send_message(chat_id, "🔄 Travessura ativa! As cartas na troca foram invertidas.")
+            bot.send_message(chat_id, "🔮 A bruxa lançou sua maldição! 🕸️ Seus instintos se confundem e agora a ordem das cartas na troca foi invertida... boa sorte quebrando o feitiço! 🕯️")
 
         # Verificação de inventário para o usuário que iniciou a troca
         if verifica_inventario_troca(eu, minhacarta) == 0:

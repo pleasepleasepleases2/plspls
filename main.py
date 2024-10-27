@@ -3338,11 +3338,11 @@ def handle_callback_escolher_carta(call):
 def categoria_callback(call):
     try:
         categoria = call.data.replace('pescar_', '')
-        chat_id = call.message.chat.id
+        user_id = message.from_user.id
         message_id = call.message.message_id
 
-        if chat_id and message_id:
-            ultimo_clique[chat_id] = {'categoria': categoria}
+        if user_id and message_id:
+            ultimo_clique[user_id] = {'categoria': categoria}
             categoria_handler(call.message, categoria)
         else:
             print("Invalid message or chat data in the callback query.")

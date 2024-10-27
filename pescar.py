@@ -62,7 +62,6 @@ def buscar_subcategorias(categoria):
 
 import random
 from datetime import datetime
-
 # Função para verificar se a "travessura de embaralhamento" está ativa
 def verificar_travessura_ativa(id_usuario, tipo_travessura="embaralhamento"):
     conn, cursor = conectar_banco_dados()
@@ -75,7 +74,9 @@ def verificar_travessura_ativa(id_usuario, tipo_travessura="embaralhamento"):
         if resultado:
             fim_travessura = resultado[0]
             return datetime.now() < fim_travessura
-        return False;
+        return False
+    finally:
+        fechar_conexao(cursor, conn)
 
 # Função para truncar aleatoriamente nomes de subcategorias
 def truncar_texto(texto, truncar_percent=0.5):

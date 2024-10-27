@@ -125,6 +125,8 @@ def mostrar_primeira_pagina_tag(message, nometag, id_usuario):
 
             markup = None
         if int(total_paginas) > 1:
+            if != pagina_atual:
+                pagina_atual = 1
             markup = criar_markup_tag(pagina_atual, total_paginas, nometag)
             resposta += f"\nPágina {pagina_atual}/{total_paginas}"
             bot.edit_message_text(chat_id=message.chat.id, message_id=message.message_id, text=resposta, reply_markup=markup, parse_mode="HTML")

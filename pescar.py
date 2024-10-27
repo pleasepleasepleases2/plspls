@@ -313,99 +313,101 @@ def obter_carta_por_submenu(cursor, subcategoria, submenu):
         print(f"Erro ao obter carta por submenu: {err}")
         return None
 
+import traceback
+
 def send_card_message(message, *args, cursor=None, conn=None):
     try:
         id_usuario = message.chat.id
         id_user = message.from_user.id
         embaralhamento_ativo = verificar_travessura_ativa(id_user)
+
+        # Debug: Exibindo os argumentos e estado de embaralhamento
+        print(f"[DEBUG] id_usuario: {id_usuario}, id_user: {id_user}, embaralhamento_ativo: {embaralhamento_ativo}, args: {args}")
+
         # Verifica se é um evento fixo (dicionário passado)
         if len(args) == 1 and isinstance(args[0], dict):
             evento_aleatorio = args[0]
             subcategoria_display = evento_aleatorio['subcategoria'].split('_')[-1]
-            id_usuario = message.chat.id
             id_personagem = evento_aleatorio['id_personagem']
             nome = evento_aleatorio['nome']
             subcategoria = evento_aleatorio['subcategoria']
+            
+            # Debug: Informações do evento fixo
+            print(f"[DEBUG] Evento fixo - id_personagem: {id_personagem}, nome: {nome}, subcategoria: {subcategoria}")
+
             add_to_inventory(id_usuario, id_personagem)
             quantidade = verifica_inventario_troca(id_usuario, id_personagem)
             quantidade_display = "☀" if quantidade == 1 else "☀ 𖡩"
 
-            # Se não houver imagem, use uma imagem padrão
-            if not evento_aleatorio['imagem']:
-                imagem = "https://telegra.ph/file/8a50bf408515b52a36734.jpg"
-            else:
-                imagem = evento_aleatorio['imagem']
+            imagem = evento_aleatorio.get('imagem', "https://telegra.ph/file/8a50bf408515b52a36734.jpg")
 
-            texto = f"🎣 Parabéns! Sua isca era boa e você recebeu:\n\n☃️ {evento_aleatorio['id_personagem']} - {evento_aleatorio['nome']}\nde {subcategoria_display}\n\n{quantidade_display}"
+            texto = f"🎣 Parabéns! Sua isca era boa e você recebeu:\n\n☃️ {id_personagem} - {nome}\nde {subcategoria_display}\n\n{quantidade_display}"
             text = truncar_texto(texto) if embaralhamento_ativo else texto
+
+            # Debug: Texto e imagem que serão enviados
+            print(f"[DEBUG] Texto final: {text}, Imagem: {imagem}")
+
             try:
                 bot.edit_message_media(
                     chat_id=message.chat.id,
                     message_id=message.message_id,
                     media=telebot.types.InputMediaPhoto(media=imagem, caption=text)
                 )
-            except Exception:
+            except Exception as ex:
+                print(f"[DEBUG] edit_message_media falhou: {ex}")
                 bot.send_photo(chat_id=message.chat.id, photo=imagem, caption=text)
             
-            # Registrar no histórico
             register_card_history(message, id_usuario, id_personagem)
-        
+
         # Verifica se é uma carta aleatória (5 argumentos)
         elif len(args) == 5:
             emoji_categoria, id_personagem, nome, subcategoria, imagem = args
             subcategoria_display = subcategoria.split('_')[-1]
-            id_usuario = message.chat.id
+
+            # Debug: Informações da carta aleatória
+            print(f"[DEBUG] Carta aleatória - emoji_categoria: {emoji_categoria}, id_personagem: {id_personagem}, nome: {nome}, subcategoria: {subcategoria}")
+
             add_to_inventory(id_usuario, id_personagem)
             quantidade = verifica_inventario_troca(id_usuario, id_personagem)
             
-            if not imagem:
-                imagem_url = "https://telegra.ph/file/8a50bf408515b52a36734.jpg"
-                text = f"🎣 Parabéns! Sua isca era boa e você recebeu:\n\n{emoji_categoria}<code> {id_personagem}</code> - {nome}\nde {subcategoria_display}\nQuantidade de cartas: {quantidade}"
-                text = truncar_texto(texto) if embaralhamento_ativo else texto
-                try:
+            imagem_url = imagem if imagem else "https://telegra.ph/file/8a50bf408515b52a36734.jpg"
+            texto = f"🎣 Parabéns! Sua isca era boa e você recebeu:\n\n{emoji_categoria}<code> {id_personagem}</code> - {nome}\nde {subcategoria_display}\nQuantidade de cartas: {quantidade}"
+            text = truncar_texto(texto) if embaralhamento_ativo else texto
+
+            # Debug: Texto e imagem que serão enviados
+            print(f"[DEBUG] Texto final: {text}, Imagem: {imagem_url}")
+
+            try:
+                if imagem_url.lower().endswith(('.jpg', '.jpeg', '.png')):
                     bot.edit_message_media(
                         chat_id=message.chat.id,
                         message_id=message.message_id,
                         media=telebot.types.InputMediaPhoto(media=imagem_url, caption=text, parse_mode="HTML")
                     )
-                except Exception:
+                elif imagem_url.lower().endswith(('.mp4', '.gif')):
+                    bot.edit_message_media(
+                        chat_id=message.chat.id,
+                        message_id=message.message_id,
+                        media=telebot.types.InputMediaVideo(media=imagem_url, caption=text, parse_mode="HTML")
+                    )
+            except Exception as ex:
+                print(f"[DEBUG] edit_message_media falhou: {ex}")
+                if imagem_url.lower().endswith(('.jpg', '.jpeg', '.png')):
                     bot.send_photo(chat_id=message.chat.id, photo=imagem_url, caption=text, parse_mode="HTML")
-            else:
-                texto = f"🎣 Parabéns! Sua isca era boa e você recebeu:\n\n{emoji_categoria} <code>{id_personagem}</code> - {nome}\nde {subcategoria_display}\n\n☀ | {quantidade}⤫"
-                text = truncar_texto(texto) if embaralhamento_ativo else texto
-                try:
-                    if imagem.lower().endswith(('.jpg', '.jpeg', '.png')):
-                        bot.edit_message_media(
-                            chat_id=message.chat.id,
-                            message_id=message.message_id,
-                            media=telebot.types.InputMediaPhoto(media=imagem, caption=text, parse_mode="HTML")
-                        )
-                    elif imagem.lower().endswith(('.mp4', '.gif')):
-                        bot.edit_message_media(
-                            chat_id=message.chat.id,
-                            message_id=message.message_id,
-                            media=telebot.types.InputMediaVideo(media=imagem, caption=text, parse_mode="HTML")
-                        )
-                except Exception:
-                    if imagem.lower().endswith(('.jpg', '.jpeg', '.png')):
-                        bot.send_photo(chat_id=message.chat.id, photo=imagem, caption=text, parse_mode="HTML")
-                    elif imagem.lower().endswith(('.mp4', '.gif')):
-                        bot.send_video(chat_id=message.chat.id, video=imagem, caption=text, parse_mode="HTML")
+                elif imagem_url.lower().endswith(('.mp4', '.gif')):
+                    bot.send_video(chat_id=message.chat.id, video=imagem_url, caption=text, parse_mode="HTML")
             
             register_card_history(message.from_user, id_usuario, id_personagem)
             if quantidade == 30:
                 bot.send_message(id_usuario, "🎉 Parabéns! Você alcançou 30 cartas do personagem, pode pedir um gif usando o comando /setgif!")
         
         else:
-            print("Número incorreto de argumentos.")
-    
+            print("[DEBUG] Número incorreto de argumentos.")
+
     except Exception as e:
-        traceback.print_exc()
         erro = traceback.format_exc()
         mensagem = f"Erro ao enviar carta: {e}\n{erro}"
         bot.send_message(grupodeerro, mensagem, parse_mode="HTML")
-
-
 
 def verificar_se_subcategoria_tem_submenu(cursor, subcategoria):
     try:

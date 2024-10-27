@@ -107,12 +107,11 @@ def categoria_handler(message, categoria):
         conn, cursor = conectar_banco_dados()
         chat_id = message.chat.id
         id_usuario = message.from_user.id
-
+        
         # Verificar se a travessura de embaralhamento está ativa
         embaralhamento_ativo = verificar_travessura_ativa(id_usuario)
 
-        # Tratar a categoria "geral" com lógica específica, caso necessário
-        if categoria.lower() == 'geral':
+        if categoria.lower() == 'geral': 
             subcategorias = buscar_subcategorias(categoria)
             subcategorias = [subcategoria for subcategoria in subcategorias if subcategoria]
 
@@ -124,6 +123,7 @@ def categoria_handler(message, categoria):
             subcategorias_aleatorias = random.sample(subcategorias, min(6, len(subcategorias)))
 
             for i, subcategoria in enumerate(subcategorias_aleatorias, start=1):
+                # Truncar a subcategoria se o embaralhamento estiver ativo
                 subcategoria_final = truncar_texto(subcategoria) if embaralhamento_ativo else subcategoria
                 resposta_texto += f"{i}\uFE0F\u20E3 - {subcategoria_final}\n"
 
@@ -132,11 +132,11 @@ def categoria_handler(message, categoria):
             for i, subcategoria in enumerate(subcategorias_aleatorias, start=1):
                 subcategoria_final = truncar_texto(subcategoria) if embaralhamento_ativo else subcategoria
                 button_text = f"{i}\uFE0F\u20E3"
-                callback_data = f"choose_subcategoria_{subcategoria}"
+                callback_data = f"choose_subcategoria_{subcategoria_final}"
                 row_buttons.append(telebot.types.InlineKeyboardButton(button_text, callback_data=callback_data))
 
             markup.row(*row_buttons)
-            imagem_url = "https://telegra.ph/file/8a50bf408515b52a36734.jpg"
+            imagem_url="https://telegra.ph/file/8a50bf408515b52a36734.jpg"
             bot.edit_message_media(
                 chat_id=message.chat.id,
                 message_id=message.message_id,
@@ -145,7 +145,7 @@ def categoria_handler(message, categoria):
             )
             return None  
 
-        # Se a categoria não for "geral"
+        # Tratamento para categorias diferentes de "geral"
         subcategorias = buscar_subcategorias(categoria)
         subcategorias = [subcategoria for subcategoria in subcategorias if subcategoria]
 
@@ -157,6 +157,7 @@ def categoria_handler(message, categoria):
         subcategorias_aleatorias = random.sample(subcategorias, min(6, len(subcategorias)))
 
         for i, subcategoria in enumerate(subcategorias_aleatorias, start=1):
+            # Truncar a subcategoria se o embaralhamento estiver ativo
             subcategoria_final = truncar_texto(subcategoria) if embaralhamento_ativo else subcategoria
             resposta_texto += f"{i}\uFE0F\u20E3 - {subcategoria_final}\n"
 
@@ -165,7 +166,7 @@ def categoria_handler(message, categoria):
         for i, subcategoria in enumerate(subcategorias_aleatorias, start=1):
             subcategoria_final = truncar_texto(subcategoria) if embaralhamento_ativo else subcategoria
             button_text = f"{i}\uFE0F\u20E3"
-            callback_data = f"choose_subcategoria_{subcategoria}"
+            callback_data = f"choose_subcategoria_{subcategoria_final}"
             row_buttons.append(telebot.types.InlineKeyboardButton(button_text, callback_data=callback_data))
 
         markup.row(*row_buttons)

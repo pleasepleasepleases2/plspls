@@ -314,7 +314,9 @@ def obter_carta_por_submenu(cursor, subcategoria, submenu):
 
 def send_card_message(message, *args, cursor=None, conn=None):
     try:
-        embaralhamento_ativo = verificar_travessura_ativa(id_usuario)
+        id_usuario = message.chat.id
+        id_user = message.from_user.id
+        embaralhamento_ativo = verificar_travessura_ativa(id_user)
         # Verifica se é um evento fixo (dicionário passado)
         if len(args) == 1 and isinstance(args[0], dict):
             evento_aleatorio = args[0]
@@ -323,7 +325,7 @@ def send_card_message(message, *args, cursor=None, conn=None):
             id_personagem = evento_aleatorio['id_personagem']
             nome = evento_aleatorio['nome']
             subcategoria = evento_aleatorio['subcategoria']
-            add_to_inventory(id_usuario, id_personagem)
+            add_to_inventory(id_user, id_personagem)
             quantidade = verifica_inventario_troca(id_usuario, id_personagem)
             quantidade_display = "☀" if quantidade == 1 else "☀ 𖡩"
 
@@ -352,7 +354,7 @@ def send_card_message(message, *args, cursor=None, conn=None):
             emoji_categoria, id_personagem, nome, subcategoria, imagem = args
             subcategoria_display = subcategoria.split('_')[-1]
             id_usuario = message.chat.id
-            add_to_inventory(id_usuario, id_personagem)
+            add_to_inventory(id_user, id_personagem)
             quantidade = verifica_inventario_troca(id_usuario, id_personagem)
             
             if not imagem:

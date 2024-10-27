@@ -356,32 +356,6 @@ def aplicar_travessura(user_id, chat_id):
     except Exception as e:
         print(f"Erro ao aplicar travessura: {e}")
 
-
-def troca_invertida(user_id,chat_id):
-    try:
-        conn, cursor = conectar_banco_dados()
-
-        # Definir o tempo de duração da praga (exemplo: 10 minutos)
-        fim_travessura = datetime.now() + timedelta(minutes=15)
-
-        # Inserir a praga na tabela 'travessuras' para o usuário
-        cursor.execute("""
-            INSERT INTO travessuras (id_usuario, tipo_travessura, fim_travessura)
-            VALUES (%s, 'troca_invertida', %s)
-            ON DUPLICATE KEY UPDATE fim_travessura = %s
-        """, (user_id, fim_travessura, fim_travessura))
-
-        conn.commit()
-
-        # Informar o usuário que ele foi amaldiçoado
-        bot.send_message(chat_id, "🎭 Travessura! A ordem dos comandos das suas proximas troca foi invertida por 15min. Tome cuidado!")
-
-    except Exception as e:
-        print(f"Erro ao aplicar praga: {e}")
-    finally:
-        fechar_conexao(cursor, conn)
-
-
 processing_lock = threading.Lock()
 # Função de callback para processar navegação
 @bot.callback_query_handler(func=lambda call: call.data.startswith('vendinha_'))
@@ -2296,6 +2270,7 @@ def handle_jogo_da_velha(message):
 def handle_jogada(call):
     jogador_fazer_jogada(bot, call)
 
+# Função principal de troca
 @bot.message_handler(commands=['picnic', 'trocar', 'troca'])
 def trade(message):
     try:
@@ -2318,6 +2293,11 @@ def trade(message):
         if voce == bot_id:
             bot.send_message(chat_id, "Você não pode fazer trocas com a Mabi :(", reply_to_message_id=message.message_id)
             return
+
+        # Verificação se a travessura "troca invertida" está ativa
+        if verificar_travessura_ativa(eu, 'troca_invertida'):
+            minhacarta, suacarta = suacarta, minhacarta  # Inverte as cartas na troca
+            bot.send_message(chat_id, "🔄 Travessura ativa! As cartas na troca foram invertidas.")
 
         # Verificação de inventário para o usuário que iniciou a troca
         if verifica_inventario_troca(eu, minhacarta) == 0:
@@ -2367,6 +2347,23 @@ def trade(message):
         erro = traceback.format_exc()
         mensagem = f"Erro durante a troca. dados: {voce},{eu},{minhacarta},{suacarta}\n{erro}"
         bot.send_message(grupodeerro, mensagem, parse_mode="HTML")
+
+# Função para verificar se a travessura está ativa
+def verificar_travessura_ativa(id_usuario, tipo_travessura):
+    conn, cursor = conectar_banco_dados()
+    try:
+        query = """
+            SELECT fim_travessura FROM travessuras
+            WHERE id_usuario = %s AND tipo_travessura = %s AND fim_travessura > NOW()
+        """
+        cursor.execute(query, (id_usuario, tipo_travessura))
+        resultado = cursor.fetchone()
+        return resultado is not None  # Retorna True se a travessura está ativa
+    except Exception as e:
+        print(f"Erro ao verificar travessura: {e}")
+        return False
+    finally:
+        fechar_conexao(cursor, conn)
 
 # Função que aplica a travessura e bloqueia o comando de raspadinha por 1 dia
 def bloquear_raspadinha(user_id):

@@ -62,6 +62,23 @@ def buscar_subcategorias(categoria):
 
 import random
 from datetime import datetime
+
+import random
+
+# Função para truncar ou alterar uma mensagem simulando uma "travessura de embaralhamento"
+def embaralhar_mensagem(texto):
+    palavras = texto.split()
+    resultado = []
+
+    for palavra in palavras:
+        # Define uma probabilidade de truncar ou alterar cada palavra
+        if random.random() < 0.5:
+            truncamento = max(1, int(len(palavra) * 0.5))  # Corta a palavra pela metade
+            palavra = palavra[:truncamento]
+        resultado.append(palavra)
+
+    return " ".join(resultado)
+
 # Função para verificar se a "travessura de embaralhamento" está ativa
 def verificar_travessura_ativa(id_usuario, tipo_travessura="embaralhamento"):
     conn, cursor = conectar_banco_dados()

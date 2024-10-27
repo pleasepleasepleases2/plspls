@@ -2159,8 +2159,6 @@ def realizar_halloween_travessura(user_id, chat_id):
                 """, (user_id, 'sombra_rouba_cenouras', fim_travessura))
                 conn.commit()
         
-                bot.send_message(chat_id, "🎃 Travessura! Suas cartas estão com as categorias erradas temporariamente.")
-        
             except Exception as e:
                 print(f"Erro ao registrar travessura de categoria errada: {e}")
         

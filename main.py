@@ -2627,7 +2627,7 @@ def handle_casar_command(message):
 def handle_divorciar_command(message):
     divorciar_command(message)
 
-@bot.message_handler(commands=['tag'])
+@bot.message_handler(commands=['tag','tags'])
 def handle_tag_command(message):
     verificar_comando_tag(message)
 

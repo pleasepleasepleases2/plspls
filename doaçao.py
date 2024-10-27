@@ -12,27 +12,18 @@ from cachetools import cached, TTLCache
 from evento import *
 from sub import *
 import mysql.connector.pooling
-def verificar_travessura_embaralhamento(user_id):
+# Função para verificar se a "travessura de embaralhamento" está ativa
+def verificar_travessura_ativa(id_usuario, tipo_travessura="embaralhamento"):
+    conn, cursor = conectar_banco_dados()
     try:
-        conn, cursor = conectar_banco_dados()
-
-        # Verificar se a travessura está ativa
-        cursor.execute("""
-            SELECT fim_travessura FROM travessuras
-            WHERE id_usuario = %s AND tipo_travessura = 'embaralhamento'
-        """, (user_id,))
+        query = "SELECT fim_travessura FROM travessuras WHERE id_usuario = %s AND tipo_travessura = %s"
+        cursor.execute(query, (id_usuario, tipo_travessura))
         resultado = cursor.fetchone()
-
+        
+        # Verificar se a travessura está ativa e ainda dentro do prazo
         if resultado:
             fim_travessura = resultado[0]
-            # Se a travessura ainda está ativa (o tempo atual é menor que o fim)
-            if datetime.now() < fim_travessura:
-                return True
-        
-        return False  # Travessura não está ativa
-    
-    except Exception as e:
-        print(f"Erro ao verificar a travessura de embaralhamento: {e}")
+            return datetime.now() < fim_travessura
         return False
     finally:
         fechar_conexao(cursor, conn)
@@ -43,7 +34,8 @@ def doar(message):
         chat_id = message.chat.id
         eu = message.from_user.id
         args = message.text.split()
-
+        # Verificar se a travessura de embaralhamento está ativa
+        embaralhamento_ativo = verificar_travessura_ativa(id_usuario)
         if len(args) < 2:
             bot.send_message(chat_id, "Formato incorreto. Use /doar <quantidade> <ID_da_carta> ou /doar all <ID_da_carta>")
             return
@@ -98,9 +90,8 @@ def doar(message):
                 types.InlineKeyboardButton(text="Sim", callback_data=f'cdoacao_{eu}_{minhacarta}_{destinatario_id}_{quantidade}'),
                 types.InlineKeyboardButton(text="Não", callback_data=f'ccancelar_{eu}')
             )
-            if verificar_travessura_embaralhamento(eu):
-                texto = embaralhar_mensagem(texto)  # Embaralha a mensagem se a travessura estiver ativa
-    
+            # Embaralha a mensagem se a travessura estiver ativa
+            texto = truncar_texto(texto) if embaralhamento_ativo else texto
             bot.send_message(chat_id, texto, reply_markup=keyboard)
         else:
             bot.send_message(chat_id, "Você não pode doar uma carta que não possui.")
@@ -118,7 +109,8 @@ def confirmar_doacao(call):
         if len(data) != 5:
             bot.send_message(call.message.chat.id, "Dados de doação inválidos.")
             return
-
+        # Verificar se a travessura de embaralhamento está ativa
+        embaralhamento_ativo = verificar_travessura_ativa(id_usuario)
         eu = int(data[1])
         minhacarta = int(data[2])
         destinatario_id = int(data[3])
@@ -191,9 +183,8 @@ def confirmar_doacao(call):
             texto_confirmacao = f"Doação de {doacao_str} realizada com sucesso!\n\n"
             texto_confirmacao += f"🧺 De {meunome}: {quantidade_doador_anterior}↝{quantidade_doador_atual}\n\n"
             texto_confirmacao += f"🧺 Para {seunome}: {quantidade_destinatario_anterior}↝{quantidade_destinatario_atual}\n"
-            if verificar_travessura_embaralhamento(eu):
-                texto_confirmacao = embaralhar_mensagem(texto_confirmacao)  # Embaralha a mensagem se a travessura estiver ativa
-    
+            # Embaralha a mensagem se a travessura estiver ativa
+            texto = truncar_texto(texto_confirmacao) if embaralhamento_ativo else texto_confirmacao
             bot.edit_message_text(texto_confirmacao, chat_id=call.message.chat.id, message_id=call.message.message_id)
         else:
             if quantidade_doador_anterior < quantidade:
@@ -202,7 +193,6 @@ def confirmar_doacao(call):
                 bot.edit_message_text("Você não possui cenouras suficientes para fazer a doação.", chat_id=call.message.chat.id, message_id=call.message.message_id)
     except Exception as e:
         print(f"Erro ao confirmar a doação: {e}")
-        newrelic.agent.record_exception()    
         bot.send_message(call.message.chat.id, "Erro ao confirmar a doação. Tente novamente!")
     finally:
         fechar_conexao(cursor, conn)
@@ -213,5 +203,4 @@ def cancelar_doacao(call):
         bot.edit_message_text("Doação cancelada.", chat_id=call.message.chat.id, message_id=call.message.message_id)
     except Exception as e:
         print(f"Erro ao cancelar a doação: {e}")
-        newrelic.agent.record_exception()    
         bot.send_message(call.message.chat.id, "Erro ao cancelar a doação.")

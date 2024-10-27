@@ -124,12 +124,13 @@ def mostrar_primeira_pagina_tag(message, nometag, id_usuario):
                 resposta += f"{emoji_status} | {emoji} ⭑<code> {id_personagem}</code> - {nome} de {subcategoria}\n"
 
             markup = None
-            if total_paginas > 1:
-                markup = criar_markup_tag(1, total_paginas, nometag)
-            resposta += f"\nPágina 1/{total_paginas}"
-            bot.send_message(message.chat.id, resposta, reply_markup=markup, parse_mode="HTML")
+        if int(total_paginas) > 1:
+            markup = criar_markup_tag(pagina_atual, total_paginas, nometag)
+            resposta += f"\nPágina {pagina_atual}/{total_paginas}"
+            bot.edit_message_text(chat_id=message.chat.id, message_id=message.message_id, text=resposta, reply_markup=markup, parse_mode="HTML")
         else:
-            bot.reply_to(message, f"Nenhum registro encontrado para a tag '{nometag}'.")
+            bot.reply_to(message, f"<i>Você não possui uma tag com o esse nome. </i> \nDeseja criar? Use o comando <code> /addtag id | {nometag}</code>.")
+
 
     except Exception as e:
         print(f"Erro ao processar comando /tag: {e}")
@@ -150,7 +151,7 @@ def verificar_comando_tag(message):
             if tags:
                 resposta = f"<b>🔖 | Tags de {nome_usuario}:\n\n</b>"
                 for i, tag in enumerate(tags, start=1):
-                    resposta += f"{i} — {tag[0]}\n"
+                    resposta += f"<i>{i} — {tag[0]}\n<\i>"
                 bot.reply_to(message, resposta,parse_mode="HTML")
             else:
                 bot.reply_to(message, "Você não possui nenhuma tag.")

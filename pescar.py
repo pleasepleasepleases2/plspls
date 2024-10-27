@@ -75,32 +75,15 @@ def verificar_travessura_ativa(id_usuario, tipo_travessura="embaralhamento"):
         if resultado:
             fim_travessura = resultado[0]
             return datetime.now() < fim_travessura
-        return False
-    finally:
-        fechar_conexao(cursor, conn)
+        return False;
 
 # Função para truncar aleatoriamente nomes de subcategorias
 def truncar_texto(texto, truncar_percent=0.5):
     max_corte = max(1, int(len(texto) * truncar_percent))
     ponto_corte = random.randint(1, max_corte)
     return texto[:len(texto) - ponto_corte]
-import random
 
-# Função para truncar ou alterar uma mensagem simulando uma "travessura de embaralhamento"
-def embaralhar_mensagem(texto):
-    palavras = texto.split()
-    resultado = []
 
-    for palavra in palavras:
-        # Define uma probabilidade de truncar ou alterar cada palavra
-        if random.random() < 0.5:
-            truncamento = max(1, int(len(palavra) * 0.5))  # Corta a palavra pela metade
-            palavra = palavra[:truncamento]
-        resultado.append(palavra)
-
-    return " ".join(resultado)
-
-# Função principal
 def categoria_handler(message, categoria):
     try:
         conn, cursor = conectar_banco_dados()
@@ -120,16 +103,13 @@ def categoria_handler(message, categoria):
 
                 for i, subcategoria in enumerate(subcategorias_aleatorias, start=1):
                     # Truncar subcategoria se a travessura estiver ativa
-                    if embaralhamento_ativo:
-                        subcategoria = truncar_texto(subcategoria)
-                    resposta_texto += f"{i}\uFE0F\u20E3 - {subcategoria}\n"
+                    subcategoria_final = truncar_texto(subcategoria) if embaralhamento_ativo else subcategoria
+                    resposta_texto += f"{i}\uFE0F\u20E3 - {subcategoria_final}\n"
 
                 markup = telebot.types.InlineKeyboardMarkup(row_width=6)
                 row_buttons = []
                 for i, subcategoria in enumerate(subcategorias_aleatorias, start=1):
-                    # Truncar para botões também
-                    if embaralhamento_ativo:
-                        subcategoria = truncar_texto(subcategoria)
+                    subcategoria_final = truncar_texto(subcategoria) if embaralhamento_ativo else subcategoria
                     button_text = f"{i}\uFE0F\u20E3"
                     row_buttons.append(telebot.types.InlineKeyboardButton(button_text, callback_data=f"choose_subcategoria_{subcategoria}"))
 
@@ -153,15 +133,13 @@ def categoria_handler(message, categoria):
                 subcategorias_aleatorias = random.sample(subcategorias, min(6, len(subcategorias)))
 
                 for i, subcategoria in enumerate(subcategorias_aleatorias, start=1):
-                    if embaralhamento_ativo:
-                        subcategoria = truncar_texto(subcategoria)
-                    resposta_texto += f"{i}\uFE0F\u20E3 - {subcategoria}\n"
+                    subcategoria_final = truncar_texto(subcategoria) if embaralhamento_ativo else subcategoria
+                    resposta_texto += f"{i}\uFE0F\u20E3 - {subcategoria_final}\n"
 
                 markup = telebot.types.InlineKeyboardMarkup(row_width=6)
                 row_buttons = []
                 for i, subcategoria in enumerate(subcategorias_aleatorias, start=1):
-                    if embaralhamento_ativo:
-                        subcategoria = truncar_texto(subcategoria)
+                    subcategoria_final = truncar_texto(subcategoria) if embaralhamento_ativo else subcategoria
                     button_text = f"{i}\uFE0F\u20E3"
                     callback_data = f"choose_subcategoria_{subcategoria}"
                     row_buttons.append(telebot.types.InlineKeyboardButton(button_text, callback_data=callback_data))

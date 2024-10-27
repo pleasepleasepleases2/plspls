@@ -629,11 +629,12 @@ def verificar_travessuras(id_usuario):
 # Dicionário para rastrear as threads e o status do roubo para cada usuário
 roubo_ativo = {}
 
+# Função para iniciar a sombra roubando cenouras periodicamente
 def iniciar_sombra_roubo_cenouras(user_id, duracao_minutos=10):
     try:
         conn, cursor = conectar_banco_dados()
 
-        # Verificar se a sombra já está ativa para o usuário
+        # Verificar se o usuário já tem a travessura ativa
         cursor.execute("""
             SELECT fim_travessura FROM travessuras
             WHERE id_usuario = %s AND tipo_travessura = 'sombra_rouba_cenouras'
@@ -643,37 +644,39 @@ def iniciar_sombra_roubo_cenouras(user_id, duracao_minutos=10):
         if resultado:
             fim_travessura = resultado[0]
             if datetime.now() < fim_travessura:
-                bot.send_message(user_id, "👻 A sombra já está roubando suas cenouras! Use +exorcizar para se livrar dela!")
+                bot.send_message(user_id, "👻 A sombra já está roubando suas cenouras! Use /exorcizar para se livrar dela!")
                 return
 
-        # Definir a duração da travessura
         fim_roubo = datetime.now() + timedelta(minutes=duracao_minutos)
-        
-        # Registrar a travessura no banco de dados
+
+        # Registrar a travessura na tabela
         cursor.execute("""
             INSERT INTO travessuras (id_usuario, tipo_travessura, fim_travessura)
             VALUES (%s, 'sombra_rouba_cenouras', %s)
+            ON DUPLICATE KEY UPDATE fim_travessura = %s
         """, (user_id, fim_roubo, fim_roubo))
         conn.commit()
 
-        # Sinalizador para parar o roubo quando exorcizado
+        # Sinalizar que o roubo está ativo para o usuário
         roubo_ativo[user_id] = True
 
+        # Função interna para o roubo de cenouras
         def roubar_cenouras_periodicamente():
             while datetime.now() < fim_roubo and roubo_ativo.get(user_id, False):
                 sucesso = diminuir_cenouras(user_id, 1)
                 if sucesso:
-                    bot.send_message(user_id, "👻 A sombra roubou 1 cenoura de você! Use +exorcizar para parar a travessura!")
+                    bot.send_message(user_id, "👻 A sombra roubou 1 cenoura! Use /exorcizar para deter a sombra!")
                 else:
-                    break  # Parar se não houver mais cenouras para roubar
+                    break  # Se não há mais cenouras para roubar
                 time.sleep(10)
 
-            # Ao terminar, remover a travessura
-            if roubo_ativo.get(user_id, False):  # Se não foi exorcizado
+            # Remover a travessura após o tempo acabar
+            if roubo_ativo.get(user_id, False):  # Se o exorcismo não foi usado
                 cursor.execute("DELETE FROM travessuras WHERE id_usuario = %s AND tipo_travessura = 'sombra_rouba_cenouras'", (user_id,))
                 conn.commit()
+                bot.send_message(user_id, "🕯️ A sombra desapareceu, suas cenouras estão seguras por enquanto.")
 
-        # Iniciar a sombra em uma thread separada
+        # Iniciar o roubo em uma thread separada
         threading.Thread(target=roubar_cenouras_periodicamente).start()
 
     except Exception as e:
@@ -688,7 +691,7 @@ def exorcizar_sombra(message):
     try:
         conn, cursor = conectar_banco_dados()
 
-        # Verificar se o usuário está com a travessura ativa (ajuste no nome da travessura para 'roubo_cenouras')
+        # Verificar se o usuário está com a travessura ativa
         cursor.execute("""
             SELECT fim_travessura FROM travessuras
             WHERE id_usuario = %s AND tipo_travessura = 'sombra_rouba_cenouras'

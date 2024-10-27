@@ -2697,8 +2697,8 @@ def gperfil_command(message):
 
 @bot.message_handler(commands=['config'])
 def config_command(message):
-    from eu import handle_config
     handle_config(message)
+    
 @bot.message_handler(commands=['delpage'])
 def del_page(message):
     try:
@@ -3652,6 +3652,9 @@ def callback_confirmar_compra(call):
 @bot.callback_query_handler(func=lambda call: call.data.startswith("evt_"))
 def callback_query_evento(call):
     handle_callback_query_evento(call)
+@bot.message_handler(commands=['editartag'])
+def handle_edit_tag_command(message):
+    handle_edit_tag(message)
 
 @bot.message_handler(commands=['start'])
 def start_comando(message):

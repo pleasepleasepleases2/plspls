@@ -151,7 +151,7 @@ def verificar_comando_tag(message):
             if tags:
                 resposta = f"<b>🔖 | Tags de {nome_usuario}:\n\n</b>"
                 for i, tag in enumerate(tags, start=1):
-                    resposta += f"<i>{i} — {tag[0]}\n<\i>"
+                    resposta += f"<i>{i} — {tag[0]}\n</i>"
                 bot.reply_to(message, resposta,parse_mode="HTML")
             else:
                 bot.reply_to(message, "Você não possui nenhuma tag.")

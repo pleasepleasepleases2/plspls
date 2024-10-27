@@ -270,4 +270,45 @@ def processar_deletar_tag(message):
         print(f"Erro ao deletar tag: {e}")
     finally:
         fechar_conexao(cursor, conn)
+def handle_edit_tag(message):
+    try:
+        parametros = message.text.split(' ', 2)
+        
+        # Verificar se o número e o novo nome da tag foram fornecidos
+        if len(parametros) < 3:
+            bot.reply_to(message, "Por favor, use o formato correto: /editartag (número) (novo nome).")
+            return
+        
+        # Extrair o número da tag e o novo nome
+        numero_tag = int(parametros[1].strip())
+        novo_nome = parametros[2].strip()
+        
+        # Obter o ID do usuário e as tags
+        id_usuario = message.from_user.id
+        conn, cursor = conectar_banco_dados()
+        
+        # Ordenar e listar as tags por ordem alfabética para correspondência do número
+        cursor.execute("SELECT DISTINCT nometag FROM tags WHERE id_usuario = %s ORDER BY nometag", (id_usuario,))
+        tags = [tag[0] for tag in cursor.fetchall()]
+        
+        # Verificar se o número da tag é válido
+        if numero_tag < 1 or numero_tag > len(tags):
+            bot.reply_to(message, "Número da tag inválido. Verifique suas tags e tente novamente.")
+            return
 
+        # Nome da tag atual com base no número
+        nome_tag_atual = tags[numero_tag - 1]
+        
+        # Atualizar o nome da tag no banco de dados
+        cursor.execute("UPDATE tags SET nometag = %s WHERE id_usuario = %s AND nometag = %s", (novo_nome, id_usuario, nome_tag_atual))
+        conn.commit()
+
+        bot.reply_to(message, f"A tag '{nome_tag_atual}' foi renomeada para '{novo_nome}'.")
+        
+    except ValueError:
+        bot.reply_to(message, "Número da tag inválido. Use apenas números inteiros.")
+    except Exception as e:
+        print(f"Erro ao editar tag: {e}")
+        bot.reply_to(message, "Ocorreu um erro ao tentar editar a tag.")
+    finally:
+        fechar_conexao(cursor, conn)

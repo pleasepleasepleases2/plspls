@@ -130,7 +130,8 @@ def categoria_handler(message, categoria, id_usuario):
                 bot.send_message(chat_id, f"Nenhuma subcategoria encontrada para a categoria '{categoria}'.")
                 return None
 
-            resposta_texto = "Sua isca atraiu 6 espécies, qual peixe você vai levar?\n\n"
+            respostatexto = "Sua isca atraiu 6 espécies, qual peixe você vai levar?\n\n"
+            resposta_texto = truncar_texto(respostatexto) if embaralhamento_ativo else respostatexto
             subcategorias_aleatorias = random.sample(subcategorias, min(6, len(subcategorias)))
 
             for i, subcategoria in enumerate(subcategorias_aleatorias, start=1):
@@ -360,6 +361,7 @@ def send_card_message(message, *args, cursor=None, conn=None):
             if not imagem:
                 imagem_url = "https://telegra.ph/file/8a50bf408515b52a36734.jpg"
                 text = f"🎣 Parabéns! Sua isca era boa e você recebeu:\n\n{emoji_categoria}<code> {id_personagem}</code> - {nome}\nde {subcategoria_display}\nQuantidade de cartas: {quantidade}"
+                text = truncar_texto(texto) if embaralhamento_ativo else texto
                 try:
                     bot.edit_message_media(
                         chat_id=message.chat.id,

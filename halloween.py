@@ -14,6 +14,33 @@ aboboras = {
     3: {"nome": "Abóbora 3", "premio": "Carta Faltante"},
     # Continue para as 30 abóboras com prêmios diferentes
 }
+import random
+from datetime import datetime, timedelta
+
+def troca_invertida(user_id, chat_id):
+    try:
+        conn, cursor = conectar_banco_dados()
+
+        # Definir o tempo de duração da praga aleatoriamente entre 5 e 60 minutos
+        duracao_minutos = random.randint(5, 60)
+        fim_travessura = datetime.now() + timedelta(minutes=duracao_minutos)
+
+        # Inserir a praga na tabela 'travessuras' para o usuário
+        cursor.execute("""
+            INSERT INTO travessuras (id_usuario, tipo_travessura, fim_travessura)
+            VALUES (%s, 'troca_invertida', %s)
+            ON DUPLICATE KEY UPDATE fim_travessura = %s
+        """, (user_id, fim_travessura, fim_travessura))
+
+        conn.commit()
+
+        # Informar o usuário que ele foi amaldiçoado com a duração da travessura
+        bot.send_message(chat_id, f"🎭 Travessura! A ordem dos comandos das suas próximas trocas foi invertida por {duracao_minutos} minutos. Tome cuidado!")
+
+    except Exception as e:
+        print(f"Erro ao aplicar praga: {e}")
+    finally:
+        fechar_conexao(cursor, conn)
 
 # Função para inicializar o tabuleiro
 def inicializar_tabuleiro():

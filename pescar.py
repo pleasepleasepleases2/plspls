@@ -314,6 +314,7 @@ def obter_carta_por_submenu(cursor, subcategoria, submenu):
 
 def send_card_message(message, *args, cursor=None, conn=None):
     try:
+        embaralhamento_ativo = verificar_travessura_ativa(id_usuario)
         # Verifica se é um evento fixo (dicionário passado)
         if len(args) == 1 and isinstance(args[0], dict):
             evento_aleatorio = args[0]

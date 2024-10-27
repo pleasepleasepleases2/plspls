@@ -1924,6 +1924,32 @@ def passar_praga(message):
 
     except Exception as e:
         bot.send_message(message.chat.id, f"Erro ao passar a praga: {e}")
+import random
+from datetime import datetime, timedelta
+
+def ativar_travessura_embaralhamento(chat_id, id_usuario):
+    # Definir duração aleatória entre 30 minutos e 2 horas
+    duracao = random.randint(30, 120)  # Em minutos
+    fim_travessura = datetime.now() + timedelta(minutes=duracao)
+
+    # Enviar mensagem informando sobre a travessura
+    bot.send_message(chat_id, "💀 Travessura! Suas mensagens estarão incompletas por um tempo!")
+
+    # Registrar a travessura na tabela
+    conn, cursor = conectar_banco_dados()
+    try:
+        query = """
+            INSERT INTO travessuras (id_usuario, tipo_travessura, fim_travessura)
+            VALUES (%s, %s, %s)
+            ON DUPLICATE KEY UPDATE fim_travessura = VALUES(fim_travessura)
+        """
+        cursor.execute(query, (id_usuario, 'embaralhamento', fim_travessura))
+        conn.commit()
+        print(f"[DEBUG] Travessura de embaralhamento ativada para {id_usuario}, termina às {fim_travessura}")
+    except Exception as e:
+        print(f"Erro ao registrar travessura: {e}")
+    finally:
+        fechar_conexao(cursor, conn)
 
 def realizar_halloween_travessura(user_id, chat_id):
     try:
@@ -1944,18 +1970,151 @@ def realizar_halloween_travessura(user_id, chat_id):
 
         elif chance == 2:
             # Mudar o nome para algo engraçado
-            nome_novo = random.choice(["Zé Bobo", "Palhaço Triste", "Mestre das Travessuras"])
-            mudar_nome_usuario(user_id, nome_novo,chat_id)
+            nome_novo = random.choice([
+                "Zé Bobo", 
+                "Palhaço Triste", 
+                "Mestre das Travessuras", 
+                "Tio da Pamonha", 
+                "Príncipe da Zona Leste", 
+                "Ninja da Calçada", 
+                "Sábio do Pastel", 
+                "Lord do Desespero", 
+                "Chiclete Grudento", 
+                "Salsicha Triste", 
+                "Bobo da Corte", 
+                "Rei do Nada", 
+                "Menino de Ouro", 
+                "Fantasma do Zap", 
+                "Sheik da Quebrada",  
+                "Ícone dos Perdidos", 
+                "Mestre dos Memes", 
+                "Guru das Piadas Ruins", 
+                "Pé de Pano", 
+                "Zé das Couves", 
+                "Vendedor de Ilusões",
+                "Tá Tranquilo, Tá Favorável", 
+                "Cara do Tá Louco Bicho", 
+                "Famoso Quem?", 
+                "Cadê o My Precious?", 
+                "Bicho Solto do Zap", 
+                "Boneco de Olinda", 
+                "Neymar Caído", 
+                "Menino Neymar", 
+                "Mr. Catra", 
+                "Senhor Barriga", 
+                "Mainha da Internet", 
+                "Dono da Kombi", 
+                "A Tia do Pavê", 
+                "Agostinho Carrara", 
+                "Seu Madruga", 
+                "Judite do Telefone", 
+                "Lineu Silva", 
+                "Kiko", 
+                "Bebel Carrara", 
+                "Seu Peru", 
+                "Rolando Lero",  
+                "Cabeção", 
+                "Paulão da Regulagem", 
+                "Eterno Beiçola", 
+                "Didi Mocó", 
+                "Richarlissom José Tite Junior Paquetá piuzinho Lucas burrao da Silva 🇧🇷🇧🇷🇧🇷", 
+                "Jaiminho Carteiro", 
+                "Dona Florinda", 
+                "Boça"
+                "Rei dos Áudios de 7 Minutos"
+            ])
+            mudar_nome_usuario(user_id, nome_novo, chat_id)
 
         elif chance == 3:
             # Mudar a música para Zé Felipe
-            nova_musica = random.choice(["Rap do Zé Felipe", "Bandido - Zé Felipe", "Malvada - Zé Felipe"])
+            nova_musica = random.choice([
+                "Dança do Créu - MC Créu",
+                "Rap do Zé Felipe", 
+                "Bandido - Zé Felipe", 
+                "Malvada - Zé Felipe",
+                "Cachorrinho - Kelly Key", 
+                "Eguinha Pocotó - MC Serginho e Lacraia",
+                "Morango do Nordeste - Karametade",
+                "Adoleta - Kelly Key",
+                "Vou Passar Cerol na Mão - Bonde do Tigrão",
+                "Dança do Quadrado",
+                "Piririm Pom Pom - As Chiquititas",
+                "Vem Ni Mim Que Eu Tô Carente - DJ Sandrinho",
+                "Ragatanga - Rouge",
+                "Na Boquinha da Garrafa - Cia. do Pagode",
+                "Tô Nem Aí - Larissa Manoela",
+                "Só Love - Claudinho & Buchecha",
+                "Éguinha Mijona - Deize Tigrona",
+                "Eu Quero Tchu, Eu Quero Tcha - João Lucas & Marcelo",
+                "A Barata da Vizinha - MC Batata",
+                "É o Tchan no Havaí - É o Tchan",
+                "Festa no Apê - Latino",
+                "Me Leva - Latino",
+                "Amigo Fura Olho - Latino",
+                "Renata Ingrata - Latino",
+                "Cátia Catchaça - Latino",
+                "Caneta Azul - Manoel Gomes",
+                "Malandramente - Dennis e MCs Nandinho & Nego Bam",
+                "Ai Se Eu Te Pego - Michel Teló",
+                "Saudade de Ex - Gaab e MC Davi",
+                "Tô Comendo Água - Barões da Pisadinha",
+                "Chupa Que é de Uva - MC Jair da Rocha",
+                "Despedida de Solteiro - Latino",
+                "Dança do Vampiro - Asa de Águia"
+            ])
             mudar_musica_usuario(user_id, nova_musica,chat_id)
 
         elif chance == 4:
-            # Mudar a bio para uma bio engraçada
-            bio_nova = random.choice(["Eu adoro travessuras!","Halloween chegando, quem quiser me assustar, eu tenho medo de whisky","Me desbloqueia vida eu mudei","Como confiar no amor, se o amor dos outros fica me mandando msg 🤡","metas ano 2025: 1 - ir no show do Zé Felipe", "só de pensar que seu corpo é 70% água já me deu sede", "Pare de correr atrás, pare de se importar, seja indisponível, desapegue. Pessoas gostam do que não têm. 🌸💭", "Perdi no jogo da vida.", "Me salva, Halloween!","Esquerdista 🍁 Evangelica 🙏 Feminista 🚺  Homofobica 🏳‍🌈 Independente 💪 Bolsonaro2k18 🇧🇷", "se viro profesora sua mocreia lacraia malasafraia desalmada ordinaria fedida catingueira","OLA limda bjss sabe vc ELINDA GOSTARIA SE jair bolsonaro 👍"])
-            mudar_bio_usuario(user_id, bio_nova,chat_id)
+            # Mudar a bio para uma bio engraçada baseada em memes
+            bio_nova = random.choice([
+                "RECEITA DO LÓLÓ ORIGINAL:\nO intuito desse texto é viralizar e, por sorte, melhorar a qualidade do lóló encontrado no carnaval do Brasil. Com os anos, os lolozeiros têm depreciado a veracidade do no nosso amado lóló e nos fornecido um produto de qualidade inferior.\nEntão vamos lá:",
+                "Oi gente sou tenente da PMDF e achei o celular desse patriota no Congresso, infelizmente ele veio a óbito lutando pelo nosso país. Sejam sinceros (mulheres apenas) o que vocês achavam dele? Tinham crush nele? Gostavam dele? deem uma nota de 1 a 10.o",
+                "👧🏽: *bora toma uma*\n👩🏿: *bora* ...\n👧🏽: *bora pra festa* .?\n👩🏿: *bora*...\n👧🏽: *Bora pra igreja*?\n👩🏿: *Se der eu vou*\n👧🏽: *Blz quando Deus* *volta se der ele ti leva*.\n*Ti juro só repasse se você não tiver vergonha de Deus*\n*Mais é só se vc tever coragem!!😉*",
+                "Defesa Pessoal 😅\nSe alguém 👤👤 te disser: 🗨️\n"és um narigudo!"👃\ntu respondes: 🗣️\nJá olhaste 👀👀 bem pra ti?!\nCom esse focinho de Javali? 🐗\no mais raro 💎 que eu já vi. 👁️\nTentaste uma ofensa 🤬🤬 menino 🧒\nmas eu nem senti. 😁😁\nhe hee 😉😉\ntoma lá 😎",
+                "relíquia da ZN 🚩🇸🇲 dinda do gael👩‍👦filha da dona ivone👵 mãe do juninho 👩‍🍼 namorada do do marcinho do BRX 👩‍❤️‍👨",
+                "Eu:perco no frefaire\nParede: não não por favor 😭😭😭😭😭😭\nEu: 👊👊👊😈😈😈😈😈😡😡😡👊👊👊",
+                "Mais perdida que cebola em salada de frutas",
+                "Minha kara quando digo que ADORO lasanha\ne a minha miiiiiiiiga crente diz: \nadora nãããoo Markim tu gosta\npq a gente ADORA só o senhor...\nahhhhh me poupe jessica",
+                "CORRENTE DE ORAÇÃO PELO BRASIL📿\nQue todas as entidades🙏🏼 existentes ajudem o Brasil🇧🇷  a passar dessa fase🙌🏼\nRepasse para os seus contatos 🙌🏼🙌🏼🙌🏼",
+                "BORA BIL",
+                "amor, tô terminando com você. não é você, você foi ate que bem normie. sou eu que sou assim meio cringe, meio noggers. me desculpe se isso é random mas eu tive que fazer, eu tenho me sentido edgy e nosso relacionamento tem sido bluepill por meses, é hora de acabar fella, sem bait",
+                "Bolsonaro querido Presidente, teu povo está pronto ✅ pra o que for necessário! Que o “SENHOR DOS EXÉRCITOS” dê diretrizes para o “Comandante Supremo das Forças Armadas!”\nTMJ 🫡🫡🫡🫡\nEu cozinho e lavo panelas de boas! Depois retomo a minha empresa.",
+                "eu sou:\n○ lésbica\n○ hétero\n○ bi\n● extremamente brasileiro. verde, azul, amarelo e branco 😝😝🇧🇷🇧🇷🇧🇷🇧🇷🇧🇷🇧🇷🇧🇷🇧🇷",
+                "Ah 🅰️que felicidade. 😀É que  🤔eu brigo🤬, choro😢, rio🤣, e brigo 😡e deleto ❌e bloqueio🚫 e ‼️fico feliz 😆e triste 😫e dou 🍑castigo😣, depois ⏩me arrependo 😞e choro 😭e rio  🤣e isto ⬅️gera ➡️um mau 😒estar nas 💢pessoas👯‍♂️ e gera ➡️desconfiança 🥸também. 😢Mas ⚠️tem uma coisa ⏺que eu 👾não faço☝️ é manipular😨 ninguém.🔇 Deixo ♾livre 🦋para pensar🤔🧠.",
+                "eu não sou bonito sério eu sou tipo muito feio pessoalmente tipo por video caralho e eu não arrumei meu cabelo eu juro que não arrumei meu cabelo porque tu pediu pra mim não arrumar e a minha voz não é bonita eu acho minha voz tipo é sério eu acho ela muito ridícula sei lá argh",
+                "LISTA DE PROCURADOS DA INTERPOL DIVULGADA ESSA SEXTA!!🚨\n🇩🇪 Prënsa Ducht🚨\n🇳🇱 Veer Deen🚨\n🇯🇵 Tabaku Ma Luko🚨\n🇨🇲 Dedudi Guri Lah🚨\n🇸🇦 Kahnah Bih Satyvah🚨\n🇹🇷 Çigar Duhčapeta🚨\n🇵🇹 Maria Joana🚨\n🇰🇷 Kadeo-Bong🚨",
+                "Sou hetero, mas a atração sexual que o bolsonaro exala é de outro patamar slcccc🥵",
+                "ei, voce gosta de anime é? entao me diz todos os jutsus e sharingas de naruto, pra ver se voce e realmente otaku. não sabe né?? ainda diz que gosta de anime kkkkkkkkkkk",
+                "Se eu 👤👈 ganhasse 🎁um ☝️ real 💸 por cada minuto ⏱️ que penso 🤔🧠 nela 😍eu não 🙅‍♂️teria um ☝️único🤏 centavo 🪙 em meu bolso👖👖, pois teria gasto🛍️💱 o dinheiro 💰 comprando 🎁 uma Lamborghini 🏎️ cheia de Tortuguitas 🐢🐢🐢 e patinhos🦆🦆🦆 para minha ✊✊ garota 👧🏽🥰",
+                "oi ;-; eu tava vendo seu perfil.e te achei muito fofa rsrs 📷 queria perguntar se você quer ser minhq amiga '-' (talvez futura esposa) ksksks mas se nao quiser responder nao precisa. já estou acustumado;-;",
+                "Parece meu rosto né?\nMas é uma máscara\nParece que to feliz né?\nSo to fingindo",
+                "Tomando coragem para amar a pessoa q não amar oq amar aí eu pedir em namora aí nois mata a polícia sonhoooh ❤😘\nPostah no status do zap e me menciona quem gostou 😉😜",
+                "⚠️ UM AVISO AVISAMOS QUE POR FALTA DE AVISO NÃO AVISAREMOS O AVISO QUE ERA PRA AVISAR, PORTANTO FIQUEM AVISADOS DESTE AVISO QUE AVISAMOS, AVISEM PARA OUTRAS PESSOAS SOBRE O AVISO PARA QUE TODOS FIQUEM AVISADOS,  TÁ  AVISADO QLQ DÚVIDA ME AVISEM⚠️",
+                "POWPAPAPUPUPAPUL🎉🎉🎉🎊🎊FIIILLLPUUUUUPOWPOWPOWPOW🎉🎉🎉🎆🎆🎆🎆🎆PAPAPAPATRATRATRATRATRA🎉🎉🎉🎉🎉🎊🎊🎊🎊🎆🎆🎆🎆🎆TATATATATAFIIIIILLLFIIIIILLLLFIIIIIIILLLPOOOWWWWWW🎆🎆🎉🎉🎉🎉🎊🎊🎊🎊PAPAPARARARARATA🎆🎆🎆🎉🎉🎉🎊🎊🎊FIIIIIIIIILLLLPOOOOOWTATATATATATARRARA🎆🎆🎆🎊🎊🎊🎉🎉🎉",
+                "Oi\n😎\nVocê tem whemts apple😎",
+                "blz mais eu já disse para vc :que:ekhfjdhsksfgdhjsvisghulvlgscgseygvisuyvgusdhfyhsi 8  ywgfyefyets8fyeyfguetw 803y f89 e78ftw78et f7t w87 trfwe87t r t3fyewfhuisgvu ergf re,ause zrge7s tfea7rt fer8 tf7at efkerygfuwrtgfiakrwygvi6wrgfa86etf we ftgwekftiewyagrekygfi 6rf t6ew tf6 ewt+",
+                "ARCANE É UMA PROPAGANDA MANIPULADORA DE NOSSOS JOVENS PARA VICIA-LOS EM JOGOS HEREGES COMO LEAGUE OF LEGENDS, PIOR QUE O VICIO DA SODOMIA, POR FAVOR NAO DEIXEM SEUS FILHOS ASSISTIREM ESSE TIPO DE CONTEUDO E NAO OS DEIXEM JOGAR LEAGUE OF LEGENDS (LOL)",
+                "Halloween chegando, quem quiser me assustar, eu tenho medo de whisky",
+                "Me desbloqueia vida, eu mudei",
+                "Como confiar no amor, se o amor dos outros fica me mandando msg 🤡",
+                "😲 imagina 👈🏻💭 nessa 🥳 idade 👄 o 🌹 que 🤸🏻‍♀️ aconteceu 💥 comigo 😱 resolvi 😌 me 🙋🏻‍♀️ apaixonar 💖 por 😳 alguém 🗣️ que 👀 não ❌ consigo 😩 ironia 🤷🏻‍♀️ do 🥱 destino 🏃🏻‍♀️ que 🌬️ só 🤲🏻 quer 🧐 brincar 🤹🏻‍♀️ com a 💢 gente 🚫 não 😠 sei 🤓 lidar 👾 com 👥 isso ⚔️ tá ✋🏻 tudo 🤔 diferente",
+                "Minha cara : 😡\nMinha personalidade: 🤪",
+                "Vc viu 😧 a briga 🙈 que teve 😱 na frente 😮 da sua casa 🏠 ontem? Não😦 viu? 5 anjos 👼🏽👼🏾👼🏻👼🏽👼🏾 lutando para te dar o garden de volta 😱 se você crê 🙏🏼 👍🏻 🙏🏼 🙏🏼 🙏🏼 🙏🏻 🙏🏼 repasse e veja algo incrível acontecer 🙌🏼🙏🏻.",
+                "GENTE NAO É COPYPASTA, hoje à meia-noite irá ter um teste nuclear aqui no Brasil esse negócio do garden cair é apenas uma distração para que nós não soubéssemos dessa O garden volto mas nao do jeito que achamos. prestemos atenção no que realmente vai acontecer  QUE DEUS TENHA PIEDADE😟!",
+                "Vc atrevessaria essa ponte agui com esse. Jaquere raivoso. Gordinho. Um bufu. faminto louco pra te papar. vc teria coragem de atravessar essa ponte de madeira podre mofada fodida um lixo cheia de cupim vc teria coragem?",
+                "NUBANK: Compra APROVADA. Ingresso do Rock in Rio para o dia da Juliette no palco Nordeste no valor de R$ 272,50 às 23:49. O ingresso acompanha um saco de farinha, leve o seu preconceito para engolir.",
+                "O LOBISOMEM PIDÃO\ntoda noite ele passa na praça pedindo farinha na cumbuca. Pede pede pede que so a porra enche o saco esse bicho pidão... eis o relato:\n- Me dê!\n- Sai pra lá pidão!",
+                "rapaz 🤔 nem se eu 🗂️ juntasse todas as copypastas 📂📁 de elogio que existe 🌍✨🪐🌌 eu ia conseguir descrever 📝🥰🙏o quao LINDA🌟✨😍 você é 🥳😘 abençoou meu dia 🌄⛅ nmrl prfta 🥴💗💖💘 linda demais 💭💕",
+                "Voltou para o lobby, foi de base, não tankou, foi de dormes, foi de berço, foi de ralo, cinzou, lobbyou, deu b, tomou ban da vida, deu respawn em um lugar melhor, foi para o Gulag, F.",
+                "Pai = Cansado\nMãe = Careca\nLento = Rápido\nTonto = Trouxa\nPato = Chato\nIdiota = Otário\nQuem = Alguém\nO que = É você\nFala o seu desejo = Levanta o rabo do gato e dá um beijo",
+                "E vc tá endauldie agrummt?E vc tá endauldilie agrummt og😜as Riobousssmigt tra",
+                "Odeio Gente Falsa Que na Frente da fente é uma coisa com a gente Por de Traz Fica Falando Da Gente De falar Por a Frente fala por de traz",
+                "Sextou com s de saudades do ex",
+                "Esquerdista 🍁 Evangelica 🙏 Feminista 🚺  Homofobica 🏳‍🌈 Independente 💪 Bolsonaro2k18 🇧🇷",
+                "se viro profesora sua mocreia lacraia malasafraia desalmada ordinaria fedida catingueira",
+                "OLA limda bjss sabe vc ELINDA GOSTARIA SE jair bolsonaro 👍"
+            ])
+            mudar_bio_usuario(user_id, bio_nova, chat_id)
 
         elif chance == 5:
             # Mudar o favorito para outra carta aleatória
@@ -2036,8 +2195,8 @@ def realizar_halloween_travessura(user_id, chat_id):
 
         elif chance == 17:
             # Alucinação: mensagens incompletas
-            bot.send_message(chat_id, "💀 Travessura! Suas mensagens estarão incompletas por um tempo!")
-
+            ativar_travessura_embaralhamento(chat_id, id_usuario)
+            
         elif chance == 18:
             # Registrar a travessura na tabela
             try:

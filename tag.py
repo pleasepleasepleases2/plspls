@@ -37,8 +37,8 @@ def editar_mensagem_tag(message, nometag, pagina_atual, id_usuario, total_pagina
     try:
         conn, cursor = conectar_banco_dados()
         offset = (pagina_atual - 1) * 15
-        query = "SELECT id_personagem FROM tags WHERE nometag = %s LIMIT 15 OFFSET %s"
-        cursor.execute(query, (nometag, offset))
+        query = "SELECT id_personagem FROM tags WHERE nometag = %s AND id_usuario = % LIMIT 15 OFFSET %s"
+        cursor.execute(query, (nometag, id_usuario, offset))
         resultados = cursor.fetchall()
 
         if resultados:
@@ -69,7 +69,7 @@ def editar_mensagem_tag(message, nometag, pagina_atual, id_usuario, total_pagina
             resposta += f"\nPágina {pagina_atual}/{total_paginas}"
             bot.edit_message_text(chat_id=message.chat.id, message_id=message.message_id, text=resposta, reply_markup=markup, parse_mode="HTML")
         else:
-            bot.reply_to(message, f"Nenhum registro encontrado para a tag '{nometag}'.")
+            print("erro ao passar pagina")
 
     except Exception as e:
         print(f"Erro ao editar mensagem de tag: {e}")

@@ -84,6 +84,21 @@ def truncar_texto(texto, truncar_percent=0.5):
     max_corte = max(1, int(len(texto) * truncar_percent))
     ponto_corte = random.randint(1, max_corte)
     return texto[:len(texto) - ponto_corte]
+import random
+
+# Função para truncar ou alterar uma mensagem simulando uma "travessura de embaralhamento"
+def embaralhar_mensagem(texto):
+    palavras = texto.split()
+    resultado = []
+
+    for palavra in palavras:
+        # Define uma probabilidade de truncar ou alterar cada palavra
+        if random.random() < 0.5:
+            truncamento = max(1, int(len(palavra) * 0.5))  # Corta a palavra pela metade
+            palavra = palavra[:truncamento]
+        resultado.append(palavra)
+
+    return " ".join(resultado)
 
 # Função principal
 def categoria_handler(message, categoria):

@@ -33,20 +33,20 @@ def criar_lista_paginas(personagens_ids_quantidade, items_por_pagina):
 
     return paginas
 
-def editar_mensagem_tag(message, nometag, pagina_atual, id_usuario, total_paginas):
+def editar_mensagem_tag(message, nometag, pagina_atual, id_usuario, total_paginas,nome_usuario):
     try:
         conn, cursor = conectar_banco_dados()
-        
+        nome_usuario = message.from_user.first_name
         # Calcular o offset com base na página atual
-        offset = (pagina_atual - 1) * 15
+        offset = (pagina_atual - 1) * 20
         
         # Ajuste da consulta SQL para paginação usando LIMIT e OFFSET corretamente
-        query = "SELECT id_personagem FROM tags WHERE nometag = %s AND id_usuario = %s LIMIT 15 OFFSET %s"
+        query = "SELECT id_personagem FROM tags WHERE nometag = %s AND id_usuario = %s LIMIT 20 OFFSET %s"
         cursor.execute(query, (nometag, id_usuario, offset))
         resultados = cursor.fetchall()
 
         if resultados:
-            resposta = f"🔖| Cartas na tag <b>{nometag}</b>:\n\n"
+            resposta = f"🔖| Cartas na tag <b>{nometag}</b> de {nome_usuario}:\n\n"
             for resultado in resultados:
                 id_personagem = resultado[0]
                 
@@ -58,7 +58,7 @@ def editar_mensagem_tag(message, nometag, pagina_atual, id_usuario, total_pagina
                 if carta_info:
                     emoji, nome, subcategoria = carta_info
                     emoji_status = '☀️' if inventario_existe(id_usuario, id_personagem) else '🌧️'
-                    resposta += f"{emoji_status} | {emoji} ⭑<code>{id_personagem}</code> - {nome} de {subcategoria}\n"
+                    resposta += f"{emoji_status} | {emoji} ⭑ <code>{id_personagem}</code> - {nome} de {subcategoria}\n"
                 else:
                     resposta += f"ℹ️ | Carta não encontrada para ID: {id_personagem}\n"
 
@@ -80,14 +80,14 @@ def editar_mensagem_tag(message, nometag, pagina_atual, id_usuario, total_pagina
 def mostrar_primeira_pagina_tag(message, nometag, id_usuario):
     try:
         conn, cursor = conectar_banco_dados()
-        
+        nome_usuario = message.from_user.first_name
         # Obter o número total de registros para a tag do usuário
         query_total = "SELECT COUNT(id_personagem) FROM tags WHERE nometag = %s AND id_usuario = %s"
         cursor.execute(query_total, (nometag, id_usuario))
         total_registros = cursor.fetchone()[0]
         
         # Definir o número de páginas
-        total_paginas = (total_registros // 15) + (1 if total_registros % 15 > 0 else 0)
+        total_paginas = (total_registros // 20) + (1 if total_registros % 20 > 0 else 0)
         pagina_atual = 1  # Inicializar a primeira página
 
         # Verificar se não há registros
@@ -96,13 +96,13 @@ def mostrar_primeira_pagina_tag(message, nometag, id_usuario):
             return
 
         # Obter os personagens da tag na primeira página
-        query = "SELECT id_personagem FROM tags WHERE nometag = %s AND id_usuario = %s LIMIT 15"
+        query = "SELECT id_personagem FROM tags WHERE nometag = %s AND id_usuario = %s LIMIT 20"
         cursor.execute(query, (nometag, id_usuario))
         resultados = cursor.fetchall()
 
         # Construir a resposta com os resultados
         if resultados:
-            resposta = f"🔖| Cartas na tag <b>{nometag}</b>:\n\n"
+            resposta = f"🔖| Cartas na tag <b>{nometag}</b> de {nome_usuario}:\n\n"
             for resultado in resultados:
                 id_personagem = resultado[0]
                 

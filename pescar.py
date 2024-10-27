@@ -148,16 +148,17 @@ def categoria_handler(message, categoria):
             subcategorias = [subcategoria for subcategoria in subcategorias if subcategoria]
             if subcategorias:
                 resposta_texto = "Sua isca atraiu 6 espécies, qual peixe você vai levar?\n\n"
+                resposta_texto = embaralhar_texto_visivel(resposta_texto) if embaralhamento_ativo else resposta_texto
                 subcategorias_aleatorias = random.sample(subcategorias, min(6, len(subcategorias)))
 
                 for i, subcategoria in enumerate(subcategorias_aleatorias, start=1):
-                    subcategoria_final = truncar_texto(subcategoria) if embaralhamento_ativo else subcategoria
+                    subcategoria_final = embaralhar_texto_visivel(subcategoria) if embaralhamento_ativo else subcategoria
                     resposta_texto += f"{i}\uFE0F\u20E3 - {subcategoria_final}\n"
 
                 markup = telebot.types.InlineKeyboardMarkup(row_width=6)
                 row_buttons = []
                 for i, subcategoria in enumerate(subcategorias_aleatorias, start=1):
-                    subcategoria_final = truncar_texto(subcategoria) if embaralhamento_ativo else subcategoria
+                    subcategoria_final = embaralhar_texto_visivel(subcategoria) if embaralhamento_ativo else subcategoria
                     button_text = f"{i}\uFE0F\u20E3"
                     callback_data = f"choose_subcategoria_{subcategoria}"
                     row_buttons.append(telebot.types.InlineKeyboardButton(button_text, callback_data=callback_data))

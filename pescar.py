@@ -106,10 +106,10 @@ def truncar_texto(texto, truncar_percent=0.5):
             # Se é uma tag HTML, preserve sem alterar
             texto_embaralhado += parte
         else:
-            # Caso contrário, trunca a parte do texto
-            max_corte = max(1, int(len(parte) * truncar_percent))
-            ponto_corte = random.randint(1, max_corte)
-            texto_embaralhado += parte[:len(parte) - ponto_corte]
+            # Trunca exatamente a metade da parte do texto visível
+            metade = len(parte) // 2
+            texto_embaralhado += parte[:metade]  # Pega somente a primeira metade
+
 
     return texto_embaralhado
 
@@ -175,7 +175,7 @@ def categoria_handler(message, categoria, id_usuario):
         for i, subcategoria in enumerate(subcategorias_aleatorias, start=1):
             subcategoria_final = truncar_texto(subcategoria) if embaralhamento_ativo else subcategoria
             button_text = f"{i}\uFE0F\u20E3"
-            callback_data = f"choose_subcategoria_{subcategoria_final}"
+            callback_data = f"choose_subcategoria_{subcategoria}"
             row_buttons.append(telebot.types.InlineKeyboardButton(button_text, callback_data=callback_data))
 
         markup.row(*row_buttons)
@@ -332,7 +332,8 @@ def send_card_message(message, *args, cursor=None, conn=None):
             else:
                 imagem = evento_aleatorio['imagem']
 
-            text = f"🎣 Parabéns! Sua isca era boa e você recebeu:\n\n☃️ {evento_aleatorio['id_personagem']} - {evento_aleatorio['nome']}\nde {subcategoria_display}\n\n{quantidade_display}"
+            texto = f"🎣 Parabéns! Sua isca era boa e você recebeu:\n\n☃️ {evento_aleatorio['id_personagem']} - {evento_aleatorio['nome']}\nde {subcategoria_display}\n\n{quantidade_display}"
+            text = truncar_texto(texto) if embaralhamento_ativo else texto
             try:
                 bot.edit_message_media(
                     chat_id=message.chat.id,
@@ -365,7 +366,8 @@ def send_card_message(message, *args, cursor=None, conn=None):
                 except Exception:
                     bot.send_photo(chat_id=message.chat.id, photo=imagem_url, caption=text, parse_mode="HTML")
             else:
-                text = f"🎣 Parabéns! Sua isca era boa e você recebeu:\n\n{emoji_categoria} <code>{id_personagem}</code> - {nome}\nde {subcategoria_display}\n\n☀ | {quantidade}⤫"
+                texto = f"🎣 Parabéns! Sua isca era boa e você recebeu:\n\n{emoji_categoria} <code>{id_personagem}</code> - {nome}\nde {subcategoria_display}\n\n☀ | {quantidade}⤫"
+                text = truncar_texto(texto) if embaralhamento_ativo else texto
                 try:
                     if imagem.lower().endswith(('.jpg', '.jpeg', '.png')):
                         bot.edit_message_media(

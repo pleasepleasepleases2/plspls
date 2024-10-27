@@ -86,57 +86,60 @@ def criar_markup_tag(pagina_atual, total_paginas, nometag):
 def mostrar_primeira_pagina_tag(message, nometag, id_usuario):
     try:
         conn, cursor = conectar_banco_dados()
+        
+        # Obter o número total de registros para a tag do usuário
         query_total = "SELECT COUNT(id_personagem) FROM tags WHERE nometag = %s AND id_usuario = %s"
         cursor.execute(query_total, (nometag, id_usuario))
         total_registros = cursor.fetchone()[0]
-
+        
+        # Definir o número de páginas
         total_paginas = (total_registros // 15) + (1 if total_registros % 15 > 0 else 0)
+        pagina_atual = 1  # Inicializar a primeira página
 
+        # Verificar se não há registros
         if total_registros == 0:
-            bot.reply_to(message, f"Nenhum registro encontrado para a tag '{nometag}'.")
+            bot.reply_to(message, f"<i>Você não possui uma tag com o nome '{nometag}'.</i> \nDeseja criar? Use o comando <code>/addtag id | {nometag}</code>.", parse_mode="HTML")
             return
 
+        # Obter os personagens da tag na primeira página
         query = "SELECT id_personagem FROM tags WHERE nometag = %s AND id_usuario = %s LIMIT 15"
         cursor.execute(query, (nometag, id_usuario))
         resultados = cursor.fetchall()
 
+        # Construir a resposta com os resultados
         if resultados:
-            resposta = f"🔖| Cartas na tag {nometag}:\n\n"
+            resposta = f"🔖| Cartas na tag <b>{nometag}</b>:\n\n"
             for resultado in resultados:
                 id_personagem = resultado[0]
                 
-                cursor.execute("SELECT emoji, nome,subcategoria FROM personagens WHERE id_personagem = %s", (id_personagem,))
-                carta_info_personagens = cursor.fetchone()
-
-                cursor.execute("SELECT emoji, nome,subcategoria FROM evento WHERE id_personagem = %s", (id_personagem,))
-                carta_info_evento = cursor.fetchone()
-
-                if carta_info_personagens:
-                    emoji, nome,subcategoria = carta_info_personagens
-                elif carta_info_evento:
-                    emoji, nome,subcategoria = carta_info_evento
+                # Consultar informações da carta em `personagens` ou `evento`
+                cursor.execute("SELECT emoji, nome, subcategoria FROM personagens WHERE id_personagem = %s", (id_personagem,))
+                carta_info = cursor.fetchone() or cursor.execute("SELECT emoji, nome, subcategoria FROM evento WHERE id_personagem = %s", (id_personagem,)) or cursor.fetchone()
+                
+                # Processar informações e verificar se está no inventário
+                if carta_info:
+                    emoji, nome, subcategoria = carta_info
+                    emoji_status = '☀️' if inventario_existe(id_usuario, id_personagem) else '🌧️'
+                    resposta += f"{emoji_status} | {emoji} ⭑<code>{id_personagem}</code> - {nome} de {subcategoria}\n"
                 else:
                     resposta += f"ℹ️ | Carta não encontrada para ID: {id_personagem}\n"
-                    continue
 
-                emoji_status = '☀️' if inventario_existe(id_usuario, id_personagem) else '🌧️'
-
-                resposta += f"{emoji_status} | {emoji} ⭑<code> {id_personagem}</code> - {nome} de {subcategoria}\n"
-
-            markup = None
-        if int(total_paginas) > 1:
-            if != pagina_atual:
-                pagina_atual = 1
-            markup = criar_markup_tag(pagina_atual, total_paginas, nometag)
+            # Criar a navegação se houver mais de uma página
+            markup = criar_markup_tag(pagina_atual, total_paginas, nometag) if total_paginas > 1 else None
             resposta += f"\nPágina {pagina_atual}/{total_paginas}"
-            bot.edit_message_text(chat_id=message.chat.id, message_id=message.message_id, text=resposta, reply_markup=markup, parse_mode="HTML")
-        else:
-            bot.reply_to(message, f"<i>Você não possui uma tag com o esse nome. </i> \nDeseja criar? Use o comando <code> /addtag id | {nometag}</code>.")
 
+            # Enviar ou editar a mensagem com o resultado
+            if message.message_id:
+                bot.edit_message_text(chat_id=message.chat.id, message_id=message.message_id, text=resposta, reply_markup=markup, parse_mode="HTML")
+            else:
+                bot.send_message(chat_id=message.chat.id, text=resposta, reply_markup=markup, parse_mode="HTML")
 
     except Exception as e:
         print(f"Erro ao processar comando /tag: {e}")
         bot.reply_to(message, "Ocorreu um erro ao processar sua solicitação.")
+    finally:
+        fechar_conexao(cursor, conn)
+
 
 # Função para lidar com o comando /tag
 def verificar_comando_tag(message):

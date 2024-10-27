@@ -128,11 +128,8 @@ def mostrar_primeira_pagina_tag(message, nometag, id_usuario):
             markup = criar_markup_tag(pagina_atual, total_paginas, nometag) if total_paginas > 1 else None
             resposta += f"\nPágina {pagina_atual}/{total_paginas}"
 
-            # Enviar ou editar a mensagem com o resultado
-            if message.message_id:
-                bot.edit_message_text(chat_id=message.chat.id, message_id=message.message_id, text=resposta, reply_markup=markup, parse_mode="HTML")
-            else:
-                bot.send_message(chat_id=message.chat.id, text=resposta, reply_markup=markup, parse_mode="HTML")
+            # Enviar a primeira página da tag (não tenta editar)
+            bot.send_message(chat_id=message.chat.id, text=resposta, reply_markup=markup, parse_mode="HTML")
 
     except Exception as e:
         print(f"Erro ao processar comando /tag: {e}")

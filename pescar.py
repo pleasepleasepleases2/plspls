@@ -130,7 +130,7 @@ def categoria_handler(message, categoria, id_usuario):
             for i, subcategoria in enumerate(subcategorias_aleatorias, start=1):
                 subcategoria_final = truncar_texto(subcategoria) if embaralhamento_ativo else subcategoria
                 button_text = f"{i}\uFE0F\u20E3"
-                callback_data = f"choose_subcategoria_{subcategoria_final}"
+                callback_data = f"choose_subcategoria_{subcategoria}"
                 row_buttons.append(telebot.types.InlineKeyboardButton(button_text, callback_data=callback_data))
 
             markup.row(*row_buttons)
@@ -611,7 +611,7 @@ def pescar(message):
                 texto = f'<i>Olá! {nome}, \nVocê tem disponível: {qtd_iscas} iscas. \nBoa pesca!\n\nSelecione uma categoria:</i>'
                 # Verificar se a travessura está ativa e embaralhar, se necessário
                 if verificar_travessura_embaralhamento(message.from_user.id):
-                    texto = embaralhar_texto_visivel(texto)
+                    texto = truncar_texto(texto)
                 bot.send_photo(message.chat.id, photo=photo, caption=texto, reply_markup=keyboard, reply_to_message_id=message.message_id, parse_mode="HTML")
             else:
                 bot.send_message(message.chat.id, "Ei visitante, você não foi convidado! 😡", reply_to_message_id=message.message_id)

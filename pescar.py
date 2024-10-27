@@ -541,7 +541,22 @@ def register_card_history(message,id_usuario, id_carta):
         fechar_conexao(cursor, conn)
 
 ultima_interacao = {}
+def embaralhar_texto_visivel(texto):
+    # Separar tags HTML do texto visível
+    partes = re.split(r'(<[^>]+>)', texto)  # Quebra o texto preservando as tags
+    texto_embaralhado = ""
 
+    for parte in partes:
+        if parte.startswith("<") and parte.endswith(">"):
+            # Se é uma tag HTML, preserve sem alterar
+            texto_embaralhado += parte
+        else:
+            # Embaralha o texto visível
+            palavras = parte.split()
+            palavras_embaralhadas = ["".join(random.sample(palavra, len(palavra))) if len(palavra) > 3 else palavra for palavra in palavras]
+            texto_embaralhado += " ".join(palavras_embaralhadas)
+
+    return texto_embaralhado
 # Função para o comando de pesca
 def pescar(message):
     try:
@@ -593,7 +608,7 @@ def pescar(message):
                 texto = f'<i>Olá! {nome}, \nVocê tem disponível: {qtd_iscas} iscas. \nBoa pesca!\n\nSelecione uma categoria:</i>'
                 # Verificar se a travessura está ativa e embaralhar, se necessário
                 if verificar_travessura_embaralhamento(message.from_user.id):
-                    texto = embaralhar_mensagem(texto)
+                    texto = embaralhar_texto_visivel(texto)
                 bot.send_photo(message.chat.id, photo=photo, caption=texto, reply_markup=keyboard, reply_to_message_id=message.message_id, parse_mode="HTML")
             else:
                 bot.send_message(message.chat.id, "Ei visitante, você não foi convidado! 😡", reply_to_message_id=message.message_id)

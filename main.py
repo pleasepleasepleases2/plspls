@@ -2828,11 +2828,32 @@ def processar_resposta_palavra(message, user_id, id_carta, palavra_gerada, nome_
             print(f"Erro ao remover a carta roubada: {e}")
         finally:
             fechar_conexao(cursor, conn)
+
+
+# Função para truncar aleatoriamente nomes de subcategorias
+def truncar_texto(texto, truncar_percent=0.5):
+    # Separar tags HTML do texto visível
+    partes = re.split(r'(<[^>]+>)', texto)  # Divide o texto preservando as tags
+    texto_embaralhado = ""
+
+    for parte in partes:
+        if parte.startswith("<") and parte.endswith(">"):
+            # Se é uma tag HTML, preserve sem alterar
+            texto_embaralhado += parte
+        else:
+            # Trunca exatamente a metade da parte do texto visível
+            metade = len(parte) // 2
+            texto_embaralhado += parte[:metade]  # Pega somente a primeira metade
+
+
+    return texto_embaralhado
+
 @bot.message_handler(commands=['gnome'])
 def handle_gnome(message):
     chat_id = message.chat.id
     user_id = message.from_user.id
-
+    # Verificar se a travessura de embaralhamento está ativa
+    embaralhamento_ativo = verificar_travessura_ativa(user_id)
     try:
         partes = message.text.split()
         if 'e' in partes:
@@ -2882,7 +2903,7 @@ def handle_gnome(message):
             categoria = categoria_errada
 
         # Salvar os resultados no dicionário global para navegação posterior
-        globals.resultados_gnome[user_id] = resultados_personagens
+        globals.resultados_gnome[user_id] = truncar_texto(resultados_personagens) if embaralhamento_ativo else resultados_personagens
 
         # Exibir a primeira carta
         enviar_primeira_carta(chat_id, user_id, resultados_personagens, 0)

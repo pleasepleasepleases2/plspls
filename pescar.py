@@ -109,7 +109,7 @@ def categoria_handler(message, categoria):
         id_usuario = message.from_user.id
         
         # Verificar se a travessura de embaralhamento está ativa
-        embaralhamento_ativo = verificar_travessura_ativa(id_usuario)
+        embaralhamento_ativo = verificar_travessura_embaralhamento(id_usuario)
 
         if categoria.lower() == 'geral': 
             subcategorias = buscar_subcategorias(categoria)
@@ -159,13 +159,13 @@ def categoria_handler(message, categoria):
 
         for i, subcategoria in enumerate(subcategorias_aleatorias, start=1):
             # Truncar a subcategoria se o embaralhamento estiver ativo
-            subcategoria_final = embaralhar_texto_visivel(subcategoria) if embaralhamento_ativo else subcategoria
+            subcategoria_final = embaralhar_texto_visivel(subcategoria) if verificar_travessura_embaralhamento else subcategoria
             resposta_texto += f"{i}\uFE0F\u20E3 - {subcategoria_final}\n"
 
         markup = telebot.types.InlineKeyboardMarkup(row_width=6)
         row_buttons = []
         for i, subcategoria in enumerate(subcategorias_aleatorias, start=1):
-            subcategoria_final = embaralhar_texto_visivel(subcategoria) if embaralhamento_ativo else subcategoria
+            subcategoria_final = embaralhar_texto_visivel(subcategoria) if verificar_travessura_embaralhamento else subcategoria
             button_text = f"{i}\uFE0F\u20E3"
             callback_data = f"choose_subcategoria_{subcategoria_final}"
             row_buttons.append(telebot.types.InlineKeyboardButton(button_text, callback_data=callback_data))

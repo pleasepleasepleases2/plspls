@@ -107,9 +107,10 @@ def categoria_handler(message, categoria):
         conn, cursor = conectar_banco_dados()
         chat_id = message.chat.id
         id_usuario = message.from_user.id
-        
+
         # Verificar se a travessura de embaralhamento está ativa
         embaralhamento_ativo = verificar_travessura_embaralhamento(id_usuario)
+        print(f"DEBUG: Embaralhamento ativo para usuário {id_usuario}: {embaralhamento_ativo}")
 
         if categoria.lower() == 'geral': 
             subcategorias = buscar_subcategorias(categoria)
@@ -120,18 +121,23 @@ def categoria_handler(message, categoria):
                 return None
 
             resposta_texto = "Sua isca atraiu 6 espécies, qual peixe você vai levar?\n\n"
-            resposta_texto = embaralhar_texto_visivel(resposta_texto) if embaralhamento_ativo else resposta_texto
+            resposta_texto = embaralhar_mensagem(resposta_texto) if embaralhamento_ativo else resposta_texto
             subcategorias_aleatorias = random.sample(subcategorias, min(6, len(subcategorias)))
+
+            print(f"DEBUG: Subcategorias aleatórias selecionadas para 'geral': {subcategorias_aleatorias}")
 
             for i, subcategoria in enumerate(subcategorias_aleatorias, start=1):
                 # Truncar a subcategoria se o embaralhamento estiver ativo
-                subcategoria_final = embaralhar_texto_visivel(subcategoria) if embaralhamento_ativo else subcategoria
+                subcategoria_final = embaralhar_mensagem(subcategoria) if embaralhamento_ativo else subcategoria
+                print(f"DEBUG: Subcategoria '{subcategoria}' após embaralhamento: '{subcategoria_final}'")
                 resposta_texto += f"{i}\uFE0F\u20E3 - {subcategoria_final}\n"
 
+            print(f"DEBUG: Resposta final de texto: {resposta_texto}")
+            
             markup = telebot.types.InlineKeyboardMarkup(row_width=6)
             row_buttons = []
             for i, subcategoria in enumerate(subcategorias_aleatorias, start=1):
-                subcategoria_final = embaralhar_texto_visivel(subcategoria) if embaralhamento_ativo else subcategoria
+                subcategoria_final = embaralhar_mensagem(subcategoria) if embaralhamento_ativo else subcategoria
                 button_text = f"{i}\uFE0F\u20E3"
                 callback_data = f"choose_subcategoria_{subcategoria_final}"
                 row_buttons.append(telebot.types.InlineKeyboardButton(button_text, callback_data=callback_data))
@@ -156,16 +162,19 @@ def categoria_handler(message, categoria):
 
         resposta_texto = "Sua isca atraiu 6 espécies, qual peixe você vai levar?\n\n"
         subcategorias_aleatorias = random.sample(subcategorias, min(6, len(subcategorias)))
+        print(f"DEBUG: Subcategorias aleatórias selecionadas para '{categoria}': {subcategorias_aleatorias}")
 
         for i, subcategoria in enumerate(subcategorias_aleatorias, start=1):
-            # Truncar a subcategoria se o embaralhamento estiver ativo
-            subcategoria_final = embaralhar_texto_visivel(subcategoria) if verificar_travessura_embaralhamento else subcategoria
+            subcategoria_final = embaralhar_mensagem(subcategoria) if embaralhamento_ativo else subcategoria
+            print(f"DEBUG: Subcategoria '{subcategoria}' após embaralhamento: '{subcategoria_final}'")
             resposta_texto += f"{i}\uFE0F\u20E3 - {subcategoria_final}\n"
+
+        print(f"DEBUG: Resposta final de texto: {resposta_texto}")
 
         markup = telebot.types.InlineKeyboardMarkup(row_width=6)
         row_buttons = []
         for i, subcategoria in enumerate(subcategorias_aleatorias, start=1):
-            subcategoria_final = embaralhar_texto_visivel(subcategoria) if verificar_travessura_embaralhamento else subcategoria
+            subcategoria_final = embaralhar_mensagem(subcategoria) if embaralhamento_ativo else subcategoria
             button_text = f"{i}\uFE0F\u20E3"
             callback_data = f"choose_subcategoria_{subcategoria_final}"
             row_buttons.append(telebot.types.InlineKeyboardButton(button_text, callback_data=callback_data))

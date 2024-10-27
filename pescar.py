@@ -97,9 +97,21 @@ def verificar_travessura_ativa(id_usuario, tipo_travessura="embaralhamento"):
 
 # Função para truncar aleatoriamente nomes de subcategorias
 def truncar_texto(texto, truncar_percent=0.5):
-    max_corte = max(1, int(len(texto) * truncar_percent))
-    ponto_corte = random.randint(1, max_corte)
-    return texto[:len(texto) - ponto_corte]
+    # Separar tags HTML do texto visível
+    partes = re.split(r'(<[^>]+>)', texto)  # Divide o texto preservando as tags
+    texto_embaralhado = ""
+
+    for parte in partes:
+        if parte.startswith("<") and parte.endswith(">"):
+            # Se é uma tag HTML, preserve sem alterar
+            texto_embaralhado += parte
+        else:
+            # Caso contrário, trunca a parte do texto
+            max_corte = max(1, int(len(parte) * truncar_percent))
+            ponto_corte = random.randint(1, max_corte)
+            texto_embaralhado += parte[:len(parte) - ponto_corte]
+
+    return texto_embaralhado
 
 
 def categoria_handler(message, categoria, id_usuario):

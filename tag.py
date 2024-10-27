@@ -36,52 +36,46 @@ def criar_lista_paginas(personagens_ids_quantidade, items_por_pagina):
 def editar_mensagem_tag(message, nometag, pagina_atual, id_usuario, total_paginas):
     try:
         conn, cursor = conectar_banco_dados()
+        
+        # Calcular o offset com base na página atual
         offset = (pagina_atual - 1) * 15
-        query = "SELECT id_personagem FROM tags WHERE nometag = %s AND id_usuario = % LIMIT 15 OFFSET %s"
+        
+        # Ajuste da consulta SQL para paginação usando LIMIT e OFFSET corretamente
+        query = "SELECT id_personagem FROM tags WHERE nometag = %s AND id_usuario = %s LIMIT 15 OFFSET %s"
         cursor.execute(query, (nometag, id_usuario, offset))
         resultados = cursor.fetchall()
 
         if resultados:
-            resposta = f"🔖| Cartas na tag {nometag}:\n\n"
+            resposta = f"🔖| Cartas na tag <b>{nometag}</b>:\n\n"
             for resultado in resultados:
                 id_personagem = resultado[0]
                 
-                cursor.execute("SELECT emoji, nome,subcategoria FROM personagens WHERE id_personagem = %s", (id_personagem,))
-                carta_info_personagens = cursor.fetchone()
-
-                cursor.execute("SELECT emoji, nome,subcategoria FROM evento WHERE id_personagem = %s", (id_personagem,))
-                carta_info_evento = cursor.fetchone()
-
-                if carta_info_personagens:
-                    emoji, nome,subcategoria = carta_info_personagens
-                elif carta_info_evento:
-                    emoji, nome,subcategoria = carta_info_evento
+                # Consultar informações da carta em `personagens` ou `evento`
+                cursor.execute("SELECT emoji, nome, subcategoria FROM personagens WHERE id_personagem = %s", (id_personagem,))
+                carta_info = cursor.fetchone() or cursor.execute("SELECT emoji, nome, subcategoria FROM evento WHERE id_personagem = %s", (id_personagem,)) or cursor.fetchone()
+                
+                # Processar informações e verificar se está no inventário
+                if carta_info:
+                    emoji, nome, subcategoria = carta_info
+                    emoji_status = '☀️' if inventario_existe(id_usuario, id_personagem) else '🌧️'
+                    resposta += f"{emoji_status} | {emoji} ⭑<code>{id_personagem}</code> - {nome} de {subcategoria}\n"
                 else:
                     resposta += f"ℹ️ | Carta não encontrada para ID: {id_personagem}\n"
-                    continue
 
-                emoji_status = '☀️' if inventario_existe(id_usuario, id_personagem) else '🌧️'
-                resposta += f"{emoji_status} | {emoji} ⭑<code> {id_personagem}</code> - {nome} de {subcategoria}\n"
-
-            markup = None
-            if int(total_paginas) > 1:
-                markup = criar_markup_tag(pagina_atual, total_paginas, nometag)
+            # Criar a navegação se houver mais de uma página
+            markup = criar_markup_tag(pagina_atual, total_paginas, nometag) if total_paginas > 1 else None
             resposta += f"\nPágina {pagina_atual}/{total_paginas}"
+
+            # Editar a mensagem existente com o conteúdo atualizado da página
             bot.edit_message_text(chat_id=message.chat.id, message_id=message.message_id, text=resposta, reply_markup=markup, parse_mode="HTML")
         else:
-            print("erro ao passar pagina")
+            bot.reply_to(message, f"Nenhum registro encontrado para a tag '{nometag}'.")
 
     except Exception as e:
         print(f"Erro ao editar mensagem de tag: {e}")
         bot.reply_to(message, "Ocorreu um erro ao processar sua solicitação.")
-
-def criar_markup_tag(pagina_atual, total_paginas, nometag):
-    markup = telebot.types.InlineKeyboardMarkup()
-    btn_anterior = telebot.types.InlineKeyboardButton("⬅️", callback_data=f"tag_{pagina_atual-1}_{nometag}_{total_paginas}")
-    btn_proxima = telebot.types.InlineKeyboardButton("➡️", callback_data=f"tag_{pagina_atual+1}_{nometag}_{total_paginas}")
-    markup.row(btn_anterior, btn_proxima)
-
-    return markup
+    finally:
+        fechar_conexao(cursor, conn)
 
 def mostrar_primeira_pagina_tag(message, nometag, id_usuario):
     try:

@@ -325,7 +325,7 @@ def send_card_message(message, *args, cursor=None, conn=None):
             id_personagem = evento_aleatorio['id_personagem']
             nome = evento_aleatorio['nome']
             subcategoria = evento_aleatorio['subcategoria']
-            add_to_inventory(id_user, id_personagem)
+            add_to_inventory(id_usuario, id_personagem)
             quantidade = verifica_inventario_troca(id_usuario, id_personagem)
             quantidade_display = "☀" if quantidade == 1 else "☀ 𖡩"
 
@@ -354,7 +354,7 @@ def send_card_message(message, *args, cursor=None, conn=None):
             emoji_categoria, id_personagem, nome, subcategoria, imagem = args
             subcategoria_display = subcategoria.split('_')[-1]
             id_usuario = message.chat.id
-            add_to_inventory(id_user, id_personagem)
+            add_to_inventory(id_usuario, id_personagem)
             quantidade = verifica_inventario_troca(id_usuario, id_personagem)
             
             if not imagem:

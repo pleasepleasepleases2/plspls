@@ -220,7 +220,16 @@ def adicionar_tag(message):
     
     finally:
         fechar_conexao(cursor, conn)
+        
+def criar_markup_tag(pagina_atual, total_paginas, nometag):
+    markup = telebot.types.InlineKeyboardMarkup()
+    btn_primeiro = telebot.types.InlineKeyboardButton("⏪", callback_data=f"tag_1_{nometag}_{total_paginas}")
+    btn_anterior = telebot.types.InlineKeyboardButton("⬅️", callback_data=f"tag_{pagina_atual-1}_{nometag}_{total_paginas}")
+    btn_proxima = telebot.types.InlineKeyboardButton("➡️", callback_data=f"tag_{pagina_atual+1}_{nometag}_{total_paginas}")
+    btn_ultimo = telebot.types.InlineKeyboardButton("⏩", callback_data=f"tag_{total_paginas}_{nometag}_{total_paginas}")
+    markup.row(btn_primeiro,btn_anterior, btn_proxima,btn_ultimo)
 
+    return markup
 
 def processar_deletar_tag(message):
     try:

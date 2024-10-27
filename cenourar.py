@@ -3,11 +3,26 @@ import traceback
 from credentials import *
 from bd import *
 bot = telebot.TeleBot(API_TOKEN)
-
+# Função para verificar se a "travessura de embaralhamento" está ativa
+def verificar_travessura_ativa(id_usuario, tipo_travessura="embaralhamento"):
+    conn, cursor = conectar_banco_dados()
+    try:
+        query = "SELECT fim_travessura FROM travessuras WHERE id_usuario = %s AND tipo_travessura = %s"
+        cursor.execute(query, (id_usuario, tipo_travessura))
+        resultado = cursor.fetchone()
+        
+        # Verificar se a travessura está ativa e ainda dentro do prazo
+        if resultado:
+            fim_travessura = resultado[0]
+            return datetime.now() < fim_travessura
+        return False
+    finally:
+        fechar_conexao(cursor, conn)
 def enviar_pergunta_cenoura(message, id_usuario, ids_personagens, bot):
     try:
         conn, cursor = conectar_banco_dados()
-
+        # Verificar se a travessura de embaralhamento está ativa
+        embaralhamento_ativo = verificar_travessura_ativa(id_usuario)
         # Recupera os nomes das cartas e formata a pergunta
         cartas_formatadas = []
         for id_personagem in ids_personagens:
@@ -16,15 +31,15 @@ def enviar_pergunta_cenoura(message, id_usuario, ids_personagens, bot):
             if nome_carta:
                 cartas_formatadas.append(f"{id_personagem} - {nome_carta[0]}")
 
-        texto_pergunta = f"Você deseja mesmo cenourar as cartas:\n\n" + "\n".join(cartas_formatadas)
-
+        respostatexto = f"Você deseja mesmo cenourar as cartas:\n\n" + "\n".join(cartas_formatadas)
+        respostatexto = truncar_texto(respostatexto) if embaralhamento_ativo else respostatexto
         # Passando os IDs como uma string separada por vírgula
         keyboard = telebot.types.InlineKeyboardMarkup()
         sim_button = telebot.types.InlineKeyboardButton(text="Sim", callback_data=f"cenourar_sim_{id_usuario}_{','.join(ids_personagens)}")
         nao_button = telebot.types.InlineKeyboardButton(text="Não", callback_data=f"cenourar_nao_{id_usuario}")
         keyboard.row(sim_button, nao_button)
 
-        bot.send_message(message.chat.id, texto_pergunta, reply_markup=keyboard)
+        bot.send_message(message.chat.id, respostatexto, reply_markup=keyboard)
 
     except Exception as e:
         print(f"Erro ao enviar pergunta de cenourar: {e}")
@@ -84,7 +99,7 @@ def cenourar_carta(call, id_usuario, ids_personagens_str):
 
         # Como ids_personagens já é uma lista, não precisamos de split.
         ids_personagens = ids_personagens_str if isinstance(ids_personagens_str, list) else ids_personagens_str.split(',')
-
+        embaralhamento_ativo = verificar_travessura_ativa(id_usuario)
         cartas_cenouradas = []
         cartas_nao_encontradas = []
 
@@ -112,7 +127,7 @@ def cenourar_carta(call, id_usuario, ids_personagens_str):
         # Mensagens de confirmação
         if cartas_cenouradas:
             mensagem_final = f"🥕<b> Agora você está mais rico em cenouras!</b>\nCartas cenouradas com sucesso:\n\n{', '.join(cartas_cenouradas)}"
-
+            mensagem_final = truncar_texto(mensagem_final) if embaralhamento_ativo else mensagem_final
             bot.edit_message_text(chat_id=chat_id, message_id=message_id, text=mensagem_final, parse_mode="HTML")
 
         if cartas_nao_encontradas:

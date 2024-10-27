@@ -97,9 +97,6 @@ def handle_obter_username(message):
     else:
         bot.reply_to(message, "Formato incorreto. Use /usuario seguido do user desejado, por exemplo: /usuario manoela")
 
-
-from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
-
 def handle_me_command(message):
     id_usuario = message.from_user.id
     query_verificar_usuario = "SELECT COUNT(*) FROM usuarios WHERE id_usuario = %s"
@@ -131,16 +128,30 @@ def handle_me_command(message):
             cursor.execute(query_verificar_vip, (id_usuario,))
             is_vip = cursor.fetchone()[0] > 0
 
-            # Obter estado de casamento
-            query_obter_casamento = """
-                SELECT c.id_personagem, COALESCE(p.nome, e.nome) AS nome_parceiro
-                FROM casamentos c
-                LEFT JOIN personagens p ON c.id_personagem = p.id_personagem
-                LEFT JOIN evento e ON c.id_personagem = e.id_personagem
-                WHERE c.user_id = %s AND c.estado = 'casado'
+            # Verificar estado de casamento na tabela controle_de_casamento
+            query_controle_casamento = """
+                SELECT c.conjuge, COALESCE(p.nome, e.nome) AS nome_conjuge
+                FROM controle_de_casamento c
+                LEFT JOIN personagens p ON c.conjuge = p.id_personagem
+                LEFT JOIN evento e ON c.conjuge = e.id_personagem
+                WHERE c.usuario = %s AND c.casado = 'sim'
             """
-            cursor.execute(query_obter_casamento, (id_usuario,))
-            casamento = cursor.fetchone()
+            cursor.execute(query_controle_casamento, (id_usuario,))
+            casamento_controle = cursor.fetchone()
+
+            # Se o usuário não estiver na tabela controle_de_casamento, buscar na tabela casamentos
+            if not casamento_controle:
+                query_casamentos = """
+                    SELECT c.id_personagem, COALESCE(p.nome, e.nome) AS nome_parceiro
+                    FROM casamentos c
+                    LEFT JOIN personagens p ON c.id_personagem = p.id_personagem
+                    LEFT JOIN evento e ON c.id_personagem = e.id_personagem
+                    WHERE c.user_id = %s AND c.estado = 'casado'
+                """
+                cursor.execute(query_casamentos, (id_usuario,))
+                casamento = cursor.fetchone()
+            else:
+                casamento = casamento_controle
 
             # Construir a resposta
             if perfil:

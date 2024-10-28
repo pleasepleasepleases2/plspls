@@ -2165,8 +2165,8 @@ def realizar_halloween_travessura(user_id, chat_id):
             bot.send_message(chat_id, "👻 Um fantasma te desafiou para um jogo da velha! Se você ganhar, a travessura será evitada.")
             jogos_da_velha[user_id] = inicializar_tabuleiro()
             tabuleiro = jogos_da_velha[user_id]
-            bot.send_message(message.chat.id, "Jogo da Velha iniciado! Você é '✔️', eu sou '❌'.")
-            bot.send_message(message.chat.id, mostrar_tabuleiro(tabuleiro), reply_markup=criar_botoes_tabuleiro(tabuleiro))
+            bot.send_message(chat_id, "Jogo da Velha iniciado! Você é '✔️', eu sou '❌'.")
+            bot.send_message(chat_id, mostrar_tabuleiro(tabuleiro), reply_markup=criar_botoes_tabuleiro(tabuleiro))
 
 
         elif chance == 12:

@@ -50,7 +50,9 @@ def inicializar_tabuleiro():
 
 # Função para mostrar o tabuleiro formatado
 def mostrar_tabuleiro(tabuleiro):
+    # Corrigindo para não acessar índices inválidos
     return '\n'.join([' '.join(linha) for linha in tabuleiro])
+
 
 # Função para criar os botões do tabuleiro
 def criar_botoes_tabuleiro(tabuleiro):

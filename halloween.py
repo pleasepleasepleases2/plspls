@@ -16,8 +16,6 @@ aboboras = {
     # Continue para as 30 abóboras com prêmios diferentes
 }
 
-# Dicionário para armazenar jogos ativos
-jogos_da_velha = {}
 
 def troca_invertida(user_id, chat_id):
     try:
@@ -44,92 +42,79 @@ def troca_invertida(user_id, chat_id):
     finally:
         fechar_conexao(cursor, conn)
 
-# Função para inicializar o tabuleiro vazio
-def inicializar_tabuleiro():
-    return [['⬜' for _ in range(3)] for _ in range(3)]
-
-# Função para mostrar o tabuleiro formatado
+# Função para exibir o tabuleiro
 def mostrar_tabuleiro(tabuleiro):
-    # Corrigindo para não acessar índices inválidos
-    return '\n'.join([' '.join(linha) for linha in tabuleiro])
+    return "\n".join([" ".join(linha) for linha in tabuleiro])
 
+# Verifica se há uma vitória
+def verificar_vitoria(tabuleiro, simbolo):
+    return any(
+        all(cell == simbolo for cell in row) for row in tabuleiro
+    ) or any(
+        all(row[i] == simbolo for row in tabuleiro) for i in range(3)
+    ) or all(
+        tabuleiro[i][i] == simbolo for i in range(3)
+    ) or all(
+        tabuleiro[i][2 - i] == simbolo for i in range(3)
+    )
 
-# Função para criar os botões do tabuleiro
-def criar_botoes_tabuleiro(tabuleiro):
-    markup = types.InlineKeyboardMarkup(row_width=3)
-    for i in range(3):
-        botoes = []
-        for j in range(3):
-            if tabuleiro[i][j] == '⬜':
-                # Cria um botão com callback_data indicando a posição
-                botao = types.InlineKeyboardButton(text="⬜", callback_data=f"jogada_{i}_{j}")
-            else:
-                # Bloqueia as posições já ocupadas
-                botao = types.InlineKeyboardButton(text=tabuleiro[i][j], callback_data="jogada_disabled")
-            botoes.append(botao)
-        markup.add(*botoes)
-    return markup
-
-# Função para verificar se alguém venceu
-def verificar_vitoria(tabuleiro, jogador):
-    # Linhas, colunas e diagonais
-    for linha in tabuleiro:
-        if all(celula == jogador for celula in linha):
-            return True
-    for coluna in range(3):
-        if all(tabuleiro[linha][coluna] == jogador for linha in range(3)):
-            return True
-    if tabuleiro[0][0] == tabuleiro[1][1] == tabuleiro[2][2] == jogador or \
-       tabuleiro[0][2] == tabuleiro[1][1] == tabuleiro[2][0] == jogador:
-        return True
-    return False
-
-# Função para verificar empate
+# Verifica se há empate
 def verificar_empate(tabuleiro):
-    return all(celula != '⬜' for linha in tabuleiro for celula in linha)
-# Função para iniciar o jogo da velha com o "fantasma"
-def iniciar_jogo_da_velha_fantasma(user_id, chat_id):
-    try:
-        # Inicializa o tabuleiro vazio
-        tabuleiro = inicializar_tabuleiro()
-        
-        # Armazena o tabuleiro no dicionário de jogos para o usuário
-        globals.jogos_da_velha[user_id] = tabuleiro
-        
-        # Envia mensagem inicial do jogo
-        bot.send_message(chat_id, "👻 O fantasma desafiou você para um jogo da velha! Você é '✔️' e ele é '❌'.\n\n" + mostrar_tabuleiro(tabuleiro))
-        
-        # Cria os botões do tabuleiro e envia a mensagem com o tabuleiro
-        markup = criar_botoes_tabuleiro(tabuleiro)
-        bot.send_message(chat_id, "Escolha sua jogada (clique em uma posição):", reply_markup=markup)
-    except Exception as e:
-        print(f"Erro ao iniciar o jogo da velha com o fantasma: {e}")
+    return all(cell != "⬜" for row in tabuleiro for cell in row)
 
-# Função para o bot fazer uma jogada
+# Função para encontrar a melhor jogada
+def encontrar_melhor_jogada(tabuleiro, simbolo_bot, simbolo_jogador):
+    melhor_valor = -float('inf')
+    melhor_jogada = None
+    for i in range(3):
+        for j in range(3):
+            if tabuleiro[i][j] == "⬜":
+                tabuleiro[i][j] = simbolo_bot
+                if verificar_vitoria(tabuleiro, simbolo_bot):
+                    valor = 10  # Prioridade máxima para a vitória
+                elif verificar_vitoria(tabuleiro, simbolo_jogador):
+                    valor = -10  # Prioridade para bloquear o jogador
+                else:
+                    valor = 0  # Neutral jogada
+                tabuleiro[i][j] = "⬜"
+                if valor > melhor_valor:
+                    melhor_valor = valor
+                    melhor_jogada = (i, j)
+    return melhor_jogada
+
+# Função para a jogada do bot com 75% de chance de fazer a melhor jogada
 def bot_fazer_jogada(tabuleiro, simbolo_bot, simbolo_jogador):
-    # 60% de chance de fazer a melhor jogada possível
-    if random.random() < 0.6:
-        melhor_valor = -float('inf')
-        melhor_jogada = None
-        for i in range(3):
-            for j in range(3):
-                if tabuleiro[i][j] == '⬜':
-                    tabuleiro[i][j] = simbolo_bot
-                    valor = minimax(tabuleiro, 0, False, simbolo_bot, simbolo_jogador)
-                    tabuleiro[i][j] = '⬜'
-                    if valor > melhor_valor:
-                        melhor_valor = valor
-                        melhor_jogada = (i, j)
+    if random.random() < 0.75:
+        melhor_jogada = encontrar_melhor_jogada(tabuleiro, simbolo_bot, simbolo_jogador)
         if melhor_jogada:
-            tabuleiro[melhor_jogada[0]][melhor_jogada[1]] = simbolo_bot
-            return tabuleiro
-    # 40% de chance de fazer uma jogada aleatória
-    while True:
-        i, j = random.randint(0, 2), random.randint(0, 2)
-        if tabuleiro[i][j] == '⬜':
+            i, j = melhor_jogada
             tabuleiro[i][j] = simbolo_bot
-            return tabuleiro
+    else:
+        # Jogada aleatória
+        while True:
+            i, j = random.randint(0, 2), random.randint(0, 2)
+            if tabuleiro[i][j] == "⬜":
+                tabuleiro[i][j] = simbolo_bot
+                break
 
+# Função principal para iniciar o jogo
+def iniciar_jogo_da_velha(user_id, chat_id):
+    tabuleiro = jogos_da_velha[user_id]
+    bot.send_message(chat_id, "Jogo da Velha iniciado! Você é '✔️', eu sou '❌'.\n\n" + mostrar_tabuleiro(tabuleiro))
+    enviar_tabuleiro(chat_id, tabuleiro)
+
+# Cria os botões do tabuleiro
+def enviar_tabuleiro(chat_id, tabuleiro):
+    markup = types.InlineKeyboardMarkup()
+    for i in range(3):
+        row = [
+            types.InlineKeyboardButton(
+                text=tabuleiro[i][j], callback_data=f"jogada_{i}_{j}"
+            )
+            for j in range(3)
+        ]
+        markup.row(*row)
+    bot.send_message(chat_id, "Escolha sua jogada:", reply_markup=markup)
 
 # Função para garantir que o jogador tenha sempre um caminho livre até a saída
 def gerar_labirinto_com_caminho_e_validacao(tamanho=10):

@@ -2479,8 +2479,9 @@ def mostrar_tabuleiro(tabuleiro):
 
 # Verifica se há uma vitória
 def verificar_vitoria(tabuleiro, simbolo):
+    # Verifica linhas, colunas e diagonais para o símbolo fornecido
     return (
-        any(np.all(row == simbolo) for row in tabuleiro) or  # Linhas
+        any(np.all(tabuleiro[i, :] == simbolo) for i in range(3)) or  # Linhas
         any(np.all(tabuleiro[:, j] == simbolo) for j in range(3)) or  # Colunas
         np.all(np.diag(tabuleiro) == simbolo) or  # Diagonal principal
         np.all(np.diag(np.fliplr(tabuleiro)) == simbolo)  # Diagonal secundária
@@ -2488,7 +2489,7 @@ def verificar_vitoria(tabuleiro, simbolo):
 
 # Verifica se o tabuleiro está completo (empate)
 def verificar_empate(tabuleiro):
-    return np.all(tabuleiro != '⬜')
+    return not any('⬜' in row for row in tabuleiro)
 
 # Função Minimax para determinar a melhor jogada do bot
 def minimax(tabuleiro, profundidade, is_maximizador, simbolo_bot, simbolo_jogador):

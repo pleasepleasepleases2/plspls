@@ -2360,21 +2360,20 @@ def finalizar_jogo_da_velha(user_id, chat_id, resultado):
         # Penalidade ao perder: Perde cenouras ou uma carta aleatória
         if random.random() < 0.5:
             cenouras_perdidas = random.randint(20, 50)
-            reduzir_cenouras(user_id, cenouras_perdidas)
+            diminuir_cenouras(user_id, cenouras_perdidas)
             bot.send_message(chat_id, f"😢 Você perdeu e perdeu {cenouras_perdidas} cenouras.")
         else:
-            remover_carta_aleatoria(user_id)
+            apagar_carta_aleatoria(user_id,chat_id)
             bot.send_message(chat_id, "😢 Você perdeu e perdeu uma carta aleatória do seu inventário.")
 
     elif resultado == "empate":
         # Penalidade e recompensa no empate
-        cenouras_perdidas = random.randint(10, 30)
-        cenouras_ganhas = random.randint(10, 30)
-        reduzir_cenouras(user_id, cenouras_perdidas)
+        apagar_carta_aleatoria(user_id,chat_id)
+        cenouras_ganhas = random.randint(50, 80)
         aumentar_cenouras(user_id, cenouras_ganhas)
         bot.send_message(
             chat_id,
-            f"😐 Empate! Você perdeu {cenouras_perdidas} cenouras, mas ganhou {cenouras_ganhas} cenouras como consolação."
+            f"😐 Empate! Você perdeu perdeu uma carta aleatória, mas ganhou {cenouras_ganhas} cenouras como consolação."
         )
 
     # Remover o jogo do usuário após o final

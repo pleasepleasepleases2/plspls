@@ -35,7 +35,7 @@ def doar(message):
         eu = message.from_user.id
         args = message.text.split()
         # Verificar se a travessura de embaralhamento está ativa
-        embaralhamento_ativo = verificar_travessura_ativa(id_usuario)
+        embaralhamento_ativo = verificar_travessura_ativa(eu)
         if len(args) < 2:
             bot.send_message(chat_id, "Formato incorreto. Use /doar <quantidade> <ID_da_carta> ou /doar all <ID_da_carta>")
             return

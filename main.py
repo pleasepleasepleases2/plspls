@@ -123,6 +123,7 @@ def bloquear_acao(user_id, acao, minutos):
     cursor.execute("INSERT INTO bloqueios (id_usuario, acao, fim_bloqueio) VALUES (%s, %s, %s)", (user_id, acao, fim_bloqueio))
     conn.commit()
     fechar_conexao(cursor, conn)
+
 @bot.callback_query_handler(func=lambda call: call.data.startswith('jogada_'))
 def processar_jogada(call):
     try:
@@ -133,7 +134,7 @@ def processar_jogada(call):
             return
 
         tabuleiro = globals.jogos_da_velha[user_id]
-        
+
         # Verificar se `call.data.split('_')` contém 3 elementos (jogada, i, j)
         dados_jogada = call.data.split('_')
         if len(dados_jogada) != 3:
@@ -192,6 +193,8 @@ def processar_jogada(call):
         bot.edit_message_text(f"Seu turno!\n\n{mostrar_tabuleiro(tabuleiro)}", 
                               call.message.chat.id, call.message.message_id, reply_markup=markup)
 
+    except IndexError:
+        bot.send_message(call.message.chat.id, "Erro: A posição selecionada não é válida. Tente novamente.")
     except Exception as e:
         print(f"Erro ao processar a jogada no jogo da velha: {e}")
 

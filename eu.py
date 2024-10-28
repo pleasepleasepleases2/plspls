@@ -10,33 +10,6 @@ import spotipy
 from spotipy.oauth2 import SpotifyClientCredentials
 from credentials import *
 
-def verificar_travessura_embaralhamento(user_id):
-    try:
-        conn, cursor = conectar_banco_dados()
-
-        # Verificar se a travessura está ativa
-        cursor.execute("""
-            SELECT fim_travessura FROM travessuras
-            WHERE id_usuario = %s AND tipo_travessura = 'embaralhamento'
-        """, (user_id,))
-        resultado = cursor.fetchone()
-
-        if resultado:
-            fim_travessura = resultado[0]
-            # Se a travessura ainda está ativa (o tempo atual é menor que o fim)
-            if datetime.now() < fim_travessura:
-                return True
-        
-        return False  # Travessura não está ativa
-    
-    except Exception as e:
-        print(f"Erro ao verificar a travessura de embaralhamento: {e}")
-        return False
-    finally:
-        fechar_conexao(cursor, conn)
-    if verificar_travessura_embaralhamento(user_id):
-        texto = embaralhar_mensagem(texto)  # Embaralha a mensagem se a travessura estiver ativa
-            
 def enviar_perfil(chat_id, legenda, imagem_fav, fav, id_usuario,message):
     gif_url = obter_gif_url(fav, id_usuario)
     if gif_url:
@@ -189,9 +162,7 @@ def handle_me_command(message):
                 botao_doce = InlineKeyboardButton(text=f"🍭 {doces}", callback_data=f"votar_doce_{id_usuario}")
                 botao_fantasma = InlineKeyboardButton(text=f"👻 {fantasmas}", callback_data=f"votar_fantasma_{id_usuario}")
                 markup.add(botao_doce, botao_fantasma)
-                if verificar_travessura_embaralhamento(id_usuario):
-                    resposta = embaralhar_mensagem(resposta)  # Embaralha a mensagem se a travessura estiver ativa
-                    
+
                 # Enviar a resposta do perfil com botões de votação e a imagem favorita
                 if imagem_fav:
                     bot.send_photo(message.chat.id, imagem_fav, caption=resposta, reply_markup=markup, parse_mode="HTML")

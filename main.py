@@ -1645,8 +1645,6 @@ def realizar_halloween_gostosura(user_id, chat_id):
         elif chance == 2:
             print(f"DEBUG: Adicionando carta faltante de Halloween para o usuário {user_id}")
             adicionar_carta_faltante_halloween(user_id, chat_id)
-            # Enviar a mensagem informando a carta recebida
-            bot.send_message(chat_id, f"🎃 Parabéns! Você encontrou uma carta do evento Halloween: {nome_carta_faltante} foi adicionada ao seu inventário.")
 
         elif chance == 3:
             print(f"DEBUG: Adicionando VIP temporário para o usuário {user_id}")

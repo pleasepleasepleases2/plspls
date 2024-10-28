@@ -341,7 +341,7 @@ def travessura_grupal(chat_id, user_id):
 
 # Dicionário global para armazenar os jogos
 jogos_da_velha = {}
-
+from math import inf as infinity
 # Função para inicializar um tabuleiro vazio
 def inicializar_tabuleiro():
     return np.full((3, 3), '⬜')
@@ -352,7 +352,6 @@ def mostrar_tabuleiro(tabuleiro):
 
 # Verifica se há uma vitória
 def verificar_vitoria(tabuleiro, simbolo):
-    # Verifica se alguma linha, coluna ou diagonal tem três símbolos iguais
     for i in range(3):
         if all(tabuleiro[i, j] == simbolo for j in range(3)):  # Linha
             return True
@@ -370,15 +369,19 @@ def verificar_empate(tabuleiro):
 
 # Função Minimax para determinar a melhor jogada do bot
 def minimax(tabuleiro, profundidade, is_maximizador, simbolo_bot, simbolo_jogador):
-    if verificar_vitoria(tabuleiro, simbolo_bot):
+    vencedor_bot = verificar_vitoria(tabuleiro, simbolo_bot)
+    vencedor_jogador = verificar_vitoria(tabuleiro, simbolo_jogador)
+    empate = verificar_empate(tabuleiro)
+
+    if vencedor_bot:
         return 10 - profundidade
-    elif verificar_vitoria(tabuleiro, simbolo_jogador):
+    elif vencedor_jogador:
         return profundidade - 10
-    elif verificar_empate(tabuleiro):
+    elif empate:
         return 0
 
     if is_maximizador:
-        melhor_valor = -np.inf
+        melhor_valor = -infinity
         for i in range(3):
             for j in range(3):
                 if tabuleiro[i][j] == '⬜':
@@ -388,7 +391,7 @@ def minimax(tabuleiro, profundidade, is_maximizador, simbolo_bot, simbolo_jogado
                     melhor_valor = max(melhor_valor, valor)
         return melhor_valor
     else:
-        melhor_valor = np.inf
+        melhor_valor = infinity
         for i in range(3):
             for j in range(3):
                 if tabuleiro[i][j] == '⬜':
@@ -398,9 +401,9 @@ def minimax(tabuleiro, profundidade, is_maximizador, simbolo_bot, simbolo_jogado
                     melhor_valor = min(melhor_valor, valor)
         return melhor_valor
 
-# Função para o bot fazer uma jogada usando minimax
+# Função para o bot fazer a melhor jogada usando minimax
 def bot_fazer_jogada(tabuleiro, simbolo_bot, simbolo_jogador):
-    melhor_valor = -np.inf
+    melhor_valor = -infinity
     melhor_jogada = None
     for i in range(3):
         for j in range(3):
@@ -482,7 +485,7 @@ def finalizar_jogo_da_velha(user_id, chat_id, resultado):
         aumentar_cenouras(user_id, cenouras_ganhas)
         bot.send_message(chat_id, f"😐 Empate! Você ganhou {cenouras_ganhas} cenouras como consolação.")
     del jogos_da_velha[user_id]
-
+    
 # Função para aplicar a travessura ao usuário
 def aplicar_travessura(user_id, chat_id):
     try:

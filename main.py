@@ -2601,6 +2601,7 @@ def finalizar_jogo_da_velha(user_id, chat_id, resultado):
         bot.send_message(chat_id, f"😐 Empate! Você ganhou {cenouras_ganhas} cenouras como consolação.")
     del jogos_da_velha[user_id]
 
+
 @bot.callback_query_handler(func=lambda call: call.data.startswith("descartar_caixa_"))
 def callback_descartar_caixa(call):
     user_id = call.from_user.id

@@ -12,3 +12,4 @@ flask
 cachetools
 newrelic
 mutagen
+numpy

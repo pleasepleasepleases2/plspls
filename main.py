@@ -2118,12 +2118,12 @@ def realizar_halloween_travessura(user_id, chat_id):
 
         elif chance == 10:
             # Nada acontece
-            bot.send_message(chat_id, "🎁 Gostosura! ...Ah, não, era uma travessura! Não há recompensa para você dessa vez.")
+            bot.send_message(chat_id, "🎁 Gostosura! Ah, não, era uma travessura! Não há recompensa para você dessa vez.")
 
         elif chance == 11:
             # Jogo da velha com um fantasma
             bot.send_message(chat_id, "👻 Um fantasma te desafiou para um jogo da velha! Se você ganhar, a travessura será evitada.")
-            iniciar_jogo_da_velha_fantasma(user_id)
+            iniciar_jogo_da_velha_fantasma(user_id,message)
 
         elif chance == 12:
             # Labirinto com um fantasma

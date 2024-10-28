@@ -2162,7 +2162,7 @@ def realizar_halloween_travessura(user_id, chat_id):
         elif chance == 11:
             # Jogo da velha com um fantasma
             bot.send_message(chat_id, "👻 Um fantasma te desafiou para um jogo da velha! Se você ganhar, a travessura será evitada.")
-            iniciar_jogo_da_velha_fantasma(user_id, chat_id)
+            iniciar_jogo_da_velha(user_id, chat_id)
 
         elif chance == 12:
             # Labirinto com um fantasma

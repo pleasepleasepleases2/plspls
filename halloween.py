@@ -20,6 +20,7 @@ aboboras = {
 
 # Estrutura global para armazenar jogos com tabuleiros vazios
 jogos_da_velha = defaultdict(lambda: [["⬜"] * 3 for _ in range(3)])
+
 # Função para exibir o tabuleiro
 def mostrar_tabuleiro(tabuleiro):
     return "\n".join([" ".join(linha) for linha in tabuleiro])
@@ -95,6 +96,7 @@ def enviar_tabuleiro(chat_id, tabuleiro):
         markup.row(*row)
     bot.send_message(chat_id, "Escolha sua jogada:", reply_markup=markup)
 
+##########################################################################################################3
 def troca_invertida(user_id, chat_id):
     try:
         conn, cursor = conectar_banco_dados()

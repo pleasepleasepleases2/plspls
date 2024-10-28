@@ -133,8 +133,20 @@ def processar_jogada(call):
             return
 
         tabuleiro = globals.jogos_da_velha[user_id]
-        _, i, j = call.data.split('_')
+        
+        # Verificar se `call.data.split('_')` contém 3 elementos (jogada, i, j)
+        dados_jogada = call.data.split('_')
+        if len(dados_jogada) != 3:
+            bot.send_message(call.message.chat.id, "Erro ao processar a jogada. Dados incorretos.")
+            return
+
+        _, i, j = dados_jogada
         i, j = int(i), int(j)
+
+        # Verifica se a jogada está dentro dos limites do tabuleiro
+        if not (0 <= i < 3 and 0 <= j < 3):
+            bot.answer_callback_query(call.id, "Jogada fora do tabuleiro.")
+            return
 
         # Verifica se a célula escolhida está vazia
         if tabuleiro[i][j] != '⬜':
@@ -182,6 +194,7 @@ def processar_jogada(call):
 
     except Exception as e:
         print(f"Erro ao processar a jogada no jogo da velha: {e}")
+
     
 @bot.callback_query_handler(func=lambda call: call.data.startswith('votar_'))
 def votar_usuario(call):

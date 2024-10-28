@@ -135,7 +135,7 @@ def processar_jogada(call):
 
         tabuleiro = globals.jogos_da_velha[user_id]
 
-        # Verificar se `call.data.split('_')` contém 3 elementos (jogada, i, j)
+        # Verifica e separa a jogada
         dados_jogada = call.data.split('_')
         if len(dados_jogada) != 3:
             bot.send_message(call.message.chat.id, "Erro ao processar a jogada. Dados incorretos.")

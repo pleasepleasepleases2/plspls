@@ -2463,7 +2463,10 @@ def handle_halloween(message):
         print(f"DEBUG: Executando travessura para o usuário {user_id}")
         realizar_halloween_travessura(user_id, chat_id)  # Executa uma das funções de travessura
 
-# Armazena o tabuleiro de cada usuário
+import random
+import numpy as np
+from telebot import types
+
 jogos_da_velha = {}
 
 # Função para inicializar o tabuleiro vazio

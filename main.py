@@ -2314,9 +2314,11 @@ def criar_botoes_tabuleiro(tabuleiro):
 @bot.callback_query_handler(func=lambda call: call.data.startswith('jogada_'))
 def processar_jogada(call):
     user_id = call.from_user.id
+    chat_id = call.message.chat.id
     tabuleiro = jogos_da_velha.get(user_id)
+    
     if not tabuleiro:
-        bot.send_message(call.message.chat.id, "O jogo ainda não foi iniciado. Use /jogodavelha para começar.")
+        bot.send_message(chat_id, "O jogo ainda não foi iniciado. Use /jogodavelha para começar.")
         return
 
     _, i, j = call.data.split('_')
@@ -2330,24 +2332,26 @@ def processar_jogada(call):
     tabuleiro[i][j] = '✔️'
     if verificar_vitoria(tabuleiro, '✔️'):
         finalizar_jogo_da_velha(user_id, chat_id, "vitoria")
+        return
     elif verificar_empate(tabuleiro):
         finalizar_jogo_da_velha(user_id, chat_id, "empate")
+        return
+
     # Jogada do bot
     bot_fazer_jogada(tabuleiro, '❌', '✔️')
     if verificar_vitoria(tabuleiro, '❌'):
         finalizar_jogo_da_velha(user_id, chat_id, "derrota")
+        return
     elif verificar_empate(tabuleiro):
         finalizar_jogo_da_velha(user_id, chat_id, "empate")
+        return
 
     # Atualizar tabuleiro para o próximo turno
-    bot.edit_message_text(mostrar_tabuleiro(tabuleiro), call.message.chat.id, call.message.message_id, reply_markup=criar_botoes_tabuleiro(tabuleiro))
+    bot.edit_message_text(mostrar_tabuleiro(tabuleiro), chat_id, call.message.message_id, reply_markup=criar_botoes_tabuleiro(tabuleiro))
 
+# Função para finalizar o jogo e aplicar recompensas/penalidades
 def finalizar_jogo_da_velha(user_id, chat_id, resultado):
-    """
-    Função para lidar com o final do jogo da velha, aplicando recompensas e penalidades.
-    """
     if resultado == "vitoria":
-        # Recompensa ao vencer: Cenouras ou carta faltante
         if random.random() < 0.5:
             cenouras_ganhas = random.randint(50, 100)
             aumentar_cenouras(user_id, cenouras_ganhas)
@@ -2357,27 +2361,23 @@ def finalizar_jogo_da_velha(user_id, chat_id, resultado):
             bot.send_message(chat_id, "🎉 Parabéns! Você venceu e ganhou uma carta faltante do evento de Halloween!")
 
     elif resultado == "derrota":
-        # Penalidade ao perder: Perde cenouras ou uma carta aleatória
         if random.random() < 0.5:
             cenouras_perdidas = random.randint(20, 50)
             diminuir_cenouras(user_id, cenouras_perdidas)
             bot.send_message(chat_id, f"😢 Você perdeu e perdeu {cenouras_perdidas} cenouras.")
         else:
-            apagar_carta_aleatoria(user_id,chat_id)
+            apagar_carta_aleatoria(user_id, chat_id)
             bot.send_message(chat_id, "😢 Você perdeu e perdeu uma carta aleatória do seu inventário.")
 
     elif resultado == "empate":
-        # Penalidade e recompensa no empate
-        apagar_carta_aleatoria(user_id,chat_id)
+        apagar_carta_aleatoria(user_id, chat_id)
         cenouras_ganhas = random.randint(50, 80)
         aumentar_cenouras(user_id, cenouras_ganhas)
-        bot.send_message(
-            chat_id,
-            f"😐 Empate! Você perdeu perdeu uma carta aleatória, mas ganhou {cenouras_ganhas} cenouras como consolação."
-        )
+        bot.send_message(chat_id, f"😐 Empate! Você perdeu uma carta aleatória, mas ganhou {cenouras_ganhas} cenouras como consolação.")
 
     # Remover o jogo do usuário após o final
     del jogos_da_velha[user_id]
+
 @bot.callback_query_handler(func=lambda call: call.data.startswith("descartar_caixa_"))
 def callback_descartar_caixa(call):
     user_id = call.from_user.id

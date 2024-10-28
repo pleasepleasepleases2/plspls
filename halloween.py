@@ -85,6 +85,23 @@ def verificar_vitoria(tabuleiro, jogador):
 # Função para verificar empate
 def verificar_empate(tabuleiro):
     return all(celula != '⬜' for linha in tabuleiro for celula in linha)
+# Função para iniciar o jogo da velha com o "fantasma"
+def iniciar_jogo_da_velha_fantasma(user_id, chat_id):
+    try:
+        # Inicializa o tabuleiro vazio
+        tabuleiro = inicializar_tabuleiro()
+        
+        # Armazena o tabuleiro no dicionário de jogos para o usuário
+        globals.jogos_da_velha[user_id] = tabuleiro
+        
+        # Envia mensagem inicial do jogo
+        bot.send_message(chat_id, "👻 O fantasma desafiou você para um jogo da velha! Você é '✔️' e ele é '❌'.\n\n" + mostrar_tabuleiro(tabuleiro))
+        
+        # Cria os botões do tabuleiro e envia a mensagem com o tabuleiro
+        markup = criar_botoes_tabuleiro(tabuleiro)
+        bot.send_message(chat_id, "Escolha sua jogada (clique em uma posição):", reply_markup=markup)
+    except Exception as e:
+        print(f"Erro ao iniciar o jogo da velha com o fantasma: {e}")
 
 # Função para o bot fazer uma jogada
 def bot_fazer_jogada(tabuleiro, simbolo_bot, simbolo_jogador):

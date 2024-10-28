@@ -128,37 +128,49 @@ def bloquear_acao(user_id, acao, minutos):
 def processar_jogada(call):
     try:
         user_id = call.from_user.id
+        print(f"DEBUG: Jogada recebida do usuário {user_id}")
+
         # Verifica se o jogo foi iniciado para o usuário
         if user_id not in globals.jogos_da_velha:
+            print("DEBUG: Jogo da velha não iniciado para o usuário.")
             bot.send_message(call.message.chat.id, "Você não iniciou um jogo da velha. Use /jogodavelha para começar.")
             return
 
         tabuleiro = globals.jogos_da_velha[user_id]
+        print(f"DEBUG: Tabuleiro atual para o usuário {user_id}:\n{mostrar_tabuleiro(tabuleiro)}")
 
-        # Verifica e separa a jogada
+        # Dividir a chamada para obter a linha e a coluna da jogada
         dados_jogada = call.data.split('_')
+        print(f"DEBUG: Dados da jogada recebidos: {dados_jogada}")
+
         if len(dados_jogada) != 3:
+            print("DEBUG: Dados da jogada estão incorretos (não possuem 3 elementos).")
             bot.send_message(call.message.chat.id, "Erro ao processar a jogada. Dados incorretos.")
             return
 
         _, i, j = dados_jogada
         i, j = int(i), int(j)
+        print(f"DEBUG: Tentativa de jogada na posição ({i}, {j})")
 
-        # Verifica se a jogada está dentro dos limites do tabuleiro
-        if not (0 <= i < 3 and 0 <= j < 3):
-            bot.answer_callback_query(call.id, "Jogada fora do tabuleiro.")
+        # Verifica se a jogada está dentro dos limites do tabuleiro (0 a 2)
+        if i < 0 or i > 2 or j < 0 or j > 2:
+            print("DEBUG: A posição selecionada está fora dos limites do tabuleiro.")
+            bot.answer_callback_query(call.id, "Erro: A posição selecionada não é válida. Tente novamente.")
             return
 
         # Verifica se a célula escolhida está vazia
         if tabuleiro[i][j] != '⬜':
+            print("DEBUG: A posição já está ocupada.")
             bot.answer_callback_query(call.id, "Essa posição já está ocupada!")
             return
 
         # Atualiza o tabuleiro com a jogada do jogador
         tabuleiro[i][j] = '✔️'
+        print(f"DEBUG: Tabuleiro após a jogada do usuário:\n{mostrar_tabuleiro(tabuleiro)}")
 
         # Verifica se o jogador venceu
         if verificar_vitoria(tabuleiro, '✔️'):
+            print("DEBUG: O usuário venceu o jogo.")
             bot.edit_message_text(f"🎉 Parabéns! Você venceu!\n\n{mostrar_tabuleiro(tabuleiro)}", 
                                   call.message.chat.id, call.message.message_id)
             del globals.jogos_da_velha[user_id]
@@ -166,6 +178,7 @@ def processar_jogada(call):
 
         # Verifica se houve empate
         if verificar_empate(tabuleiro):
+            print("DEBUG: O jogo terminou em empate.")
             bot.edit_message_text(f"😐 Empate!\n\n{mostrar_tabuleiro(tabuleiro)}", 
                                   call.message.chat.id, call.message.message_id)
             del globals.jogos_da_velha[user_id]
@@ -173,9 +186,11 @@ def processar_jogada(call):
 
         # Jogada do bot
         tabuleiro = bot_fazer_jogada(tabuleiro, '❌', '✔️')
+        print(f"DEBUG: Tabuleiro após a jogada do bot:\n{mostrar_tabuleiro(tabuleiro)}")
 
         # Verifica se o bot venceu
         if verificar_vitoria(tabuleiro, '❌'):
+            print("DEBUG: O bot venceu o jogo.")
             bot.edit_message_text(f"😎 Eu venci! Melhor sorte da próxima vez.\n\n{mostrar_tabuleiro(tabuleiro)}", 
                                   call.message.chat.id, call.message.message_id)
             del globals.jogos_da_velha[user_id]
@@ -183,6 +198,7 @@ def processar_jogada(call):
 
         # Verifica novamente se houve empate após a jogada do bot
         if verificar_empate(tabuleiro):
+            print("DEBUG: O jogo terminou em empate após a jogada do bot.")
             bot.edit_message_text(f"😐 Empate!\n\n{mostrar_tabuleiro(tabuleiro)}", 
                                   call.message.chat.id, call.message.message_id)
             del globals.jogos_da_velha[user_id]
@@ -190,13 +206,13 @@ def processar_jogada(call):
 
         # Atualiza o tabuleiro com os novos botões para o próximo turno
         markup = criar_botoes_tabuleiro(tabuleiro)
+        print("DEBUG: Enviando o tabuleiro atualizado para o próximo turno.")
         bot.edit_message_text(f"Seu turno!\n\n{mostrar_tabuleiro(tabuleiro)}", 
                               call.message.chat.id, call.message.message_id, reply_markup=markup)
 
-    except IndexError:
-        bot.send_message(call.message.chat.id, "Erro: A posição selecionada não é válida. Tente novamente.")
     except Exception as e:
         print(f"Erro ao processar a jogada no jogo da velha: {e}")
+        traceback.print_exc()
 
     
 @bot.callback_query_handler(func=lambda call: call.data.startswith('votar_'))

@@ -2311,18 +2311,35 @@ def verificar_vitoria(tabuleiro, simbolo):
 def verificar_empate(tabuleiro):
     return all(cell != '⬜' for row in tabuleiro for cell in row)
 
+import random
+
 # Função para jogada do bot (75% chance de escolher a melhor jogada)
 def bot_fazer_jogada(tabuleiro, simbolo_bot, simbolo_jogador):
+    # Chance de 75% de tentar a melhor jogada
     if random.random() < 0.75:
-        # Melhor jogada
+        melhor_jogada = None
+
+        # Avalia todas as posições possíveis para o bot
         for i in range(3):
             for j in range(3):
                 if tabuleiro[i][j] == '⬜':
+                    # Faz uma jogada temporária
                     tabuleiro[i][j] = simbolo_bot
+                    # Verifica se essa jogada leva à vitória
                     if verificar_vitoria(tabuleiro, simbolo_bot):
-                        return  # Jogada vitoriosa
+                        return  # Faz a jogada imediatamente se for vitoriosa
+                    # Desfaz a jogada temporária
                     tabuleiro[i][j] = '⬜'
-    # Jogada aleatória
+                    # Armazena a jogada como uma possível melhor jogada
+                    melhor_jogada = (i, j)
+        
+        # Se encontrou uma jogada vantajosa mas não vitoriosa
+        if melhor_jogada:
+            i, j = melhor_jogada
+            tabuleiro[i][j] = simbolo_bot
+            return
+
+    # Se não fizer a jogada ideal, faz uma jogada aleatória
     while True:
         i, j = random.randint(0, 2), random.randint(0, 2)
         if tabuleiro[i][j] == '⬜':

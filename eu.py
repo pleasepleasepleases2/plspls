@@ -202,6 +202,7 @@ def handle_me_command(message):
             bot.send_message(message.chat.id, "Você ainda não iniciou o bot. Use /start para começar.", reply_to_message_id=message.message_id)
 
     except Exception as e:
+        traceback.print_exc() 
         print(f"Erro ao verificar perfil: {e}")
         bot.send_message(message.chat.id, f"Erro ao verificar perfil: {e}", reply_to_message_id=message.message_id)
 

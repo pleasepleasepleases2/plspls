@@ -51,56 +51,40 @@ def inicializar_tabuleiro():
 # Função para mostrar o tabuleiro formatado
 def mostrar_tabuleiro(tabuleiro):
     return '\n'.join([' '.join(linha) for linha in tabuleiro])
-    
+
+# Função para criar os botões do tabuleiro
+def criar_botoes_tabuleiro(tabuleiro):
+    markup = types.InlineKeyboardMarkup(row_width=3)
+    for i in range(3):
+        botoes = []
+        for j in range(3):
+            if tabuleiro[i][j] == '⬜':
+                # Cria um botão com callback_data indicando a posição
+                botao = types.InlineKeyboardButton(text="⬜", callback_data=f"jogada_{i}_{j}")
+            else:
+                # Bloqueia as posições já ocupadas
+                botao = types.InlineKeyboardButton(text=tabuleiro[i][j], callback_data="jogada_disabled")
+            botoes.append(botao)
+        markup.add(*botoes)
+    return markup
+
 # Função para verificar se alguém venceu
 def verificar_vitoria(tabuleiro, jogador):
+    # Linhas, colunas e diagonais
     for linha in tabuleiro:
         if all(celula == jogador for celula in linha):
             return True
     for coluna in range(3):
         if all(tabuleiro[linha][coluna] == jogador for linha in range(3)):
             return True
-    if tabuleiro[0][0] == tabuleiro[1][1] == tabuleiro[2][2] == jogador:
-        return True
-    if tabuleiro[0][2] == tabuleiro[1][1] == tabuleiro[2][0] == jogador:
+    if tabuleiro[0][0] == tabuleiro[1][1] == tabuleiro[2][2] == jogador or \
+       tabuleiro[0][2] == tabuleiro[1][1] == tabuleiro[2][0] == jogador:
         return True
     return False
 
 # Função para verificar empate
 def verificar_empate(tabuleiro):
     return all(celula != '⬜' for linha in tabuleiro for celula in linha)
-
-import random
-
-# Função Minimax para avaliar as melhores jogadas
-def minimax(tabuleiro, profundidade, is_maximizador, simbolo_bot, simbolo_jogador):
-    if verificar_vitoria(tabuleiro, simbolo_bot):
-        return 10 - profundidade  # Valor positivo se o bot vence
-    elif verificar_vitoria(tabuleiro, simbolo_jogador):
-        return profundidade - 10  # Valor negativo se o jogador vence
-    elif verificar_empate(tabuleiro):
-        return 0  # Empate
-
-    if is_maximizador:
-        melhor_valor = -float('inf')
-        for i in range(3):
-            for j in range(3):
-                if tabuleiro[i][j] == '⬜':
-                    tabuleiro[i][j] = simbolo_bot
-                    valor = minimax(tabuleiro, profundidade + 1, False, simbolo_bot, simbolo_jogador)
-                    tabuleiro[i][j] = '⬜'
-                    melhor_valor = max(melhor_valor, valor)
-        return melhor_valor
-    else:
-        melhor_valor = float('inf')
-        for i in range(3):
-            for j in range(3):
-                if tabuleiro[i][j] == '⬜':
-                    tabuleiro[i][j] = simbolo_jogador
-                    valor = minimax(tabuleiro, profundidade + 1, True, simbolo_bot, simbolo_jogador)
-                    tabuleiro[i][j] = '⬜'
-                    melhor_valor = min(melhor_valor, valor)
-        return melhor_valor
 
 # Função para o bot fazer uma jogada
 def bot_fazer_jogada(tabuleiro, simbolo_bot, simbolo_jogador):
@@ -126,34 +110,6 @@ def bot_fazer_jogada(tabuleiro, simbolo_bot, simbolo_jogador):
         if tabuleiro[i][j] == '⬜':
             tabuleiro[i][j] = simbolo_bot
             return tabuleiro
-
-# Função para criar botões do tabuleiro
-def criar_botoes_tabuleiro(tabuleiro):
-    markup = types.InlineKeyboardMarkup(row_width=3)
-    for i in range(3):
-        botoes = []
-        for j in range(3):
-            if tabuleiro[i][j] == '⬜':
-                botao = types.InlineKeyboardButton(text=f"{i * 3 + j + 1}", callback_data=f"jogada_{i}_{j}")
-            else:
-                botao = types.InlineKeyboardButton(text=tabuleiro[i][j], callback_data="jogada_disabled")
-            botoes.append(botao)
-        markup.add(*botoes)
-    return markup
-
-
-def iniciar_jogo_da_velha_fantasma(user_id, chat_id):
-    try:
-        tabuleiro = inicializar_tabuleiro()
-        globals.jogos_da_velha[user_id] = tabuleiro
-        
-        bot.send_message(chat_id, "Vamos jogar Jogo da Velha! Você é '✔️' e eu sou '❌'.\n\n" + mostrar_tabuleiro(tabuleiro))
-        
-        markup = criar_botoes_tabuleiro(tabuleiro)
-        bot.send_message(chat_id, "Escolha sua jogada (1-9):", reply_markup=markup)
-    except Exception as e:
-        print(f"Erro ao iniciar o jogo da velha com o fantasma: {e}")
-
 
 
 # Função para garantir que o jogador tenha sempre um caminho livre até a saída

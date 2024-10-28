@@ -124,45 +124,6 @@ def bloquear_acao(user_id, acao, minutos):
     conn.commit()
     fechar_conexao(cursor, conn)
 
-# Processa a jogada do jogador
-@bot.callback_query_handler(func=lambda call: call.data.startswith("jogada_"))
-def processar_jogada(call):
-    user_id = call.from_user.id
-    tabuleiro = halloween.jogos_da_velha[user_id]
-    _, i, j = call.data.split("_")
-    i, j = int(i), int(j)
-
-    if tabuleiro[i][j] != "⬜":
-        bot.answer_callback_query(call.id, "Posição já ocupada. Tente novamente.")
-        return
-
-    # Jogada do jogador
-    tabuleiro[i][j] = "✔️"
-    if verificar_vitoria(tabuleiro, "✔️"):
-        bot.edit_message_text(f"Parabéns! Você venceu!\n\n{mostrar_tabuleiro(tabuleiro)}", call.message.chat.id, call.message.message_id)
-        del halloween.jogos_da_velha[user_id]
-        return
-    if verificar_empate(tabuleiro):
-        bot.edit_message_text(f"Empate!\n\n{mostrar_tabuleiro(tabuleiro)}", call.message.chat.id, call.message.message_id)
-        del halloween.jogos_da_velha[user_id]
-        return
-
-    # Jogada do bot
-    bot_fazer_jogada(tabuleiro, "❌", "✔️")
-    if verificar_vitoria(tabuleiro, "❌"):
-        bot.edit_message_text(f"Eu venci! Melhor sorte na próxima vez.\n\n{mostrar_tabuleiro(tabuleiro)}", call.message.chat.id, call.message.message_id)
-        del halloween.jogos_da_velha[user_id]
-        return
-    if verificar_empate(tabuleiro):
-        bot.edit_message_text(f"Empate!\n\n{mostrar_tabuleiro(tabuleiro)}", call.message.chat.id, call.message.message_id)
-        del halloween.jogos_da_velha[user_id]
-        return
-
-    # Atualiza o tabuleiro para o próximo turno
-    bot.edit_message_text(mostrar_tabuleiro(tabuleiro), call.message.chat.id, call.message.message_id)
-    enviar_tabuleiro(call.message.chat.id, tabuleiro)
-
-
 @bot.callback_query_handler(func=lambda call: call.data.startswith('votar_'))
 def votar_usuario(call):
     id_usuario_avaliador = call.from_user.id

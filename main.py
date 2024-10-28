@@ -2163,7 +2163,11 @@ def realizar_halloween_travessura(user_id, chat_id):
         elif chance == 11:
             # Jogo da velha com um fantasma
             bot.send_message(chat_id, "👻 Um fantasma te desafiou para um jogo da velha! Se você ganhar, a travessura será evitada.")
-            iniciar_jogo_da_velha(user_id, chat_id)
+            jogos_da_velha[user_id] = inicializar_tabuleiro()
+            tabuleiro = jogos_da_velha[user_id]
+            bot.send_message(message.chat.id, "Jogo da Velha iniciado! Você é '✔️', eu sou '❌'.")
+            bot.send_message(message.chat.id, mostrar_tabuleiro(tabuleiro), reply_markup=criar_botoes_tabuleiro(tabuleiro))
+
 
         elif chance == 12:
             # Labirinto com um fantasma
@@ -2265,6 +2269,105 @@ def handle_halloween(message):
     else:
         print(f"DEBUG: Executando travessura para o usuário {user_id}")
         realizar_halloween_travessura(user_id, chat_id)  # Executa uma das funções de travessura
+
+# Armazena o tabuleiro de cada usuário
+jogos_da_velha = {}
+
+# Função para inicializar o tabuleiro vazio
+def inicializar_tabuleiro():
+    return [['⬜' for _ in range(3)] for _ in range(3)]
+
+# Função para exibir o tabuleiro
+def mostrar_tabuleiro(tabuleiro):
+    return '\n'.join([' '.join(row) for row in tabuleiro])
+
+# Verifica se há uma vitória
+def verificar_vitoria(tabuleiro, simbolo):
+    return any(
+        all(cell == simbolo for cell in row) for row in tabuleiro
+    ) or any(
+        all(tabuleiro[i][j] == simbolo for i in range(3)) for j in range(3)
+    ) or all(
+        tabuleiro[i][i] == simbolo for i in range(3)
+    ) or all(
+        tabuleiro[i][2 - i] == simbolo for i in range(3)
+    )
+
+# Verifica se o tabuleiro está completo (empate)
+def verificar_empate(tabuleiro):
+    return all(cell != '⬜' for row in tabuleiro for cell in row)
+
+# Função para jogada do bot (75% chance de escolher a melhor jogada)
+def bot_fazer_jogada(tabuleiro, simbolo_bot, simbolo_jogador):
+    if random.random() < 0.75:
+        # Melhor jogada
+        for i in range(3):
+            for j in range(3):
+                if tabuleiro[i][j] == '⬜':
+                    tabuleiro[i][j] = simbolo_bot
+                    if verificar_vitoria(tabuleiro, simbolo_bot):
+                        return  # Jogada vitoriosa
+                    tabuleiro[i][j] = '⬜'
+    # Jogada aleatória
+    while True:
+        i, j = random.randint(0, 2), random.randint(0, 2)
+        if tabuleiro[i][j] == '⬜':
+            tabuleiro[i][j] = simbolo_bot
+            break
+
+# Função para criar os botões do tabuleiro
+def criar_botoes_tabuleiro(tabuleiro):
+    markup = types.InlineKeyboardMarkup()
+    for i in range(3):
+        row = [
+            types.InlineKeyboardButton(
+                text=tabuleiro[i][j], callback_data=f'jogada_{i}_{j}'
+            ) for j in range(3)
+        ]
+        markup.row(*row)
+    return markup
+
+# Processa a jogada do jogador
+@bot.callback_query_handler(func=lambda call: call.data.startswith('jogada_'))
+def processar_jogada(call):
+    user_id = call.from_user.id
+    tabuleiro = jogos_da_velha.get(user_id)
+    if not tabuleiro:
+        bot.send_message(call.message.chat.id, "O jogo ainda não foi iniciado. Use /jogodavelha para começar.")
+        return
+
+    _, i, j = call.data.split('_')
+    i, j = int(i), int(j)
+
+    if tabuleiro[i][j] != '⬜':
+        bot.answer_callback_query(call.id, "Posição já ocupada. Escolha outra.")
+        return
+
+    # Jogada do jogador
+    tabuleiro[i][j] = '✔️'
+    if verificar_vitoria(tabuleiro, '✔️'):
+        bot.edit_message_text(f"🎉 Você venceu!\n{mostrar_tabuleiro(tabuleiro)}", call.message.chat.id, call.message.message_id)
+        jogos_da_velha.pop(user_id, None)
+        return
+    elif verificar_empate(tabuleiro):
+        bot.edit_message_text(f"😐 Empate!\n{mostrar_tabuleiro(tabuleiro)}", call.message.chat.id, call.message.message_id)
+        jogos_da_velha.pop(user_id, None)
+        return
+
+    # Jogada do bot
+    bot_fazer_jogada(tabuleiro, '❌', '✔️')
+    if verificar_vitoria(tabuleiro, '❌'):
+        bot.edit_message_text(f"😎 Eu venci! Tente novamente.\n{mostrar_tabuleiro(tabuleiro)}", call.message.chat.id, call.message.message_id)
+        jogos_da_velha.pop(user_id, None)
+        return
+    elif verificar_empate(tabuleiro):
+        bot.edit_message_text(f"😐 Empate!\n{mostrar_tabuleiro(tabuleiro)}", call.message.chat.id, call.message.message_id)
+        jogos_da_velha.pop(user_id, None)
+        return
+
+    # Atualizar tabuleiro para o próximo turno
+    bot.edit_message_text(mostrar_tabuleiro(tabuleiro), call.message.chat.id, call.message.message_id, reply_markup=criar_botoes_tabuleiro(tabuleiro))
+
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("descartar_caixa_"))
 def callback_descartar_caixa(call):

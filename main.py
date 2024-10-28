@@ -123,6 +123,66 @@ def bloquear_acao(user_id, acao, minutos):
     cursor.execute("INSERT INTO bloqueios (id_usuario, acao, fim_bloqueio) VALUES (%s, %s, %s)", (user_id, acao, fim_bloqueio))
     conn.commit()
     fechar_conexao(cursor, conn)
+@bot.callback_query_handler(func=lambda call: call.data.startswith('jogada_'))
+def processar_jogada(call):
+    try:
+        user_id = call.from_user.id
+        # Verifica se o jogo foi iniciado para o usuário
+        if user_id not in globals.jogos_da_velha:
+            bot.send_message(call.message.chat.id, "Você não iniciou um jogo da velha. Use /jogodavelha para começar.")
+            return
+
+        tabuleiro = globals.jogos_da_velha[user_id]
+        _, i, j = call.data.split('_')
+        i, j = int(i), int(j)
+
+        # Verifica se a célula escolhida está vazia
+        if tabuleiro[i][j] != '⬜':
+            bot.answer_callback_query(call.id, "Essa posição já está ocupada!")
+            return
+
+        # Atualiza o tabuleiro com a jogada do jogador
+        tabuleiro[i][j] = '✔️'
+
+        # Verifica se o jogador venceu
+        if verificar_vitoria(tabuleiro, '✔️'):
+            bot.edit_message_text(f"🎉 Parabéns! Você venceu!\n\n{mostrar_tabuleiro(tabuleiro)}", 
+                                  call.message.chat.id, call.message.message_id)
+            del globals.jogos_da_velha[user_id]
+            return
+
+        # Verifica se houve empate
+        if verificar_empate(tabuleiro):
+            bot.edit_message_text(f"😐 Empate!\n\n{mostrar_tabuleiro(tabuleiro)}", 
+                                  call.message.chat.id, call.message.message_id)
+            del globals.jogos_da_velha[user_id]
+            return
+
+        # Jogada do bot
+        tabuleiro = bot_fazer_jogada(tabuleiro, '❌', '✔️')
+
+        # Verifica se o bot venceu
+        if verificar_vitoria(tabuleiro, '❌'):
+            bot.edit_message_text(f"😎 Eu venci! Melhor sorte da próxima vez.\n\n{mostrar_tabuleiro(tabuleiro)}", 
+                                  call.message.chat.id, call.message.message_id)
+            del globals.jogos_da_velha[user_id]
+            return
+
+        # Verifica novamente se houve empate após a jogada do bot
+        if verificar_empate(tabuleiro):
+            bot.edit_message_text(f"😐 Empate!\n\n{mostrar_tabuleiro(tabuleiro)}", 
+                                  call.message.chat.id, call.message.message_id)
+            del globals.jogos_da_velha[user_id]
+            return
+
+        # Atualiza o tabuleiro com os novos botões para o próximo turno
+        markup = criar_botoes_tabuleiro(tabuleiro)
+        bot.edit_message_text(f"Seu turno!\n\n{mostrar_tabuleiro(tabuleiro)}", 
+                              call.message.chat.id, call.message.message_id, reply_markup=markup)
+
+    except Exception as e:
+        print(f"Erro ao processar a jogada no jogo da velha: {e}")
+    
 @bot.callback_query_handler(func=lambda call: call.data.startswith('votar_'))
 def votar_usuario(call):
     id_usuario_avaliador = call.from_user.id

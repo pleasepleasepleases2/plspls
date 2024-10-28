@@ -350,18 +350,80 @@ def inicializar_tabuleiro():
 def mostrar_tabuleiro(tabuleiro):
     return '\n'.join([' '.join(row) for row in tabuleiro])
 
-# Verifica se há uma vitória
+# Verifica se há uma vitória (adaptado para garantir que a lógica é aplicada corretamente)
 def verificar_vitoria(tabuleiro, simbolo):
+    # Verificar linhas e colunas
     for i in range(3):
         if all(tabuleiro[i, j] == simbolo for j in range(3)):  # Linha
             return True
         if all(tabuleiro[j, i] == simbolo for j in range(3)):  # Coluna
             return True
+    # Verificar diagonais
     if all(tabuleiro[i, i] == simbolo for i in range(3)):      # Diagonal principal
         return True
     if all(tabuleiro[i, 2 - i] == simbolo for i in range(3)):  # Diagonal secundária
         return True
     return False
+
+# Processa a jogada do jogador
+@bot.callback_query_handler(func=lambda call: call.data.startswith('jogada_'))
+def processar_jogada(call):
+    user_id = call.from_user.id
+    tabuleiro = jogos_da_velha.get(user_id)
+    if tabuleiro is None:
+        bot.send_message(call.message.chat.id, "O jogo ainda não foi iniciado. Use /jogodavelha para começar.")
+        return
+
+    _, i, j = call.data.split('_')
+    i, j = int(i), int(j)
+
+    if tabuleiro[i][j] != '⬜':
+        bot.answer_callback_query(call.id, "Posição já ocupada. Escolha outra.")
+        return
+
+    # Jogada do jogador
+    tabuleiro[i][j] = '✔️'
+    if verificar_vitoria(tabuleiro, '✔️'):
+        finalizar_jogo_da_velha(user_id, call.message.chat.id, "vitoria")
+        return
+
+    # Verifica empate após a jogada do jogador
+    if verificar_empate(tabuleiro):
+        finalizar_jogo_da_velha(user_id, call.message.chat.id, "empate")
+        return
+
+    # Jogada do bot
+    bot_fazer_jogada(tabuleiro, '❌', '✔️')
+    if verificar_vitoria(tabuleiro, '❌'):
+        finalizar_jogo_da_velha(user_id, call.message.chat.id, "derrota")
+        return
+
+    # Verifica empate após a jogada do bot
+    if verificar_empate(tabuleiro):
+        finalizar_jogo_da_velha(user_id, call.message.chat.id, "empate")
+        return
+
+    # Atualizar tabuleiro para o próximo turno
+    bot.edit_message_text(mostrar_tabuleiro(tabuleiro), call.message.chat.id, call.message.message_id, reply_markup=criar_botoes_tabuleiro(tabuleiro))
+
+# Função para finalizar o jogo e notificar o resultado
+def finalizar_jogo_da_velha(user_id, chat_id, resultado):
+    if resultado == "vitoria":
+        cenouras_ganhas = random.randint(50, 100)
+        aumentar_cenouras(user_id, cenouras_ganhas)
+        bot.send_message(chat_id, f"🎉 Parabéns! Você venceu e ganhou {cenouras_ganhas} cenouras!")
+    elif resultado == "derrota":
+        cenouras_perdidas = random.randint(20, 50)
+        diminuir_cenouras(user_id, cenouras_perdidas)
+        bot.send_message(chat_id, f"😢 Você perdeu e perdeu {cenouras_perdidas} cenouras.")
+    elif resultado == "empate":
+        cenouras_ganhas = random.randint(50, 80)
+        aumentar_cenouras(user_id, cenouras_ganhas)
+        bot.send_message(chat_id, f"😐 Empate! Você ganhou {cenouras_ganhas} cenouras como consolação.")
+    # Remover o jogo da lista ativa
+    if user_id in jogos_da_velha:
+        del jogos_da_velha[user_id]
+
 
 # Verifica se o tabuleiro está completo (empate)
 def verificar_empate(tabuleiro):
@@ -429,63 +491,6 @@ def criar_botoes_tabuleiro(tabuleiro):
         markup.row(*row)
     return markup
 
-# Processa a jogada do jogador
-@bot.callback_query_handler(func=lambda call: call.data.startswith('jogada_'))
-def processar_jogada(call):
-    user_id = call.from_user.id
-    tabuleiro = jogos_da_velha.get(user_id)
-    if tabuleiro is None:
-        bot.send_message(call.message.chat.id, "O jogo ainda não foi iniciado. Use /jogodavelha para começar.")
-        return
-
-    _, i, j = call.data.split('_')
-    i, j = int(i), int(j)
-
-    if tabuleiro[i][j] != '⬜':
-        bot.answer_callback_query(call.id, "Posição já ocupada. Escolha outra.")
-        return
-
-    # Jogada do jogador
-    tabuleiro[i][j] = '✔️'
-    if verificar_vitoria(tabuleiro, '✔️'):
-        finalizar_jogo_da_velha(user_id, call.message.chat.id, "vitoria")
-        return
-
-    # Verifica empate após a jogada do jogador
-    if verificar_empate(tabuleiro):
-        finalizar_jogo_da_velha(user_id, call.message.chat.id, "empate")
-        return
-
-    # Jogada do bot
-    bot_fazer_jogada(tabuleiro, '❌', '✔️')
-    if verificar_vitoria(tabuleiro, '❌'):
-        finalizar_jogo_da_velha(user_id, call.message.chat.id, "derrota")
-        return
-
-    # Verifica empate após a jogada do bot
-    if verificar_empate(tabuleiro):
-        finalizar_jogo_da_velha(user_id, call.message.chat.id, "empate")
-        return
-
-    # Atualizar tabuleiro para o próximo turno
-    bot.edit_message_text(mostrar_tabuleiro(tabuleiro), call.message.chat.id, call.message.message_id, reply_markup=criar_botoes_tabuleiro(tabuleiro))
-
-# Função para finalizar o jogo
-def finalizar_jogo_da_velha(user_id, chat_id, resultado):
-    if resultado == "vitoria":
-        cenouras_ganhas = random.randint(50, 100)
-        aumentar_cenouras(user_id, cenouras_ganhas)
-        bot.send_message(chat_id, f"🎉 Parabéns! Você venceu e ganhou {cenouras_ganhas} cenouras!")
-    elif resultado == "derrota":
-        cenouras_perdidas = random.randint(20, 50)
-        diminuir_cenouras(user_id, cenouras_perdidas)
-        bot.send_message(chat_id, f"😢 Você perdeu e perdeu {cenouras_perdidas} cenouras.")
-    elif resultado == "empate":
-        cenouras_ganhas = random.randint(50, 80)
-        aumentar_cenouras(user_id, cenouras_ganhas)
-        bot.send_message(chat_id, f"😐 Empate! Você ganhou {cenouras_ganhas} cenouras como consolação.")
-    del jogos_da_velha[user_id]
-    
 # Função para aplicar a travessura ao usuário
 def aplicar_travessura(user_id, chat_id):
     try:

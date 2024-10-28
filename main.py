@@ -2431,10 +2431,6 @@ def realizar_halloween_travessura(user_id, chat_id):
                 fechar_conexao(cursor, conn)
 
         elif chance == 19:
-            # Carta roubada por um demônio
-            iniciar_demonio_roubo_carta(user_id, chat_id)
-
-        elif chance == 20:
             # Carta aleatória do inventário será apagada
             apagar_carta_aleatoria(user_id, chat_id)
             bot.send_message(chat_id, "💀 Travessura! Uma carta aleatória foi apagada do seu inventário.")

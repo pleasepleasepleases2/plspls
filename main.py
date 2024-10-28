@@ -162,6 +162,7 @@ def processar_jogada(call):
     bot.edit_message_text(mostrar_tabuleiro(tabuleiro), call.message.chat.id, call.message.message_id)
     enviar_tabuleiro(call.message.chat.id, tabuleiro)
 
+
 @bot.callback_query_handler(func=lambda call: call.data.startswith('votar_'))
 def votar_usuario(call):
     id_usuario_avaliador = call.from_user.id

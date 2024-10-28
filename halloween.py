@@ -17,6 +17,9 @@ aboboras = {
 }
 
 
+# Estrutura global para armazenar jogos
+jogos_da_velha = defaultdict(lambda: [["⬜"] * 3 for _ in range(3)])
+
 def troca_invertida(user_id, chat_id):
     try:
         conn, cursor = conectar_banco_dados()

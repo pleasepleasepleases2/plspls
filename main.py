@@ -752,6 +752,21 @@ def adicionar_vip_temporario(user_id, grupo_sugestao,chat_id):
         print(f"Erro ao adicionar VIP temporário: {e}")
     finally:
         fechar_conexao(cursor, conn)
+
+# Função para aumentar as cenouras de um usuário
+def aumentar_cenouras(user_id, quantidade):
+    try:
+        conn = conectar_banco_dados()
+        cursor = conn.cursor()
+        # Atualiza o campo `cenouras` na tabela `usuarios` adicionando a quantidade
+        cursor.execute("UPDATE usuarios SET cenouras = cenouras + %s WHERE id_usuario = %s", (quantidade, user_id))
+        conn.commit()
+        cursor.close()
+        conn.close()
+        print(f"DEBUG: Cenouras aumentadas em {quantidade} para o usuário {user_id}.")
+    except Exception as e:
+        print(f"Erro ao aumentar cenouras para o usuário {user_id}: {e}")
+
 def alterar_usuario(user_id, coluna, valor_novo,chat_id):
     """
     Função genérica para alterar um campo específico na tabela `usuarios`.
@@ -2314,29 +2329,56 @@ def processar_jogada(call):
     # Jogada do jogador
     tabuleiro[i][j] = '✔️'
     if verificar_vitoria(tabuleiro, '✔️'):
-        bot.edit_message_text(f"🎉 Você venceu!\n{mostrar_tabuleiro(tabuleiro)}", call.message.chat.id, call.message.message_id)
-        jogos_da_velha.pop(user_id, None)
-        return
+        finalizar_jogo_da_velha(user_id, chat_id, "vitoria")
     elif verificar_empate(tabuleiro):
-        bot.edit_message_text(f"😐 Empate!\n{mostrar_tabuleiro(tabuleiro)}", call.message.chat.id, call.message.message_id)
-        jogos_da_velha.pop(user_id, None)
-        return
-
+        finalizar_jogo_da_velha(user_id, chat_id, "empate")
     # Jogada do bot
     bot_fazer_jogada(tabuleiro, '❌', '✔️')
     if verificar_vitoria(tabuleiro, '❌'):
-        bot.edit_message_text(f"😎 Eu venci! Tente novamente.\n{mostrar_tabuleiro(tabuleiro)}", call.message.chat.id, call.message.message_id)
-        jogos_da_velha.pop(user_id, None)
-        return
+        finalizar_jogo_da_velha(user_id, chat_id, "derrota")
     elif verificar_empate(tabuleiro):
-        bot.edit_message_text(f"😐 Empate!\n{mostrar_tabuleiro(tabuleiro)}", call.message.chat.id, call.message.message_id)
-        jogos_da_velha.pop(user_id, None)
-        return
+        finalizar_jogo_da_velha(user_id, chat_id, "empate")
 
     # Atualizar tabuleiro para o próximo turno
     bot.edit_message_text(mostrar_tabuleiro(tabuleiro), call.message.chat.id, call.message.message_id, reply_markup=criar_botoes_tabuleiro(tabuleiro))
 
+def finalizar_jogo_da_velha(user_id, chat_id, resultado):
+    """
+    Função para lidar com o final do jogo da velha, aplicando recompensas e penalidades.
+    """
+    if resultado == "vitoria":
+        # Recompensa ao vencer: Cenouras ou carta faltante
+        if random.random() < 0.5:
+            cenouras_ganhas = random.randint(50, 100)
+            aumentar_cenouras(user_id, cenouras_ganhas)
+            bot.send_message(chat_id, f"🎉 Parabéns! Você venceu e ganhou {cenouras_ganhas} cenouras!")
+        else:
+            adicionar_carta_faltante_halloween(user_id)
+            bot.send_message(chat_id, "🎉 Parabéns! Você venceu e ganhou uma carta faltante do evento de Halloween!")
 
+    elif resultado == "derrota":
+        # Penalidade ao perder: Perde cenouras ou uma carta aleatória
+        if random.random() < 0.5:
+            cenouras_perdidas = random.randint(20, 50)
+            reduzir_cenouras(user_id, cenouras_perdidas)
+            bot.send_message(chat_id, f"😢 Você perdeu e perdeu {cenouras_perdidas} cenouras.")
+        else:
+            remover_carta_aleatoria(user_id)
+            bot.send_message(chat_id, "😢 Você perdeu e perdeu uma carta aleatória do seu inventário.")
+
+    elif resultado == "empate":
+        # Penalidade e recompensa no empate
+        cenouras_perdidas = random.randint(10, 30)
+        cenouras_ganhas = random.randint(10, 30)
+        reduzir_cenouras(user_id, cenouras_perdidas)
+        aumentar_cenouras(user_id, cenouras_ganhas)
+        bot.send_message(
+            chat_id,
+            f"😐 Empate! Você perdeu {cenouras_perdidas} cenouras, mas ganhou {cenouras_ganhas} cenouras como consolação."
+        )
+
+    # Remover o jogo do usuário após o final
+    del jogos_da_velha[user_id]
 @bot.callback_query_handler(func=lambda call: call.data.startswith("descartar_caixa_"))
 def callback_descartar_caixa(call):
     user_id = call.from_user.id

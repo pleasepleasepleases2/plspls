@@ -2190,7 +2190,7 @@ def realizar_halloween_travessura(user_id, chat_id):
 
         elif chance == 17:
             # Alucinação: mensagens incompletas
-            ativar_travessura_embaralhamento(chat_id, id_usuario)
+            ativar_travessura_embaralhamento(chat_id, user_id)
             
         elif chance == 18:
             # Registrar a travessura na tabela

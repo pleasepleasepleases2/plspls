@@ -18,34 +18,8 @@ aboboras = {
 }
 
 
-# Estrutura global para armazenar jogos
+# Estrutura global para armazenar jogos com tabuleiros vazios
 jogos_da_velha = defaultdict(lambda: [["⬜"] * 3 for _ in range(3)])
-
-def troca_invertida(user_id, chat_id):
-    try:
-        conn, cursor = conectar_banco_dados()
-
-        # Definir o tempo de duração da praga aleatoriamente entre 5 e 60 minutos
-        duracao_minutos = random.randint(5, 60)
-        fim_travessura = datetime.now() + timedelta(minutes=duracao_minutos)
-
-        # Inserir a praga na tabela 'travessuras' para o usuário
-        cursor.execute("""
-            INSERT INTO travessuras (id_usuario, tipo_travessura, fim_travessura)
-            VALUES (%s, 'troca_invertida', %s)
-            ON DUPLICATE KEY UPDATE fim_travessura = %s
-        """, (user_id, fim_travessura, fim_travessura))
-
-        conn.commit()
-
-        # Informar o usuário que ele foi amaldiçoado com a duração da travessura
-        bot.send_message(chat_id, f"🎭 Travessura! A ordem dos comandos das suas próximas trocas foi invertida por {duracao_minutos} minutos. Tome cuidado!")
-
-    except Exception as e:
-        print(f"Erro ao aplicar praga: {e}")
-    finally:
-        fechar_conexao(cursor, conn)
-
 # Função para exibir o tabuleiro
 def mostrar_tabuleiro(tabuleiro):
     return "\n".join([" ".join(linha) for linha in tabuleiro])
@@ -79,7 +53,7 @@ def encontrar_melhor_jogada(tabuleiro, simbolo_bot, simbolo_jogador):
                 elif verificar_vitoria(tabuleiro, simbolo_jogador):
                     valor = -10  # Prioridade para bloquear o jogador
                 else:
-                    valor = 0  # Neutral jogada
+                    valor = 0  # Jogada neutra
                 tabuleiro[i][j] = "⬜"
                 if valor > melhor_valor:
                     melhor_valor = valor
@@ -103,6 +77,7 @@ def bot_fazer_jogada(tabuleiro, simbolo_bot, simbolo_jogador):
 
 # Função principal para iniciar o jogo
 def iniciar_jogo_da_velha(user_id, chat_id):
+    jogos_da_velha[user_id] = [["⬜"] * 3 for _ in range(3)]  # Inicializa o tabuleiro com células vazias
     tabuleiro = jogos_da_velha[user_id]
     bot.send_message(chat_id, "Jogo da Velha iniciado! Você é '✔️', eu sou '❌'.\n\n" + mostrar_tabuleiro(tabuleiro))
     enviar_tabuleiro(chat_id, tabuleiro)
@@ -119,6 +94,32 @@ def enviar_tabuleiro(chat_id, tabuleiro):
         ]
         markup.row(*row)
     bot.send_message(chat_id, "Escolha sua jogada:", reply_markup=markup)
+
+def troca_invertida(user_id, chat_id):
+    try:
+        conn, cursor = conectar_banco_dados()
+
+        # Definir o tempo de duração da praga aleatoriamente entre 5 e 60 minutos
+        duracao_minutos = random.randint(5, 60)
+        fim_travessura = datetime.now() + timedelta(minutes=duracao_minutos)
+
+        # Inserir a praga na tabela 'travessuras' para o usuário
+        cursor.execute("""
+            INSERT INTO travessuras (id_usuario, tipo_travessura, fim_travessura)
+            VALUES (%s, 'troca_invertida', %s)
+            ON DUPLICATE KEY UPDATE fim_travessura = %s
+        """, (user_id, fim_travessura, fim_travessura))
+
+        conn.commit()
+
+        # Informar o usuário que ele foi amaldiçoado com a duração da travessura
+        bot.send_message(chat_id, f"🎭 Travessura! A ordem dos comandos das suas próximas trocas foi invertida por {duracao_minutos} minutos. Tome cuidado!")
+
+    except Exception as e:
+        print(f"Erro ao aplicar praga: {e}")
+    finally:
+        fechar_conexao(cursor, conn)
+
 
 # Função para garantir que o jogador tenha sempre um caminho livre até a saída
 def gerar_labirinto_com_caminho_e_validacao(tamanho=10):

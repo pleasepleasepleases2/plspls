@@ -7,7 +7,7 @@ import socketserver
 from telebot.types import InputMediaPhoto, InlineKeyboardMarkup, InlineKeyboardButton
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from socketserver import ThreadingMixIn
-
+import numpy as np
 #Conexão com o Banco de Dados
 import mysql.connector
 from mysql.connector import Error
@@ -2496,39 +2496,51 @@ def verificar_empate(tabuleiro):
 
 import random
 
-# Função para jogada do bot (75% chance de escolher a melhor jogada)
-def bot_fazer_jogada(tabuleiro, simbolo_bot, simbolo_jogador):
-    # Chance de 75% de tentar a melhor jogada
-    if random.random() < 0.75:
-        melhor_jogada = None
+# Função Minimax para determinar a melhor jogada do bot
+def minimax(tabuleiro, profundidade, is_maximizador, simbolo_bot, simbolo_jogador):
+    if verificar_vitoria(tabuleiro, simbolo_bot):
+        return 10 - profundidade
+    elif verificar_vitoria(tabuleiro, simbolo_jogador):
+        return profundidade - 10
+    elif verificar_empate(tabuleiro):
+        return 0
 
-        # Avalia todas as posições possíveis para o bot
+    if is_maximizador:
+        melhor_valor = -np.inf
         for i in range(3):
             for j in range(3):
                 if tabuleiro[i][j] == '⬜':
-                    # Faz uma jogada temporária
                     tabuleiro[i][j] = simbolo_bot
-                    # Verifica se essa jogada leva à vitória
-                    if verificar_vitoria(tabuleiro, simbolo_bot):
-                        return  # Faz a jogada imediatamente se for vitoriosa
-                    # Desfaz a jogada temporária
+                    valor = minimax(tabuleiro, profundidade + 1, False, simbolo_bot, simbolo_jogador)
                     tabuleiro[i][j] = '⬜'
-                    # Armazena a jogada como uma possível melhor jogada
+                    melhor_valor = max(melhor_valor, valor)
+        return melhor_valor
+    else:
+        melhor_valor = np.inf
+        for i in range(3):
+            for j in range(3):
+                if tabuleiro[i][j] == '⬜':
+                    tabuleiro[i][j] = simbolo_jogador
+                    valor = minimax(tabuleiro, profundidade + 1, True, simbolo_bot, simbolo_jogador)
+                    tabuleiro[i][j] = '⬜'
+                    melhor_valor = min(melhor_valor, valor)
+        return melhor_valor
+
+# Função para jogada do bot usando minimax
+def bot_fazer_jogada(tabuleiro, simbolo_bot, simbolo_jogador):
+    melhor_valor = -np.inf
+    melhor_jogada = None
+    for i in range(3):
+        for j in range(3):
+            if tabuleiro[i][j] == '⬜':
+                tabuleiro[i][j] = simbolo_bot
+                valor = minimax(tabuleiro, 0, False, simbolo_bot, simbolo_jogador)
+                tabuleiro[i][j] = '⬜'
+                if valor > melhor_valor:
+                    melhor_valor = valor
                     melhor_jogada = (i, j)
-        
-        # Se encontrou uma jogada vantajosa mas não vitoriosa
-        if melhor_jogada:
-            i, j = melhor_jogada
-            tabuleiro[i][j] = simbolo_bot
-            return
-
-    # Se não fizer a jogada ideal, faz uma jogada aleatória
-    while True:
-        i, j = random.randint(0, 2), random.randint(0, 2)
-        if tabuleiro[i][j] == '⬜':
-            tabuleiro[i][j] = simbolo_bot
-            break
-
+    if melhor_jogada:
+        tabuleiro[melhor_jogada] = simbolo_bot
 # Função para criar os botões do tabuleiro
 def criar_botoes_tabuleiro(tabuleiro):
     markup = types.InlineKeyboardMarkup()

@@ -154,78 +154,7 @@ def iniciar_jogo_da_velha_fantasma(user_id, chat_id):
         print(f"Erro ao iniciar o jogo da velha com o fantasma: {e}")
 
 
-# Função para processar a jogada do jogador
-def processar_jogada_jogador(call):
-    try:
-        id_usuario = call.from_user.id
-        if id_usuario not in jogos_da_velha:
-            bot.send_message(call.message.chat.id, "👻 Você não iniciou um jogo da velha. Use /jogodavelha para começar.")
-            return
 
-        if call.data == "jogada_disabled":
-            bot.answer_callback_query(call.id, "Essa posição já está ocupada!")
-            return
-
-        tabuleiro = jogos_da_velha[id_usuario]
-        _, i, j = call.data.split('_')
-        i, j = int(i), int(j)
-
-        if tabuleiro[i][j] != '⬜':
-            bot.answer_callback_query(call.id, "Essa posição já está ocupada!")
-            return
-
-        tabuleiro[i][j] = '✔️'
-
-        if verificar_vitoria(tabuleiro, '✔️'):
-            bot.edit_message_text(
-                f"🎉 Você venceu o fantasma!\n\n{mostrar_tabuleiro(tabuleiro)}",
-                call.message.chat.id,
-                call.message.message_id
-            )
-            del jogos_da_velha[id_usuario]
-            return
-
-        if verificar_empate(tabuleiro):
-            bot.edit_message_text(
-                f"😐 Empate!\n\n{mostrar_tabuleiro(tabuleiro)}",
-                call.message.chat.id,
-                call.message.message_id
-            )
-            del jogos_da_velha[id_usuario]
-            return
-
-        tabuleiro = bot_fazer_jogada(tabuleiro, '❌', '✔️')
-
-        if verificar_vitoria(tabuleiro, '❌'):
-            bot.edit_message_text(
-                f"😎 O fantasma venceu! Mais sorte da próxima vez.\n\n{mostrar_tabuleiro(tabuleiro)}",
-                call.message.chat.id,
-                call.message.message_id
-            )
-            del jogos_da_velha[id_usuario]
-            return
-
-        if verificar_empate(tabuleiro):
-            bot.edit_message_text(
-                f"😐 Empate!\n\n{mostrar_tabuleiro(tabuleiro)}",
-                call.message.chat.id,
-                call.message.message_id
-            )
-            del jogos_da_velha[id_usuario]
-            return
-
-        markup = criar_botoes_tabuleiro(tabuleiro)
-        bot.edit_message_text(
-            f"Seu turno!\n\n{mostrar_tabuleiro(tabuleiro)}",
-            call.message.chat.id,
-            call.message.message_id,
-            reply_markup=markup
-        )
-
-    except Exception as e:
-        print(f"Erro ao processar o jogo da velha: {e}")
-        traceback.print_exc()
-#labirinto
 # Função para garantir que o jogador tenha sempre um caminho livre até a saída
 def gerar_labirinto_com_caminho_e_validacao(tamanho=10):
     labirinto = [['🪨' for _ in range(tamanho)] for _ in range(tamanho)]

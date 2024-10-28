@@ -110,7 +110,7 @@ def confirmar_doacao(call):
             bot.send_message(call.message.chat.id, "Dados de doação inválidos.")
             return
         # Verificar se a travessura de embaralhamento está ativa
-        embaralhamento_ativo = verificar_travessura_ativa(id_usuario)
+        embaralhamento_ativo = verificar_travessura_ativa(eu)
         eu = int(data[1])
         minhacarta = int(data[2])
         destinatario_id = int(data[3])

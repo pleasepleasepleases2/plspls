@@ -2362,7 +2362,7 @@ def realizar_halloween_travessura(user_id, chat_id):
         elif chance == 12:
             # Labirinto com um fantasma
             bot.send_message(chat_id, "👻 Um fantasma te desafiou para escapar de um labirinto!")
-            iniciar_labirinto(message)
+            iniciar_labirinto(user_id,chat_id)
 
         elif chance == 13:
             # Travessura acontece com todos os que mandaram mensagem no grupo nos últimos 10 minutos

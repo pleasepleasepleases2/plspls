@@ -2353,7 +2353,7 @@ def finalizar_jogo_da_velha(user_id, chat_id, resultado):
             aumentar_cenouras(user_id, cenouras_ganhas)
             bot.send_message(chat_id, f"🎉 Parabéns! Você venceu e ganhou {cenouras_ganhas} cenouras!")
         else:
-            adicionar_carta_faltante_halloween(user_id)
+            adicionar_carta_faltante_halloween(user_id, chat_id)
             bot.send_message(chat_id, "🎉 Parabéns! Você venceu e ganhou uma carta faltante do evento de Halloween!")
 
     elif resultado == "derrota":

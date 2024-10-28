@@ -2011,7 +2011,15 @@ def realizar_halloween_travessura(user_id, chat_id):
                 "Richarlissom José Tite Junior Paquetá piuzinho Lucas burrao da Silva 🇧🇷🇧🇷🇧🇷", 
                 "Jaiminho Carteiro", 
                 "Dona Florinda", 
-                "Boça"
+                "Boça",
+                "Lindah💍", 
+                "Gattinha😋", 
+                "Maravilhosa🌸", 
+                "#TãÖö_LïNdÄa 😍😍👏❤️💘💍💑👑💞🍃 ", 
+                "#RöStÏnHöÖ_Dë_PrÏnCëSäÄ🙆👑✊😍😍😘👏💘❤️💍💞", 
+                "seloko fidelidade e pra cachorro🔥nois e patife", 
+                "sai fora pvt", 
+                "Boça",
                 "Rei dos Áudios de 7 Minutos"
             ])
             mudar_nome_usuario(user_id, nome_novo, chat_id)
@@ -2103,6 +2111,31 @@ def realizar_halloween_travessura(user_id, chat_id):
                 "Sextou com s de saudades do ex",
                 "Esquerdista 🍁 Evangelica 🙏 Feminista 🚺  Homofobica 🏳‍🌈 Independente 💪 Bolsonaro2k18 🇧🇷",
                 "se viro profesora sua mocreia lacraia malasafraia desalmada ordinaria fedida catingueira",
+                "Ei machão😡😡😡😡🤬🤬, acha bonito enganar mulher 👩👩👩né…🤬 se pagar de gostosão😋😋🤬 né? Jogadorzinho de lol 🤮🤮🤮🤮🥶 sem caráter, aprende a respeitar as mulheres 🤬🤬😡👩👩 viu, acho bom 😁😁, chamar uma mulher 👩👩👩 pra sair 🏃🏃🏃 e ficar com outra 👱‍♀️👱‍♀️👱‍♀️👱‍♀️, tu tem vergonha 🙈🙈 na cara 😳😳 não 😡😡😡😡? Tem caráter não 😡🤯🤬? Tu é um molequezinho 👶👶👶👶 sem caráter👺👺💢! Tu fez uma coisa mais ridícula 😒😒😒😒, tu quer ser homem👨‍🦰👨‍🦰👨‍🦰👨‍🎓👨‍🎓👨‍🎤👨‍🏫? Começa a agir como um🤸‍♂️🤸‍♂️🤸‍♂️🤸‍♂️, seu moleque👼👼👼…",
+                "POR FAVOR NAO COMPRE O LANCHE DO BTS DO MCDONALDS SE VOCE NAO FOR ARMY. VOCE VAI ESTAR IMPEDINDO OS VERDADEIROS FÃS DO BTS QUE ESPERARAM MESES PARA PODER COMER. COMER OS MOLHOS SEM ENTENDER O SIGNIFICADO É LITERALMENTE APROPRIAÇÃO CULTURAL E NÃO ESTA TUDO BEM  : )",
+                "se viro profesora sua mocreia lacraia malasafraia desalmada ordinaria fedida catingueira",
+                "olha o pronome neutro 👻👻 olha a lacração 👻👻 olha os gay andando na rua 👻👻👻 olha o personagem preto 👻👻👻 buuuu olha a agenda woke 👻👻",
+                "Bom🥺dia🥺gente🥺eu🥺estou🥺querendo🥺uma🥺coisa🥺mas🥺to🥺com🥺vergonha🥺de🥺pedir🥺",
+                "gente, acabei de receber um email com uma intimação judicial e eu fiquei ??? Aparentemente to sendo processado e preciso comparecer amanhã as 16h no fórum com um advogado pq me denunciaram por ser o sonho de toda sogra",
+                "BARK 🤬🐗WOOF 🐒BARK 🐕‍🦺RUFF 😡🐺BARK 🐻BARK 🤬🦊BARK 🐕BARK 🐻WOOF 🐕WOOF 🦊RUFF 🐂RUFF🦮 GRRRRR🐕‍🦺 BARK🐶 BARK 🤬🦁WOOF😡🙊 WOOF 🦁GRRRR🐶 RUFF 🐴RUFF🐗 BARK🐺 😡WOOF🦮 RUFF🐕 GRRRR🐶 BARK 🐕‍🦺BARK BARK 🤬🐗WOOF 🐒BARK 🐕‍🦺RUFF 😡🐺BARK 🐻BARK 🤬🦊BARK 🐕BARK",
+                "nem hetero\nnem homossexual\neu pertenço ao mundo animal\nmeus pronomes?\njagua/tirica",
+                "👑*-AtenÇão 😱😱To Vendo Uma Lindeza😍Uma Perfeição😍😘Na Minha Frente😁😍😘 Vc Chego Ao LiiMitte ⚠️⚠️🚧 De Liindezha 🎥📹📷📷💝😍😘❤️💘 Ir PerfeiÇãoO 😍😘😊❤️💚-Miin-Descullpa 👆👆 Maiis Me Enprestta Un Ocullos 😎😎 Porque Sua Belleza Incomodaa Muita Gente❤️💚💞💕😌😌🍃IluMinar Maiis Que O Sol..😍😍❤️💞💓🍃😘😍😍Chega Meu Celular Travo📱📱📱De Tanta Beleza...😍😍😍😍....🚧🚦 Parou o Face.. Kaundo Vi Essa Foto,, Sllk Essa Ft Ta a Sensação,, Do Meu Face 👇👇👇👇👇👇👇👇😍💘😎...😱😱😱 A Melhor Ft Q Ja Vi Ate Agora Sem Mentira...😍.....Toca Fogo Na Inveja Que Essa Foto Ta a Mais Lindah Das Perffeiccoes...😍😍😍",
+                "se viro profesora sua mocreia lacraia malasafraia desalmada ordinaria fedida catingueira",
+                "😍- Princesa 😍👊♡ 👏😱❤️ tão Lindaa ❤️😱👏CHUPA DISNEY ESSA PRINCESA VOCÊS NÃO TEM 👊 ",
+                "Para tudu😱😱🖐🖐 olha essa princesa 👑✔️a disney vai a falensia🔝✔️a mais gata😻✔️a mais top🔝😍✔️plincesaah✔️divaah💜💚💙👑✔️ seducao 👑✔️taum perfeitah💕👏✔️taum rainha👑😍✔️taum lindah😻✔️meu face parou so pra te ver😍 Ta isperanu oq pra mebja 😍😘❤️🔝👌 sorriahh, alguein pode se apaixonahh pelo seu sorrisuhh😍🔝💘To digitando com os pé pq ca mão to aplaudindo",
+                "Vamos falar de coisa boa,chegou a filmadora mais vendida do Brasil , é a Tekpix Ela grava,filma,é mp3,tem saída de áudio e de tv . É a filmadora que faltava na sua casa. E ta vendo esta parcelinha aqui em baixo de R$110,00 mensais,acabou de cair para 99,00 é isso mesmo 99,00.",
+                "quem é Neymar?\nem geografia, meu mundo.\nem história, meu rei.\nem matemática, minha solução.\nem biologia, meu medicamento.\nem mitologia, meu deus.\nem astronomia, meu universo.\nPara o cego, é a luz.\nPara o faminto, é o pão.\nPara o sedento, é a fonte de água viva.",
+                "alô📞☎️ alô alô📞 alô alô📞 alô alouuu alouu📞❓ alouuu alouu📞❓ alouu aloUuUu alouUUUuuUuU📞⁉️ aal o U😂😂  ALOOOOOO📞☎️ ALOOUuUuUUuUULUULULULU LULULULULU",
+                "se tem uma menina👩🏻‍🦰 olhando essa mensagem💌🥺 por favor namora comigo 😭😭 eu nunca namorei desde quando eu nasci 👶🏾 eu tenho 1️⃣9️⃣ anos e nunca namorei 😭😭😭 meus amigos👨‍👨‍👦 ficam me zoando na escola 🏬 porque eu nunca namorei pufavo namora comigo pufavoo 🥺😭😭",
+                "EU ARREPENDIDO POR TER VOTADO 17??\nMEUAMIGO EU APERTO 17 TODO DIA NO ELEVADOR NO IMPULSO, MORO NO TERCEIRO ANDAR\nCOMO COMIDA FRIA PQ APERTO 17 NO MICROONDAS\nCOMPREI UMA REPLICA DA URNA SÓ PRA FICAR APERTANDO 17",
+                "Estou offline\nNao estou usandi whats app\nEstou sem sinao\nNao estou usano nada de redes sociais \nNao me encham o saco",
+                "Minha vacina é a BOLSOVAC\n💉 1ª dose foi em 2018\n💉 2ª dose será em 2022\nJAIRMECTINA\nAZITROMESSIAS\nHIDROXICLOROMITO\n👉🏻 eficaz contra o abuso das autoridades, contra a corrupção e contra o comunismo e o terrorismo psicológico !!!\n#Bolsonaro2022 😎💪🏻🇧🇷",
+                "Vocês acham que a Peppa Pig é só um desenho infantil? Acordem! Peppa Pig na verdade é uma trama secreta dos Illuminati para manipular nossas crianças. O triângulo que aparece nos episódios não é coincidência, é o símbolo da Nova Ordem Mundial",
+                "eu sei que alguns de vocês podem amar o jungkook e tudo mais, mas vocês têm que entender que eu sou a pessoa que mais ama ele na terra, sabem? sinto muito e espero que cheguem onde cheguei, mas sou eu. eu sou a maior fã dele que existe. ninguém ama mais o jungkook do que eu",
+                "Eu lembro da época em que eu queria ter uma bicicleta, eu tentei pedir pra deus me dar uma, mas eu sei que deus não trabalha dessa forma então eu roubei uma bicicleta e pedi perdão em seguida.",
+                "E na chamada da escola, a professora:\nSapo?\n- Presente!\nCachorro?\n- Presente! \nGato?\n- Presente!\nJumento?\n(Ñ respondeu pq tava lendo)\n Galinha?\n- Presente!\n Macaco?\n- Presente!\n e o jumento lendo...\nPinguim?\n- Presente!\nPorco?\n- Presente!\n e o jumento ainda lendo",
+                "⚠️ATENÇÃO⚠️\neu sou baixinha\nisso mesmo que vc leu 😤 eu 👉sou baixinha👈\ndiria que minúscula 😜 quase nao alcanço a maçaneta 😂",
+                "*aponta arma*\n- quem são elas\n- twice\n- que que elas são\n- o maior grupo da nação\n- quem é a membro mais fofa\n- a momo\n- errado, são todas agora dança\n*dançando* 🕺🕺🕺",
                 "OLA limda bjss sabe vc ELINDA GOSTARIA SE jair bolsonaro 👍"
             ])
             mudar_bio_usuario(user_id, bio_nova, chat_id)

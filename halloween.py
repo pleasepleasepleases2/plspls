@@ -141,23 +141,18 @@ def criar_botoes_tabuleiro(tabuleiro):
     markup.add(*botoes)
     return markup
 
-# Função para iniciar o jogo da velha
-def iniciar_jogo_da_velha_fantasma(bot, message):
+def iniciar_jogo_da_velha_fantasma(user_id, chat_id):
     try:
-        id_usuario = message.from_user.id
         tabuleiro = inicializar_tabuleiro()
-        jogos_da_velha[id_usuario] = tabuleiro
-
-        bot.send_message(
-            message.chat.id,
-            f"👻 Jogo da Velha com o Fantasma! Você é '✔️' e o fantasma é '❌'.\n\n{mostrar_tabuleiro(tabuleiro)}"
-        )
-
+        globals.jogos_da_velha[user_id] = tabuleiro
+        
+        bot.send_message(chat_id, "Vamos jogar Jogo da Velha! Você é '✔️' e eu sou '❌'.\n\n" + mostrar_tabuleiro(tabuleiro))
+        
         markup = criar_botoes_tabuleiro(tabuleiro)
-        bot.send_message(message.chat.id, "Escolha sua jogada (1-9):", reply_markup=markup)
+        bot.send_message(chat_id, "Escolha sua jogada (1-9):", reply_markup=markup)
     except Exception as e:
-        print(f"Erro ao iniciar o jogo da velha: {e}")
-        traceback.print_exc()
+        print(f"Erro ao iniciar o jogo da velha com o fantasma: {e}")
+
 
 # Função para processar a jogada do jogador
 def processar_jogada_jogador(call):

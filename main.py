@@ -2472,7 +2472,7 @@ jogos_da_velha = {}
 
 # Função para inicializar o tabuleiro vazio
 def inicializar_tabuleiro():
-    return [['⬜' for _ in range(3)] for _ in range(3)]
+    return np.full((3, 3), '⬜')
 
 # Função para exibir o tabuleiro
 def mostrar_tabuleiro(tabuleiro):
@@ -2480,21 +2480,16 @@ def mostrar_tabuleiro(tabuleiro):
 
 # Verifica se há uma vitória
 def verificar_vitoria(tabuleiro, simbolo):
-    return any(
-        all(cell == simbolo for cell in row) for row in tabuleiro
-    ) or any(
-        all(tabuleiro[i][j] == simbolo for i in range(3)) for j in range(3)
-    ) or all(
-        tabuleiro[i][i] == simbolo for i in range(3)
-    ) or all(
-        tabuleiro[i][2 - i] == simbolo for i in range(3)
+    return (
+        any(np.all(row == simbolo) for row in tabuleiro) or  # Linhas
+        any(np.all(tabuleiro[:, j] == simbolo) for j in range(3)) or  # Colunas
+        np.all(np.diag(tabuleiro) == simbolo) or  # Diagonal principal
+        np.all(np.diag(np.fliplr(tabuleiro)) == simbolo)  # Diagonal secundária
     )
 
 # Verifica se o tabuleiro está completo (empate)
 def verificar_empate(tabuleiro):
-    return all(cell != '⬜' for row in tabuleiro for cell in row)
-
-import random
+    return np.all(tabuleiro != '⬜')
 
 # Função Minimax para determinar a melhor jogada do bot
 def minimax(tabuleiro, profundidade, is_maximizador, simbolo_bot, simbolo_jogador):
@@ -2541,6 +2536,7 @@ def bot_fazer_jogada(tabuleiro, simbolo_bot, simbolo_jogador):
                     melhor_jogada = (i, j)
     if melhor_jogada:
         tabuleiro[melhor_jogada] = simbolo_bot
+
 # Função para criar os botões do tabuleiro
 def criar_botoes_tabuleiro(tabuleiro):
     markup = types.InlineKeyboardMarkup()
@@ -2557,11 +2553,9 @@ def criar_botoes_tabuleiro(tabuleiro):
 @bot.callback_query_handler(func=lambda call: call.data.startswith('jogada_'))
 def processar_jogada(call):
     user_id = call.from_user.id
-    chat_id = call.message.chat.id
     tabuleiro = jogos_da_velha.get(user_id)
-    
-    if not tabuleiro:
-        bot.send_message(chat_id, "O jogo ainda não foi iniciado. Use /jogodavelha para começar.")
+    if tabuleiro is None:
+        bot.send_message(call.message.chat.id, "O jogo ainda não foi iniciado. Use /jogodavelha para começar.")
         return
 
     _, i, j = call.data.split('_')
@@ -2574,51 +2568,38 @@ def processar_jogada(call):
     # Jogada do jogador
     tabuleiro[i][j] = '✔️'
     if verificar_vitoria(tabuleiro, '✔️'):
-        finalizar_jogo_da_velha(user_id, chat_id, "vitoria")
+        finalizar_jogo_da_velha(user_id, call.message.chat.id, "vitoria")
         return
     elif verificar_empate(tabuleiro):
-        finalizar_jogo_da_velha(user_id, chat_id, "empate")
+        finalizar_jogo_da_velha(user_id, call.message.chat.id, "empate")
         return
 
     # Jogada do bot
     bot_fazer_jogada(tabuleiro, '❌', '✔️')
     if verificar_vitoria(tabuleiro, '❌'):
-        finalizar_jogo_da_velha(user_id, chat_id, "derrota")
+        finalizar_jogo_da_velha(user_id, call.message.chat.id, "derrota")
         return
     elif verificar_empate(tabuleiro):
-        finalizar_jogo_da_velha(user_id, chat_id, "empate")
+        finalizar_jogo_da_velha(user_id, call.message.chat.id, "empate")
         return
 
     # Atualizar tabuleiro para o próximo turno
-    bot.edit_message_text(mostrar_tabuleiro(tabuleiro), chat_id, call.message.message_id, reply_markup=criar_botoes_tabuleiro(tabuleiro))
+    bot.edit_message_text(mostrar_tabuleiro(tabuleiro), call.message.chat.id, call.message.message_id, reply_markup=criar_botoes_tabuleiro(tabuleiro))
 
-# Função para finalizar o jogo e aplicar recompensas/penalidades
+# Função para finalizar o jogo
 def finalizar_jogo_da_velha(user_id, chat_id, resultado):
     if resultado == "vitoria":
-        if random.random() < 0.5:
-            cenouras_ganhas = random.randint(50, 100)
-            aumentar_cenouras(user_id, cenouras_ganhas)
-            bot.send_message(chat_id, f"🎉 Parabéns! Você venceu e ganhou {cenouras_ganhas} cenouras!")
-        else:
-            adicionar_carta_faltante_halloween(user_id, chat_id)
-            bot.send_message(chat_id, "🎉 Parabéns! Você venceu e ganhou uma carta faltante do evento de Halloween!")
-
+        cenouras_ganhas = random.randint(50, 100)
+        aumentar_cenouras(user_id, cenouras_ganhas)
+        bot.send_message(chat_id, f"🎉 Parabéns! Você venceu e ganhou {cenouras_ganhas} cenouras!")
     elif resultado == "derrota":
-        if random.random() < 0.5:
-            cenouras_perdidas = random.randint(20, 50)
-            diminuir_cenouras(user_id, cenouras_perdidas)
-            bot.send_message(chat_id, f"😢 Você perdeu e perdeu {cenouras_perdidas} cenouras.")
-        else:
-            apagar_carta_aleatoria(user_id, chat_id)
-            bot.send_message(chat_id, "😢 Você perdeu e perdeu uma carta aleatória do seu inventário.")
-
+        cenouras_perdidas = random.randint(20, 50)
+        diminuir_cenouras(user_id, cenouras_perdidas)
+        bot.send_message(chat_id, f"😢 Você perdeu e perdeu {cenouras_perdidas} cenouras.")
     elif resultado == "empate":
-        apagar_carta_aleatoria(user_id, chat_id)
         cenouras_ganhas = random.randint(50, 80)
         aumentar_cenouras(user_id, cenouras_ganhas)
-        bot.send_message(chat_id, f"😐 Empate! Você perdeu uma carta aleatória, mas ganhou {cenouras_ganhas} cenouras como consolação.")
-
-    # Remover o jogo do usuário após o final
+        bot.send_message(chat_id, f"😐 Empate! Você ganhou {cenouras_ganhas} cenouras como consolação.")
     del jogos_da_velha[user_id]
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("descartar_caixa_"))

@@ -130,16 +130,17 @@ def bot_fazer_jogada(tabuleiro, simbolo_bot, simbolo_jogador):
 # Função para criar botões do tabuleiro
 def criar_botoes_tabuleiro(tabuleiro):
     markup = types.InlineKeyboardMarkup(row_width=3)
-    botoes = []
     for i in range(3):
+        botoes = []
         for j in range(3):
             if tabuleiro[i][j] == '⬜':
-                botao = types.InlineKeyboardButton(f"{i*3+j+1}", callback_data=f"jogada_{i}_{j}")
+                botao = types.InlineKeyboardButton(text=f"{i * 3 + j + 1}", callback_data=f"jogada_{i}_{j}")
             else:
-                botao = types.InlineKeyboardButton(tabuleiro[i][j], callback_data="jogada_disabled")
+                botao = types.InlineKeyboardButton(text=tabuleiro[i][j], callback_data="jogada_disabled")
             botoes.append(botao)
-    markup.add(*botoes)
+        markup.add(*botoes)
     return markup
+
 
 def iniciar_jogo_da_velha_fantasma(user_id, chat_id):
     try:

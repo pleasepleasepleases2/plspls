@@ -9,6 +9,7 @@ from datetime import datetime, timedelta
 import traceback
 from telebot import types
 import globals
+from collections import defaultdict
 aboboras = {
     1: {"nome": "Abóbora 1", "premio": "50 cenouras"},
     2: {"nome": "Abóbora 2", "premio": "100 cenouras"},

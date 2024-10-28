@@ -179,14 +179,6 @@ def verificar_travessura(id_usuario):
     finally:
         fechar_conexao(cursor, conn)
 
-def iniciar_labirinto_fantasma(user_id):
-    try:
-        # Inicializa o labirinto fantasma para o usuário
-        iniciar_labirinto(user_id)
-        bot.send_message(user_id, "👻 Você foi transportado para um labirinto fantasma! Tente escapar o mais rápido possível.")
-    except Exception as e:
-        print(f"Erro ao iniciar o labirinto fantasma: {e}")
-
 def iniciar_demonio_roubo_carta(user_id, chat_id):
     try:
         conn, cursor = conectar_banco_dados()
@@ -1915,8 +1907,6 @@ def passar_praga(message):
 
     except Exception as e:
         bot.send_message(message.chat.id, f"Erro ao passar a praga: {e}")
-import random
-from datetime import datetime, timedelta
 
 def ativar_travessura_embaralhamento(chat_id, id_usuario):
     # Definir duração aleatória entre 30 minutos e 2 horas
@@ -1941,6 +1931,199 @@ def ativar_travessura_embaralhamento(chat_id, id_usuario):
         print(f"Erro ao registrar travessura: {e}")
     finally:
         fechar_conexao(cursor, conn)
+import random
+from datetime import datetime, timedelta
+from telebot import types
+
+# Armazenamento de jogadores no labirinto
+jogadores_labirinto = {}
+
+# Função para criar o labirinto com um caminho garantido até a saída
+def gerar_labirinto_com_caminho_e_validacao(tamanho=10):
+    labirinto = [['🪨' for _ in range(tamanho)] for _ in range(tamanho)]
+    
+    # Ponto inicial e final
+    x, y = 1, 1  # Início
+    saida_x, saida_y = tamanho - 2, random.randint(1, tamanho - 2)  # Saída aleatória
+    
+    # Backtracking para garantir caminho à saída
+    caminho = [(x, y)]
+    labirinto[x][y] = '⬜'
+    
+    while (x, y) != (saida_x, saida_y):
+        direcoes = []
+        if x > 1 and labirinto[x-1][y] == '🪨':
+            direcoes.append((-1, 0))
+        if x < tamanho - 2 and labirinto[x+1][y] == '🪨':
+            direcoes.append((1, 0))
+        if y > 1 and labirinto[x][y-1] == '🪨':
+            direcoes.append((0, -1))
+        if y < tamanho - 2 and labirinto[x][y+1] == '🪨':
+            direcoes.append((0, 1))
+
+        if not direcoes:
+            x, y = caminho.pop()
+        else:
+            dx, dy = random.choice(direcoes)
+            x += dx
+            y += dy
+            labirinto[x][y] = '⬜'
+            caminho.append((x, y))
+
+    # Define a saída
+    labirinto[saida_x][saida_y] = '🚪'
+    
+    # Adiciona monstros e recompensas
+    for _ in range(5):
+        while True:
+            mx, my = random.randint(1, tamanho - 2), random.randint(1, tamanho - 2)
+            if labirinto[mx][my] == '🪨' and (mx, my) not in caminho:
+                labirinto[mx][my] = '👻'
+                break
+    
+    for _ in range(3):
+        while True:
+            rx, ry = random.randint(1, tamanho - 2), random.randint(1, tamanho - 2)
+            if labirinto[rx][ry] == '🪨' and (rx, ry) not in caminho:
+                labirinto[rx][ry] = '🎃'
+                break
+
+    return labirinto
+
+# Função para mostrar o labirinto parcialmente, baseado na posição do jogador
+def mostrar_labirinto(labirinto, posicao):
+    mapa = ""
+    x, y = posicao
+    for i in range(len(labirinto)):
+        for j in range(len(labirinto[i])):
+            if (i, j) == posicao:
+                mapa += "🔦"
+            elif abs(x - i) <= 1 and abs(y - j) <= 1:
+                mapa += labirinto[i][j]
+            else:
+                mapa += "⬛"
+        mapa += "\n"
+    return mapa
+
+# Função para mover o jogador no labirinto
+def mover_posicao(posicao_atual, direcao, labirinto):
+    x, y = posicao_atual
+    if direcao == 'norte' and x > 0 and labirinto[x - 1][y] != '🪨':
+        return (x - 1, y)
+    elif direcao == 'sul' and x < len(labirinto) - 1 and labirinto[x + 1][y] != '🪨':
+        return (x + 1, y)
+    elif direcao == 'leste' and y < len(labirinto[0]) - 1 and labirinto[x][y + 1] != '🪨':
+        return (x, y + 1)
+    elif direcao == 'oeste' and y > 0 and labirinto[x][y - 1] != '🪨':
+        return (x, y - 1)
+    return posicao_atual  # Movimento inválido, retorna posição atual
+
+def iniciar_labirinto(user_id, chat_id):
+    try:
+        tamanho = 10  # Tamanho do labirinto
+        labirinto = gerar_labirinto_com_caminho_e_validacao(tamanho)
+        posicao_inicial = (1, 1)  # Início fixo
+        movimentos_restantes = 35  # Limite de movimentos para escapar
+
+        # Armazena o estado do jogador
+        jogadores_labirinto[user_id] = {
+            "labirinto": labirinto,
+            "posicao": posicao_inicial,
+            "movimentos": movimentos_restantes
+        }
+
+        mapa = mostrar_labirinto(labirinto, posicao_inicial)
+        markup = criar_botoes_navegacao()
+        
+        bot.send_message(chat_id, f"🏰 Bem-vindo ao Labirinto! Você tem {movimentos_restantes} movimentos para escapar.\n\n{mapa}", reply_markup=markup)
+    except Exception as e:
+        print(f"Erro ao iniciar o labirinto: {e}")
+
+# Função para criar botões de navegação
+def criar_botoes_navegacao():
+    markup = types.InlineKeyboardMarkup(row_width=4)
+    markup.add(
+        types.InlineKeyboardButton("⬆️", callback_data="norte"),
+        types.InlineKeyboardButton("⬅️", callback_data="oeste"),
+        types.InlineKeyboardButton("➡️", callback_data="leste"),
+        types.InlineKeyboardButton("⬇️", callback_data="sul")
+    )
+    return markup
+
+# Função para mover dentro do labirinto
+@bot.callback_query_handler(func=lambda call: call.data in ['norte', 'sul', 'leste', 'oeste'])
+def mover_labirinto(call):
+    id_usuario = call.from_user.id
+    if id_usuario not in jogadores_labirinto:
+        bot.send_message(call.message.chat.id, "👻 Inicie o labirinto com /labirinto.")
+        return
+    
+    direcao = call.data
+    jogador = jogadores_labirinto[id_usuario]
+    labirinto = jogador["labirinto"]
+    posicao_atual = jogador["posicao"]
+    movimentos_restantes = jogador["movimentos"]
+    
+    nova_posicao = mover_posicao(posicao_atual, direcao, labirinto)
+    
+    if nova_posicao != posicao_atual:  # Movimento válido
+        jogadores_labirinto[id_usuario]["posicao"] = nova_posicao
+        jogadores_labirinto[id_usuario]["movimentos"] -= 1
+        movimentos_restantes -= 1
+        conteudo = labirinto[nova_posicao[0]][nova_posicao[1]]
+        
+        # Verifica vitória, derrota ou continuidade
+        if conteudo == '🚪':
+            bot.edit_message_text(f"🏆 Parabéns! Você encontrou a saída!\n\n{revelar_labirinto(labirinto)}", call.message.chat.id, call.message.message_id)
+            del jogadores_labirinto[id_usuario]  # Remove jogador
+        elif movimentos_restantes == 0:
+            bot.edit_message_text(f"😢 Seus movimentos acabaram. Fim de jogo!\n\n{revelar_labirinto(labirinto)}", call.message.chat.id, call.message.message_id)
+            del jogadores_labirinto[id_usuario]
+        else:
+            atualizar_labirinto(call, labirinto, nova_posicao, movimentos_restantes, conteudo)
+    else:
+        bot.answer_callback_query(call.id, "👻 Direção bloqueada por uma parede!")
+
+# Função para atualizar o labirinto e aplicar consequências (monstro ou recompensa)
+def atualizar_labirinto(call, labirinto, posicao, movimentos_restantes, conteudo):
+    mapa = mostrar_labirinto(labirinto, posicao)
+    markup = criar_botoes_navegacao()
+
+    if conteudo == '👻':
+        labirinto[posicao[0]][posicao[1]] = '⬜'
+        bot.edit_message_text(f"👻 Você encontrou um monstro! Perdeu 20 cenouras. Quer encerrar ou continuar?\n\n{mapa}", 
+                              call.message.chat.id, call.message.message_id, reply_markup=criar_botoes_opcoes())
+        aplicar_penalidade_cenouras(call.from_user.id, -20)
+    elif conteudo == '🎃':
+        labirinto[posicao[0]][posicao[1]] = '⬜'
+        bot.edit_message_text(f"🎃 Você encontrou uma abóbora! Ganhou 50 cenouras. Quer encerrar ou continuar?\n\n{mapa}", 
+                              call.message.chat.id, call.message.message_id, reply_markup=criar_botoes_opcoes())
+        aplicar_recompensa_cenouras(call.from_user.id, 50)
+    else:
+        bot.edit_message_text(f"Movimentos restantes: {movimentos_restantes}\n\n{mapa}", 
+                              call.message.chat.id, call.message.message_id, reply_markup=markup)
+
+# Função para criar botões de opções (encerrar ou continuar)
+def criar_botoes_opcoes():
+    markup_opcoes = types.InlineKeyboardMarkup()
+    markup_opcoes.add(
+        types.InlineKeyboardButton("Encerrar", callback_data="encerrar"),
+        types.InlineKeyboardButton("Continuar", callback_data="continuar")
+    )
+    return markup_opcoes
+
+# Handlers para encerrar ou continuar no labirinto
+@bot.callback_query_handler(func=lambda call: call.data in ['encerrar', 'continuar'])
+def encerrar_ou_continuar(call):
+    id_usuario = call.from_user.id
+    if call.data == 'encerrar':
+        bot.edit_message_text("💀 Você encerrou o jogo. Fim de jornada!", call.message.chat.id, call.message.message_id)
+        del jogadores_labirinto[id_usuario]
+    elif call.data == 'continuar':
+        jogador = jogadores_labirinto[id_usuario]
+        mapa = mostrar_labirinto(jogador["labirinto"], jogador["posicao"])
+        markup = criar_botoes_navegacao()
+        bot.edit_message_text(f"Movimentos restantes: {jogador['movimentos']}\n\n{mapa}", call.message.chat.id, call.message.message_id, reply_markup=markup)
 
 def realizar_halloween_travessura(user_id, chat_id):
     try:
@@ -2015,8 +2198,8 @@ def realizar_halloween_travessura(user_id, chat_id):
                 "Lindah💍", 
                 "Gattinha😋", 
                 "Maravilhosa🌸", 
-                "#TãÖö_LïNdÄa 😍😍👏❤️💘💍💑👑💞🍃 ", 
-                "#RöStÏnHöÖ_Dë_PrÏnCëSäÄ🙆👑✊😍😍😘👏💘❤️💍💞", 
+                "TãÖö_LïNdÄa 😍😍👏❤️💘💍💑👑💞🍃 ", 
+                "RöStÏnHöÖ_Dë_PrÏnCëSäÄ🙆👑✊😍😍😘💍💞", 
                 "seloko fidelidade e pra cachorro🔥nois e patife", 
                 "sai fora pvt", 
                 "Boça",
@@ -2179,7 +2362,7 @@ def realizar_halloween_travessura(user_id, chat_id):
         elif chance == 12:
             # Labirinto com um fantasma
             bot.send_message(chat_id, "👻 Um fantasma te desafiou para escapar de um labirinto!")
-            iniciar_labirinto_fantasma(user_id)
+            iniciar_labirinto(message)
 
         elif chance == 13:
             # Travessura acontece com todos os que mandaram mensagem no grupo nos últimos 10 minutos
@@ -2703,18 +2886,6 @@ def verificar_ids(message):
         print(f"Erro ao verificar IDs: {e}")
         bot.reply_to(message, "Não foi possivel verificar essa mensagem, tente copiar e colar para verificar novamente.")
         
-@bot.message_handler(commands=['labirinto'])
-def handle_labirinto(message):
-    iniciar_labirinto(message)
-
-@bot.callback_query_handler(func=lambda call: call.data in ['norte', 'sul', 'leste', 'oeste'])
-def handle_mover_labirinto(call):
-    mover_labirinto(call)
-
-@bot.callback_query_handler(func=lambda call: call.data in ['encerrar', 'continuar'])
-def handle_encerrar_ou_continuar(call):
-    encerrar_ou_continuar(call)
-
 def process_wish(message):
     try:
         chat_id = message.chat.id

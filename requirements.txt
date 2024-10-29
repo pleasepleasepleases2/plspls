@@ -13,3 +13,4 @@ cachetools
 newrelic
 mutagen
 numpy
+APScheduler

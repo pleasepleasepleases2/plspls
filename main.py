@@ -448,7 +448,8 @@ def handle_passar_praga(message):
             print(f"Erro ao obter nome do usuário {target_user_id} no chat {chat_id}: {e}")
         
     except Exception as e:
-        print(f"Erro ao passar praga: {e}")
+        print(f"Erro ao bloquear comandos para o usuário {user_id}: {e}")
+        traceback.print_exc()
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("jogada_"))
 def processar_jogada(call):

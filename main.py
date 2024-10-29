@@ -345,6 +345,7 @@ jogos_em_andamento = {}
 jogador = '❌'
 bot_jogador = '⭕️'
 
+
 def criar_tabuleiro():
     """Cria um tabuleiro vazio de jogo da velha."""
     return np.full((3, 3), ' ')
@@ -371,8 +372,8 @@ def iniciar_jogo_da_velha(chat_id, user_id):
         'tabuleiro': criar_tabuleiro(),
         'ativo': True
     }
-    bot.send_message(chat_id, "👻 Um fantasma te desafiou para um jogo da velha! Se você ganhar, a travessura será evitada.")
     bot.send_message(chat_id, "Faça sua jogada clicando em uma posição.", reply_markup=criar_tabuleiro_markup(jogos_em_andamento[user_id]['tabuleiro']))
+
 @bot.callback_query_handler(func=lambda call: call.data.startswith("jogada_"))
 def processar_jogada(call):
     user_id = call.from_user.id
@@ -435,16 +436,62 @@ def checar_empate(tabuleiro):
     return ' ' not in tabuleiro
 
 def bot_jogada(tabuleiro):
-    """Jogada simples do bot: escolhe a primeira posição vazia."""
-    for i in range(3):
-        for j in range(3):
-            if tabuleiro[i, j] == ' ':
-                tabuleiro[i, j] = bot_jogador
-                return
+    """Decide entre uma jogada inteligente (Minimax) e uma aleatória com 80% e 20% de chance, respectivamente."""
+    if random.random() < 0.8:
+        # Jogada inteligente usando Minimax
+        best_score = -np.inf
+        best_move = None
+        for i in range(3):
+            for j in range(3):
+                if tabuleiro[i, j] == ' ':
+                    tabuleiro[i, j] = bot_jogador
+                    score = minimax(tabuleiro, 0, False)
+                    tabuleiro[i, j] = ' '
+                    if score > best_score:
+                        best_score = score
+                        best_move = (i, j)
+        if best_move:
+            tabuleiro[best_move] = bot_jogador
+    else:
+        # Jogada aleatória
+        empty_positions = [(i, j) for i in range(3) for j in range(3) if tabuleiro[i, j] == ' ']
+        if empty_positions:
+            move = random.choice(empty_positions)
+            tabuleiro[move] = bot_jogador
+
+def minimax(tabuleiro, depth, is_maximizing):
+    if checar_vitoria(tabuleiro, bot_jogador):
+        return 1
+    elif checar_vitoria(tabuleiro, jogador):
+        return -1
+    elif checar_empate(tabuleiro):
+        return 0
+
+    if is_maximizing:
+        best_score = -np.inf
+        for i in range(3):
+            for j in range(3):
+                if tabuleiro[i, j] == ' ':
+                    tabuleiro[i, j] = bot_jogador
+                    score = minimax(tabuleiro, depth + 1, False)
+                    tabuleiro[i, j] = ' '
+                    best_score = max(score, best_score)
+        return best_score
+    else:
+        best_score = np.inf
+        for i in range(3):
+            for j in range(3):
+                if tabuleiro[i, j] == ' ':
+                    tabuleiro[i, j] = jogador
+                    score = minimax(tabuleiro, depth + 1, True)
+                    tabuleiro[i, j] = ' '
+                    best_score = min(score, best_score)
+        return best_score
 
 def mostrar_tabuleiro(tabuleiro):
     """Função para retornar o tabuleiro como string"""
     return "\n".join([" | ".join(row) for row in tabuleiro])
+
 # Função para aplicar a travessura ao usuário
 def aplicar_travessura(user_id, chat_id):
     try:

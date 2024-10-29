@@ -1135,8 +1135,13 @@ def verificar_praga(user_id):
     """
     conn, cursor = conectar_banco_dados()
     try:
-        # Consulta para obter o fim da praga do usuário
-        cursor.execute("SELECT fim_praga FROM pragas_ativas WHERE id_usuario = %s", (user_id,))
+        # Consulta para obter o fim da praga mais recente do usuário
+        cursor.execute("""
+            SELECT fim_praga 
+            FROM pragas_ativas 
+            WHERE id_usuario = %s 
+            ORDER BY fim_praga DESC LIMIT 1
+        """, (user_id,))
         resultado = cursor.fetchone()
 
         if resultado:
@@ -1151,6 +1156,7 @@ def verificar_praga(user_id):
         return False
     finally:
         fechar_conexao(cursor, conn)
+
 
 def passar_praga(user_id, target_user_id, chat_id):
     try:

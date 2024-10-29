@@ -2060,6 +2060,8 @@ from telebot import types
 # Armazenamento de jogadores no labirinto
 jogadores_labirinto = {}
 
+import random
+
 def gerar_labirinto_com_caminho_e_validacao(tamanho=10):
     labirinto = [['🪨' for _ in range(tamanho)] for _ in range(tamanho)]
     
@@ -2111,27 +2113,26 @@ def gerar_labirinto_com_caminho_e_validacao(tamanho=10):
                 ramo_x, ramo_y = ramo_x + dx, ramo_y + dy
                 labirinto[ramo_x][ramo_y] = '⬜'
     
-    # Adicionar ramificações em pontos do caminho principal para criar mais complexidade
+    # Adicionar ramificações para complexidade
     for i in range(0, len(caminho), max(1, len(caminho) // 4)):
         criar_caminho_ramificado(*caminho[i])
 
-    # Adicionar monstros e recompensas em locais fora do caminho principal
+    # Adicionar monstros e recompensas somente nos espaços abertos ('⬜')
     for _ in range(5):
         while True:
             mx, my = random.randint(1, tamanho - 2), random.randint(1, tamanho - 2)
-            if labirinto[mx][my] == '🪨' and (mx, my) not in caminho:
+            if labirinto[mx][my] == '⬜' and (mx, my) != (x, y):  # Verifica se não é saída ou caminho principal
                 labirinto[mx][my] = '👻'
                 break
     
     for _ in range(3):
         while True:
             rx, ry = random.randint(1, tamanho - 2), random.randint(1, tamanho - 2)
-            if labirinto[rx][ry] == '🪨' and (rx, ry) not in caminho:
+            if labirinto[rx][ry] == '⬜' and (rx, ry) != (saida_x, saida_y):  # Não coloca sobre a saída
                 labirinto[rx][ry] = '🎃'
                 break
 
     return labirinto
-
 
 
 # Função para mostrar o labirinto parcialmente, baseado na posição do jogador

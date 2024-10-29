@@ -86,6 +86,15 @@ from armazem import *
 from diamantes import *
 from game import *
 from gif import *
+from apscheduler.schedulers.background import BackgroundScheduler
+from datetime import datetime, timedelta
+import time
+
+# Dicionário para armazenar pragas ativas com tempo restante
+pragas_ativas = {}
+
+# Inicializa o agendador
+scheduler = BackgroundScheduler()
 # Configuração de Webhook
 WEBHOOK_URL_PATH = '/' + API_TOKEN + '/'
 WEBHOOK_LISTEN = "0.0.0.0"
@@ -646,92 +655,64 @@ def handle_halloween(message):
         print(f"DEBUG: Executando travessura para o usuário {user_id}")
         realizar_halloween_travessura(user_id, chat_id)  # Executa uma das funções de travessura
         
+
 def aplicar_praga(user_id):
-    try:
-        conn, cursor = conectar_banco_dados()
-
-        # Definir o tempo de duração da praga (exemplo: 10 minutos)
-        fim_travessura = datetime.now() + timedelta(minutes=10)
-
-        # Inserir a praga na tabela 'travessuras' para o usuário
-        cursor.execute("""
-            INSERT INTO travessuras (id_usuario, tipo_travessura, fim_travessura)
-            VALUES (%s, 'praga', %s)
-            ON DUPLICATE KEY UPDATE fim_travessura = %s
-        """, (user_id, fim_travessura, fim_travessura))
-
-        conn.commit()
-
-        # Informar o usuário que ele foi amaldiçoado
-        bot.send_message(user_id, "👹 Travessura! Você foi amaldiçoado, use +praga para passar a praga para outra pessoa.")
-
-    except Exception as e:
-        print(f"Erro ao aplicar praga: {e}")
-    finally:
-        fechar_conexao(cursor, conn)
-
-def verificar_praga(user_id):
-    try:
-        conn, cursor = conectar_banco_dados()
-
-        # Verificar se o usuário tem a praga ativa
-        cursor.execute("""
-            SELECT fim_travessura FROM travessuras
-            WHERE id_usuario = %s AND tipo_travessura = 'praga'
-        """, (user_id,))
-        resultado = cursor.fetchone()
-
-        if resultado:
-            fim_travessura = resultado[0]
-            # Se a praga ainda está ativa (tempo atual é menor que o fim da travessura)
-            if datetime.now() < fim_travessura:
-                return True
-
-        return False  # Não tem praga ativa
-    
-    except Exception as e:
-        print(f"Erro ao verificar praga: {e}")
-        return False
-    finally:
-        fechar_conexao(cursor, conn)
-
-def iniciar_praga(user_id):
     """
-    Inicia a praga para um usuário.
+    Aplica a praga inicial ao usuário com um temporizador de 10 minutos.
     """
-    jogo_praga['user_id'] = user_id
-    jogo_praga['start_time'] = time.time()
-    bot.send_message(user_id, "👻 Você foi amaldiçoado com a praga! Passe a praga para outro usuário rapidamente, ou sofrerá uma travessura!")
+    fim_praga = datetime.now() + timedelta(minutes=10)
+    pragas_ativas[user_id] = {
+        "fim_praga": fim_praga,
+        "ultimos_passadores": [user_id]  # Histórico dos passadores
+    }
+    bot.send_message(user_id, "👻 Você foi amaldiçoado! Passe a praga para outro usuário em 10 minutos, ou ela cairá sobre você!")
 
-def roubar_cenouras_periodicamente(user_id, fim_travessura):
-    try:
-        conn, cursor = conectar_banco_dados()
+def verificar_tempo_praga():
+    """
+    Verifica se o tempo da praga expirou para cada usuário.
+    """
+    agora = datetime.now()
+    for user_id, info in list(pragas_ativas.items()):
+        if agora >= info["fim_praga"]:
+            praga_encerra(user_id)
+            del pragas_ativas[user_id]  # Remove a praga depois de expirar
 
-        while datetime.now() < fim_travessura:
-            # Verificar se a travessura ainda está ativa
-            cursor.execute("""
-                SELECT fim_travessura FROM travessuras
-                WHERE id_usuario = %s AND tipo_travessura = 'sombra_rouba_cenouras'
-            """, (user_id,))
-            resultado = cursor.fetchone()
+def praga_encerra(user_id):
+    """
+    Lida com o término da praga, aplicando penalidade ao último portador.
+    """
+    bot.send_message(user_id, "👻 A praga caiu sobre você! Você não conseguiu passá-la a tempo.")
 
-            if resultado and datetime.now() < resultado[0]:
-                # Roubar uma cenoura
-                cursor.execute("UPDATE usuarios SET cenouras = cenouras - 1 WHERE id_usuario = %s", (user_id,))
-                conn.commit()
+def passar_praga(origem_id, destino_id):
+    """
+    Passa a praga de origem_id para destino_id, com o tempo restante até o fim da praga.
+    """
+    if origem_id not in pragas_ativas:
+        bot.send_message(origem_id, "Você não está amaldiçoado, não pode passar a praga.")
+        return
 
-                # Notificar o usuário que uma cenoura foi roubada
-                bot.send_message(user_id, "👻 Uma sombra roubou uma de suas cenouras!")
-                
-                # Esperar 10 segundos antes de roubar novamente
-                time.sleep(10)
-            else:
-                break
+    tempo_restante = (pragas_ativas[origem_id]["fim_praga"] - datetime.now()).total_seconds()
+    if tempo_restante <= 0:
+        praga_encerra(origem_id)
+        return
 
-    except Exception as e:
-        print(f"Erro ao roubar cenouras: {e}")
-    finally:
-        fechar_conexao(cursor, conn)
+    fim_praga = datetime.now() + timedelta(seconds=tempo_restante)
+    pragas_ativas[destino_id] = {
+        "fim_praga": fim_praga,
+        "ultimos_passadores": pragas_ativas[origem_id]["ultimos_passadores"] + [destino_id]
+    }
+    del pragas_ativas[origem_id]  # Remove a praga do portador anterior
+
+    bot.send_message(origem_id, "👻 Você passou a praga com sucesso!")
+    bot.send_message(destino_id, f"👻 A praga foi passada para você! Você tem {int(tempo_restante / 60)} minutos para passá-la a outra pessoa.")
+
+# Configura o agendador para verificar a praga a cada 10 segundos
+scheduler.add_job(verificar_tempo_praga, 'interval', seconds=10)
+scheduler.start()
+
+# Função para parar o agendador ao final do programa
+def parar_agendador():
+    scheduler.shutdown()
 
 def aplicar_travessura(id_usuario, tipo_travessura):
     """

@@ -395,6 +395,27 @@ def iniciar_jogo_da_velha(chat_id, user_id):
         'ativo': True
     }
     bot.send_message(chat_id, "Faça sua jogada clicando em uma posição.", reply_markup=criar_tabuleiro_markup(jogos_em_andamento[user_id]['tabuleiro']))
+@bot.message_handler(func=lambda message: message.text.startswith('+praga'))
+def passar_praga(user_id, target_user_id, chat_id):
+    try:
+        print(f"DEBUG: {user_id} tentando passar a praga para {target_user_id} no chat {chat_id}")
+        
+        if not verificar_praga(user_id):
+            bot.send_message(user_id, "👻 Você não tem uma praga para passar.")
+            return
+
+        tempo_restante = (praga_ativa[chat_id]["fim_praga"] - datetime.now()).total_seconds()
+        nova_fim_praga = datetime.now() + timedelta(seconds=tempo_restante)
+        praga_ativa[chat_id]["usuario_atual"] = target_user_id
+        praga_ativa[chat_id]["fim_praga"] = nova_fim_praga
+
+        atualizar_praga_no_banco(user_id, target_user_id, chat_id, nova_fim_praga)
+        print(f"DEBUG: Praga passada para {target_user_id} no chat {chat_id} com tempo restante: {nova_fim_praga - datetime.now()} segundos")
+
+        bot.send_message(user_id, f"🎃 Você passou a praga para {target_user_id}!")
+        bot.send_message(target_user_id, f"👻 Você agora tem a praga! Passe-a para alguém nos próximos {int(tempo_restante / 60)} minutos.")
+    except Exception as e:
+        print(f"Erro ao passar praga: {e}")
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("jogada_"))
 def processar_jogada(call):
@@ -1152,27 +1173,6 @@ def verificar_praga(user_id):
     finally:
         fechar_conexao(cursor, conn)
 
-@bot.message_handler(func=lambda message: message.text.startswith('+praga'))
-def passar_praga(user_id, target_user_id, chat_id):
-    try:
-        print(f"DEBUG: {user_id} tentando passar a praga para {target_user_id} no chat {chat_id}")
-        
-        if not verificar_praga(user_id):
-            bot.send_message(user_id, "👻 Você não tem uma praga para passar.")
-            return
-
-        tempo_restante = (praga_ativa[chat_id]["fim_praga"] - datetime.now()).total_seconds()
-        nova_fim_praga = datetime.now() + timedelta(seconds=tempo_restante)
-        praga_ativa[chat_id]["usuario_atual"] = target_user_id
-        praga_ativa[chat_id]["fim_praga"] = nova_fim_praga
-
-        atualizar_praga_no_banco(user_id, target_user_id, chat_id, nova_fim_praga)
-        print(f"DEBUG: Praga passada para {target_user_id} no chat {chat_id} com tempo restante: {nova_fim_praga - datetime.now()} segundos")
-
-        bot.send_message(user_id, f"🎃 Você passou a praga para {target_user_id}!")
-        bot.send_message(target_user_id, f"👻 Você agora tem a praga! Passe-a para alguém nos próximos {int(tempo_restante / 60)} minutos.")
-    except Exception as e:
-        print(f"Erro ao passar praga: {e}")
 
 def atualizar_praga_no_banco(old_user_id, new_user_id, chat_id, fim_praga):
     conn, cursor = conectar_banco_dados()

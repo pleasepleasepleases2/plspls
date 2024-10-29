@@ -439,7 +439,7 @@ def jogador_fazer_jogada(bot, call):
             del jogos_da_velha[id_usuario]
             return
 
-        # Jogada do bot
+        # Jogada do bot (apenas se o jogo não terminou)
         bot_fazer_jogada(tabuleiro, '❌', '✔️')
 
         # Atualiza o tabuleiro após a jogada do bot

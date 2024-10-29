@@ -429,8 +429,8 @@ def handle_passar_praga(message):
 
         # Notificar os usuários sobre a nova praga
         target_user_name = bot.get_chat_member(message.chat.id, target_user_id).user.first_name
-        bot.send_message(message.chat.id, f"🎃 Praga passada para {target_user_name}!")
-        bot.send_message(target_user_id, f"👻 Você agora tem a praga! Passe-a para alguém nos próximos {int(tempo_restante / 60)} minutos.")
+        bot.send_message(message.chat.id, f"🦠 Praga passada para {target_user_name}!")
+        bot.send_message(target_user_id, f"🦠 Você agora tem a praga! Passe-a para alguém nos próximos {int(tempo_restante / 60)} minutos.")
         print(f"DEBUG: Praga passada de {user_id} para {target_user_id} com {int(tempo_restante / 60)} minutos restantes.")
 
     except Exception as e:
@@ -1146,7 +1146,7 @@ def iniciar_pega_pega(user_id, chat_id):
         scheduler.add_job(verificar_expiracao_praga, 'date', run_date=fim_praga, args=[chat_id])
 
         print(f"DEBUG: {user_id} iniciou o pega-pega no chat {chat_id}. Fim da praga em: {fim_praga}")
-        bot.send_message(chat_id, f"👻 {user_id} está com a praga! Use +praga para passá-la a outra pessoa!")
+        bot.send_message(chat_id, f"🦠 Você está com a praga! Use /praga para passá-la a outra pessoa em até 10 minutos ou sofra as consequencias!")
     except Exception as e:
         print(f"Erro ao iniciar o Pega-Pega com praga: {e}")
 
@@ -1220,8 +1220,38 @@ def remover_praga_do_banco(user_id):
         fechar_conexao(cursor, conn)
 
 def realizar_travessura_final(usuario_com_praga, chat_id):
-    bot.send_message(chat_id, f"👻 {usuario_com_praga} sofreu uma travessura! Uma carta foi removida do seu inventário.")
+    """
+    Aplica uma penalidade ao usuário com praga. A penalidade pode ser:
+    - Perda de cenouras
+    - Perda de uma carta aleatória
+    - Perda de ambos
+    """
+    conn, cursor = conectar_banco_dados()
+    try:
+        penalidade = random.choice(["cenouras", "carta", "ambos"])
+        mensagem = f"👻 {usuario_com_praga} sofreu uma travessura! "
 
+        # Penalidade de perda de cenouras
+        if penalidade in ["cenouras", "ambos"]:
+            cenouras_perdidas = random.randint(10, 50)  # Valor aleatório de cenouras perdidas
+            cursor.execute("UPDATE usuarios SET cenouras = GREATEST(0, cenouras - %s) WHERE id_usuario = %s", (cenouras_perdidas, usuario_com_praga))
+            mensagem += f"Perdeu {cenouras_perdidas} cenouras. "
+
+        # Penalidade de perda de carta aleatória
+        if penalidade in ["carta", "ambos"]:
+            cursor.execute("SELECT id_carta FROM cartas WHERE id_usuario = %s ORDER BY RAND() LIMIT 1", (usuario_com_praga,))
+            carta_perdida = cursor.fetchone()
+            if carta_perdida:
+                cursor.execute("DELETE FROM cartas WHERE id_usuario = %s AND id_carta = %s", (usuario_com_praga, carta_perdida[0]))
+                mensagem += "Perdeu uma carta do inventário."
+
+        conn.commit()
+        bot.send_message(chat_id, mensagem)
+
+    except Exception as e:
+        print(f"Erro ao aplicar travessura: {e}")
+    finally:
+        fechar_conexao(cursor, conn)
 def ativar_dobro_cenouras(user_id):
     try:
         conn, cursor = conectar_banco_dados()
@@ -1540,9 +1570,8 @@ def mostrar_portas_escolha(user_id):
     porta_3 = InlineKeyboardButton("🚪 ", callback_data=f"escolha_porta_3_{user_id}")
     
     markup.add(porta_1, porta_2, porta_3)
-    
     # Enviar a mensagem com as três portas
-    bot.send_message(user_id, "Escolha uma porta! Todas as portas escondem algo bom:", reply_markup=markup)
+    bot.send_message(user_id, "🎃 Parabéns! Escolha uma porta com sabedoria! Todas as portas escondem algo bom:", reply_markup=markup)
 def salvar_premios_escolha(user_id, premios):
     # Aqui você pode salvar os prêmios no banco de dados ou em cache
     # Exemplo básico:
@@ -1807,7 +1836,7 @@ def realizar_halloween_gostosura(user_id, chat_id):
 
         elif chance == 8:
             print(f"DEBUG: Mostrando portas de escolha para o usuário {user_id}")
-            bot.send_message(chat_id, f"🎃 Parabéns! 3 portas foram enviadas para o seu privado, escolha com sabedoria!")
+            
             mostrar_portas_escolha(user_id)
 
         elif chance == 9:
@@ -2436,7 +2465,7 @@ def realizar_halloween_travessura(user_id, chat_id):
 
         elif chance == 9:
             # Pega-pega (passar uma praga para outros usuários)
-            bot.send_message(chat_id, f"👹 Travessura! Você foi amaldiçoado, use +praga para passar a praga para outra pessoa.")
+            bot.send_message(chat_id, f"👹 Travessura! Você foi amaldiçoado, use /praga para passar a praga para outra pessoa.")
             iniciar_pega_pega(chat_id,user_id)
 
         elif chance == 10:

@@ -1128,6 +1128,29 @@ def registrar_praga_no_banco(user_id, chat_id, fim_praga):
         print(f"Erro ao registrar praga no banco: {e}")
     finally:
         fechar_conexao(cursor, conn)
+def verificar_praga(user_id):
+    """
+    Verifica se o usuário tem uma praga ativa.
+    Retorna True se a praga estiver ativa, False caso contrário.
+    """
+    conn, cursor = conectar_banco_dados()
+    try:
+        # Consulta para obter o fim da praga do usuário
+        cursor.execute("SELECT fim_praga FROM pragas_ativas WHERE id_usuario = %s", (user_id,))
+        resultado = cursor.fetchone()
+
+        if resultado:
+            fim_praga = resultado[0]
+            # Verifica se o tempo atual ainda está dentro do período da praga
+            if datetime.now() < fim_praga:
+                return True
+
+        return False  # Praga não ativa ou já expirou
+    except Exception as e:
+        print(f"Erro ao verificar praga: {e}")
+        return False
+    finally:
+        fechar_conexao(cursor, conn)
 
 def passar_praga(user_id, target_user_id, chat_id):
     try:

@@ -91,7 +91,7 @@ from datetime import datetime, timedelta
 import time
 
 # Dicionário para armazenar pragas ativas com tempo restante
-pragas_ativas = {}
+praga_ativa = {}
 
 # Inicializa o agendador
 scheduler = BackgroundScheduler()

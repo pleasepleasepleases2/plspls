@@ -398,38 +398,47 @@ def iniciar_jogo_da_velha(chat_id, user_id):
 @bot.message_handler(commands=['praga'])
 def handle_passar_praga(message):
     try:
-        # Extrair IDs do usuário atual e do alvo (deve ser respondido a alguém para definir o alvo)
+        # IDs do usuário atual (que possui a praga) e do alvo (para quem vai passar)
         user_id = message.from_user.id
-        if not message.reply_to_message:
-            bot.send_message(message.chat.id, "👻 Você deve responder a uma mensagem para passar a praga!")
-            return
-
-        target_user_id = message.reply_to_message.from_user.id
         chat_id = message.chat.id
+        
+        # Verificar se o comando é respondido a alguém para definir o alvo
+        if not message.reply_to_message:
+            bot.send_message(chat_id, "👻 Você deve responder a uma mensagem de alguém para passar a praga!")
+            print("DEBUG: Comando +praga não foi respondido a ninguém.")
+            return
+        
+        target_user_id = message.reply_to_message.from_user.id
+        
+        print(f"DEBUG: {user_id} tentando passar a praga para {target_user_id} no chat {chat_id}")
 
-        print(f"DEBUG: {user_id} tentando passar a praga para {target_user_id}")
-
-        # Verifica se o usuário atual realmente tem a praga
+        # Verificar se o usuário atual realmente tem a praga
         if not verificar_praga(user_id):
-            bot.send_message(user_id, "👻 Você não tem uma praga para passar.")
+            bot.send_message(chat_id, "👻 Você não tem uma praga para passar.")
+            print(f"DEBUG: Usuário {user_id} tentou passar a praga, mas não a possui.")
             return
 
-        # Atualiza o novo detentor da praga e o tempo restante
+        # Calcular o tempo restante da praga
         tempo_restante = (praga_ativa[chat_id]["fim_praga"] - datetime.now()).total_seconds()
         nova_fim_praga = datetime.now() + timedelta(seconds=tempo_restante)
 
+        # Atualizar o novo detentor da praga e o tempo final
         praga_ativa[chat_id] = {
             "usuario_atual": target_user_id,
             "fim_praga": nova_fim_praga
         }
 
-        # Atualiza no banco de dados
+        # Atualizar no banco de dados
         atualizar_praga_no_banco(user_id, target_user_id, chat_id, nova_fim_praga)
 
-        # Notifica os usuários envolvidos
-        bot.send_message(user_id, f"🎃 Você passou a praga para {bot.get_chat_member(chat_id, target_user_id).user.first_name}!")
-        bot.send_message(target_user_id, f"👻 Você agora tem a praga! Passe-a para alguém nos próximos {int(tempo_restante / 60)} minutos.")
-        print(f"DEBUG: Praga passada de {user_id} para {target_user_id}")
+        # Mensagem para notificar a transferência da praga
+        try:
+            target_user_name = bot.get_chat_member(chat_id, target_user_id).user.first_name
+            bot.send_message(chat_id, f"🎃 Você passou a praga para {target_user_name}!")
+            bot.send_message(target_user_id, f"👻 Você agora tem a praga! Passe-a para alguém nos próximos {int(tempo_restante / 60)} minutos.")
+            print(f"DEBUG: Praga passada de {user_id} para {target_user_id} com {int(tempo_restante / 60)} minutos restantes.")
+        except Exception as e:
+            print(f"Erro ao obter nome do usuário {target_user_id} no chat {chat_id}: {e}")
         
     except Exception as e:
         print(f"Erro ao passar praga: {e}")

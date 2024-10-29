@@ -419,48 +419,61 @@ def jogador_fazer_jogada(bot, call):
         # Jogada do jogador
         tabuleiro[i][j] = '✔️'
 
-        # Atualiza o tabuleiro com os novos botões antes de verificar a vitória
-        bot.edit_message_text(
-            f"Tabuleiro atualizado:\n\n{mostrar_tabuleiro(tabuleiro)}",
-            call.message.chat.id,
-            call.message.message_id,
-            reply_markup=criar_botoes_tabuleiro(tabuleiro)
-        )
-
         # Verifica se o jogador venceu
         if verificar_vitoria(tabuleiro, '✔️'):
             premiar_jogador(bot, call.message.chat.id, id_usuario, "vitoria")
             del jogos_da_velha[id_usuario]
+            bot.edit_message_text(
+                f"🎉 Parabéns! Você venceu!\n\n{mostrar_tabuleiro(tabuleiro)}",
+                call.message.chat.id,
+                call.message.message_id
+            )
             return
 
         # Verifica se houve empate após a jogada do jogador
         if verificar_empate(tabuleiro):
             premiar_jogador(bot, call.message.chat.id, id_usuario, "empate")
             del jogos_da_velha[id_usuario]
+            bot.edit_message_text(
+                f"😐 Empate!\n\n{mostrar_tabuleiro(tabuleiro)}",
+                call.message.chat.id,
+                call.message.message_id
+            )
             return
 
         # Jogada do bot (apenas se o jogo não terminou)
-        bot_fazer_jogada(tabuleiro, '❌', '✔️')
-
-        # Atualiza o tabuleiro após a jogada do bot
-        bot.edit_message_text(
-            f"Tabuleiro atualizado:\n\n{mostrar_tabuleiro(tabuleiro)}",
-            call.message.chat.id,
-            call.message.message_id,
-            reply_markup=criar_botoes_tabuleiro(tabuleiro)
-        )
+        tabuleiro = bot_fazer_jogada(tabuleiro, '❌', '✔️')
 
         # Verifica se o bot venceu
         if verificar_vitoria(tabuleiro, '❌'):
             premiar_jogador(bot, call.message.chat.id, id_usuario, "derrota")
             del jogos_da_velha[id_usuario]
+            bot.edit_message_text(
+                f"😎 Eu venci! Melhor sorte da próxima vez.\n\n{mostrar_tabuleiro(tabuleiro)}",
+                call.message.chat.id,
+                call.message.message_id
+            )
             return
 
         # Verifica novamente se houve empate após a jogada do bot
         if verificar_empate(tabuleiro):
             premiar_jogador(bot, call.message.chat.id, id_usuario, "empate")
             del jogos_da_velha[id_usuario]
+            bot.edit_message_text(
+                f"😐 Empate!\n\n{mostrar_tabuleiro(tabuleiro)}",
+                call.message.chat.id,
+                call.message.message_id
+            )
             return
+
+        # Atualiza o tabuleiro com os novos botões
+        markup = criar_botoes_tabuleiro(tabuleiro)
+        bot.edit_message_text(
+            f"Seu turno!\n\n{mostrar_tabuleiro(tabuleiro)}",
+            call.message.chat.id,
+            call.message.message_id,
+            reply_markup=markup
+        )
 
     except Exception as e:
         print(f"Erro ao processar o jogo da velha: {e}")

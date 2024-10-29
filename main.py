@@ -586,6 +586,21 @@ def callback_query_cesta(call):
         bot.answer_callback_query(call.id, "Erro ao processar o callback.")
     finally:
         processing_lock.release()
+@bot.message_handler(commands=['halloween'])
+def handle_halloween(message):
+    user_id = message.from_user.id  # Obtém o ID do usuário
+    chat_id = message.chat.id
+
+    print(f"DEBUG: Comando /halloween acionado pelo usuário {user_id}")
+    chance = random.random()  # Gera um número entre 0 e 1
+    print(f"DEBUG: Chance sorteada para gostosura ou travessura: {chance}")
+
+    if chance < 0.5:
+        print(f"DEBUG: Executando gostosura para o usuário {user_id}")
+        realizar_halloween_gostosura(user_id, chat_id)  # Executa uma das funções de gostosura
+    else:
+        print(f"DEBUG: Executando travessura para o usuário {user_id}")
+        realizar_halloween_travessura(user_id, chat_id)  # Executa uma das funções de travessura
         
 def aplicar_praga(user_id):
     try:
@@ -2556,27 +2571,6 @@ def realizar_halloween_travessura(user_id, chat_id):
         bot.send_message(user_id, "Ocorreu um erro ao realizar a travessura.")
 
 
-@bot.message_handler(commands=['halloween'])
-def handle_halloween(message):
-    user_id = message.from_user.id  # Obtém o ID do usuário
-    chat_id = message.chat.id
-
-    # Verificar se o usuário já tem um jogo da velha ativo
-    if user_id in jogos_da_velha:
-        bot.send_message(chat_id, "👻 Você já tem um jogo da velha em andamento! Complete o jogo atual antes de iniciar outra ação.")
-        print(f"DEBUG: Comando /halloween bloqueado para o usuário {user_id} porque há um jogo da velha ativo.")
-        return
-
-    print(f"DEBUG: Comando /halloween acionado pelo usuário {user_id}")
-    chance = random.random()  # Gera um número entre 0 e 1
-    print(f"DEBUG: Chance sorteada para gostosura ou travessura: {chance}")
-
-    if chance < 0.5:
-        print(f"DEBUG: Executando gostosura para o usuário {user_id}")
-        realizar_halloween_gostosura(user_id, chat_id)  # Executa uma das funções de gostosura
-    else:
-        print(f"DEBUG: Executando travessura para o usuário {user_id}")
-        realizar_halloween_travessura(user_id, chat_id)  # Executa uma das funções de travessura
 
 
 

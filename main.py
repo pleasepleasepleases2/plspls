@@ -2512,7 +2512,7 @@ def realizar_halloween_travessura(user_id, chat_id):
         elif chance == 9:
             # Pega-pega (passar uma praga para outros usuários)
             bot.send_message(chat_id, f"👹 Travessura! Você foi amaldiçoado, use +praga para passar a praga para outra pessoa.")
-            iniciar_pega_pega(user_id)
+            iniciar_pega_pega(chat_id,user_id)
 
         elif chance == 10:
             # Nada acontece

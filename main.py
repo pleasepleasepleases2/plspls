@@ -1075,8 +1075,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from datetime import datetime, timedelta
 import time
 
-# Dicionário para armazenar o status da praga ativa
-praga_ativa = {}
+
 scheduler = BackgroundScheduler()
 scheduler.start()
 
@@ -1165,7 +1164,8 @@ def verificar_praga(user_id):
         return False
     finally:
         fechar_conexao(cursor, conn)
-
+# Função para o comando +praga (responder a uma mensagem de outro usuário)
+@bot.message_handler(func=lambda message: message.text.startswith('+praga'))
 def passar_praga(user_id, target_user_id, chat_id):
     try:
         # Verifica se o usuário realmente tem a praga
@@ -1988,68 +1988,6 @@ def aplicar_travessura(user_id, chat_id):
     except Exception as e:
         print(f"Erro ao aplicar a travessura: {e}")
         bot.send_message(chat_id, f"Ocorreu um erro ao aplicar a travessura.")
-
-# Função de contagem regressiva para a praga
-def contagem_regressiva_praga(user_id, chat_id):
-    try:
-        # Espera por 10 minutos
-        time.sleep(600)  # 600 segundos = 10 minutos
-
-        # Se o usuário ainda estiver com a praga, aplica uma travessura aleatória
-        if jogo_praga.get('user_id') == user_id:
-            aplicar_travessura(user_id, chat_id)  # Aplica uma travessura aleatória
-            bot.send_message(chat_id, "💀 Você não passou a praga a tempo. A travessura foi aplicada!")
-            jogo_praga.clear()  # Limpar a praga
-
-    except Exception as e:
-        bot.send_message(chat_id, f"Erro ao executar a contagem regressiva da praga: {e}")
-# Dicionário para armazenar quem tem a praga e o horário
-jogo_praga = {}
-
-# Função para iniciar a travessura de pega-pega
-def iniciar_travessura_praga(user_id, chat_id):
-    try:
-        # Inicia a praga para o usuário
-        bot.send_message(chat_id, f"👻 Você foi amaldiçoado com uma praga! Passe a praga para outra pessoa usando +praga em até 10 minutos, ou será afetado pela travessura!")
-        
-        # Salvar a praga e o horário inicial
-        jogo_praga['user_id'] = user_id
-        jogo_praga['start_time'] = time.time()
-
-        # Iniciar contagem regressiva de 10 minutos
-        threading.Thread(target=contagem_regressiva_praga, args=(user_id, chat_id,)).start()
-
-    except Exception as e:
-        bot.send_message(chat_id, f"Erro ao iniciar a travessura de praga: {e}")
-
-# Função para o comando +praga (responder a uma mensagem de outro usuário)
-@bot.message_handler(func=lambda message: message.text.startswith('+praga'))
-def passar_praga(message):
-    try:
-        # O usuário deve responder à mensagem de outro usuário
-        if not message.reply_to_message:
-            bot.send_message(message.chat.id, "👻 Você precisa responder a uma mensagem de outro usuário para passar a praga!")
-            return
-
-        user_id = message.from_user.id
-        target_user_id = message.reply_to_message.from_user.id
-        chat_id = message.chat.id
-
-        # Verificar se o usuário tem a praga
-        if jogo_praga.get('user_id') != user_id:
-            bot.send_message(chat_id, "👻 Você não tem a praga para passar!")
-            return
-
-        # Transferir a praga para o outro usuário
-        jogo_praga['user_id'] = target_user_id
-        jogo_praga['start_time'] = time.time()
-
-        # Informar o alvo que ele recebeu a praga
-        bot.send_message(chat_id, f"👻 {message.reply_to_message.from_user.first_name}, você recebeu a praga! Passe para outra pessoa ou sofrerá a travessura!")
-        bot.send_message(user_id, "🎃 Você passou a praga para outro usuário com sucesso!")
-
-    except Exception as e:
-        bot.send_message(message.chat.id, f"Erro ao passar a praga: {e}")
 
 def ativar_travessura_embaralhamento(chat_id, id_usuario):
     # Definir duração aleatória entre 30 minutos e 2 horas

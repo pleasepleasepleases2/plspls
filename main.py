@@ -2060,10 +2060,6 @@ from telebot import types
 # Armazenamento de jogadores no labirinto
 jogadores_labirinto = {}
 
-import random
-
-import random
-
 def gerar_labirinto_com_caminho_e_validacao(tamanho=10):
     labirinto = [['🪨' for _ in range(tamanho)] for _ in range(tamanho)]
     

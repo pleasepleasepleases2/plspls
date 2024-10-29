@@ -395,28 +395,36 @@ def processar_jogada(call):
     # Jogada do usuário
     tabuleiro[linha, coluna] = jogador
     if checar_vitoria(tabuleiro, jogador):
+        cenouras_ganhas = random.randint(50, 200)
+        aumentar_cenouras(user_id, cenouras_ganhas)
         bot.edit_message_text(chat_id=chat_id, message_id=call.message.message_id,
-                              text="Parabéns! Você venceu o fantasma e evitou a travessura!\n\n" + mostrar_tabuleiro(tabuleiro), reply_markup=None)
+                              text=f"🎉 Parabéns! Você venceu e ganhou {cenouras_ganhas} cenouras!" + mostrar_tabuleiro(tabuleiro), reply_markup=None)
         jogos_em_andamento[user_id]['ativo'] = False
         return
 
     if checar_empate(tabuleiro):
+        cenouras_ganhas = random.randint(1, 10)
+        aumentar_cenouras(user_id, cenouras_ganhas)
         bot.edit_message_text(chat_id=chat_id, message_id=call.message.message_id,
-                              text="Empate! A travessura foi evitada por pouco!\n\n" + mostrar_tabuleiro(tabuleiro), reply_markup=None)
+                              text=f"😐 Empate! Você ganhou {cenouras_ganhas} cenouras como consolação." + mostrar_tabuleiro(tabuleiro), reply_markup=None)
         jogos_em_andamento[user_id]['ativo'] = False
         return
 
     # Jogada do bot
     bot_jogada(tabuleiro)
     if checar_vitoria(tabuleiro, bot_jogador):
+        cenouras_perdidas = random.randint(30, 80)
+        diminuir_cenouras(user_id, cenouras_perdidas)
         bot.edit_message_text(chat_id=chat_id, message_id=call.message.message_id,
-                              text="O fantasma venceu! Prepare-se para a travessura!\n\n" + mostrar_tabuleiro(tabuleiro), reply_markup=None)
+                              text=f"😢 Você perdeu e perdeu {cenouras_perdidas} cenouras."+ mostrar_tabuleiro(tabuleiro), reply_markup=None)
         jogos_em_andamento[user_id]['ativo'] = False
         return
 
     if checar_empate(tabuleiro):
+        cenouras_ganhas = random.randint(1, 10)
+        aumentar_cenouras(user_id, cenouras_ganhas)
         bot.edit_message_text(chat_id=chat_id, message_id=call.message.message_id,
-                              text="Empate! A travessura foi evitada por pouco!\n\n" + mostrar_tabuleiro(tabuleiro), reply_markup=None)
+                              text=f"😐 Empate! Você ganhou {cenouras_ganhas} cenouras como consolação." + mostrar_tabuleiro(tabuleiro), reply_markup=None)
         jogos_em_andamento[user_id]['ativo'] = False
         return
 
@@ -2508,8 +2516,17 @@ def realizar_halloween_travessura(user_id, chat_id):
             bloquear_comandos_usuario(user_id, duracao_bloqueio_comandos,chat_id)
             
         elif chance == 8:
-            # Embaralhar as mensagens
-            bot.send_message(chat_id, embaralhar_mensagem("🐯 Olá! Você tem disponível: X iscas. Boa pesca!"))
+                minutes = random.randint(2, 30)
+                fim_travessura = datetime.now() + timedelta(minutes)
+        
+                # Inserir ou atualizar a travessura no banco de dados
+                cursor.execute("""
+                    INSERT INTO travessuras (id_usuario, tipo_travessura, fim_travessura)
+                    VALUES (%s, %s, %s)
+                    ON DUPLICATE KEY UPDATE tipo_travessura = VALUES(tipo_travessura), fim_travessura = VALUES(fim_travessura)
+                """, (user_id, 'embaralhar_mensagem', fim_travessura))
+                conn.commit()
+            bot.send_message(chat_id, ("🎃 Travessura! Suas mensagens estarão embaralhadas temporariamente. sɐɥuɐɹʇsǝ ˙˙˙oɔnod ɯn ɹɐʇsǝ ɯǝpod suǝƃɐsuǝɯ s∀"))
 
         elif chance == 9:
             # Pega-pega (passar uma praga para outros usuários)

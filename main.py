@@ -396,27 +396,43 @@ def iniciar_jogo_da_velha(chat_id, user_id):
     }
     bot.send_message(chat_id, "Faça sua jogada clicando em uma posição.", reply_markup=criar_tabuleiro_markup(jogos_em_andamento[user_id]['tabuleiro']))
 @bot.message_handler(func=lambda message: message.text.startswith('+praga'))
-def passar_praga(user_id, target_user_id, chat_id):
+def handle_passar_praga(message):
     try:
-        print(f"DEBUG: {user_id} tentando passar a praga para {target_user_id} no chat {chat_id}")
-        
+        # Extrair IDs do usuário atual e do alvo (deve ser respondido a alguém para definir o alvo)
+        user_id = message.from_user.id
+        if not message.reply_to_message:
+            bot.send_message(message.chat.id, "👻 Você deve responder a uma mensagem para passar a praga!")
+            return
+
+        target_user_id = message.reply_to_message.from_user.id
+        chat_id = message.chat.id
+
+        print(f"DEBUG: {user_id} tentando passar a praga para {target_user_id}")
+
+        # Verifica se o usuário atual realmente tem a praga
         if not verificar_praga(user_id):
             bot.send_message(user_id, "👻 Você não tem uma praga para passar.")
             return
 
+        # Atualiza o novo detentor da praga e o tempo restante
         tempo_restante = (praga_ativa[chat_id]["fim_praga"] - datetime.now()).total_seconds()
         nova_fim_praga = datetime.now() + timedelta(seconds=tempo_restante)
-        praga_ativa[chat_id]["usuario_atual"] = target_user_id
-        praga_ativa[chat_id]["fim_praga"] = nova_fim_praga
 
+        praga_ativa[chat_id] = {
+            "usuario_atual": target_user_id,
+            "fim_praga": nova_fim_praga
+        }
+
+        # Atualiza no banco de dados
         atualizar_praga_no_banco(user_id, target_user_id, chat_id, nova_fim_praga)
-        print(f"DEBUG: Praga passada para {target_user_id} no chat {chat_id} com tempo restante: {nova_fim_praga - datetime.now()} segundos")
 
-        bot.send_message(user_id, f"🎃 Você passou a praga para {target_user_id}!")
+        # Notifica os usuários envolvidos
+        bot.send_message(user_id, f"🎃 Você passou a praga para {bot.get_chat_member(chat_id, target_user_id).user.first_name}!")
         bot.send_message(target_user_id, f"👻 Você agora tem a praga! Passe-a para alguém nos próximos {int(tempo_restante / 60)} minutos.")
+        print(f"DEBUG: Praga passada de {user_id} para {target_user_id}")
+        
     except Exception as e:
         print(f"Erro ao passar praga: {e}")
-
 @bot.callback_query_handler(func=lambda call: call.data.startswith("jogada_"))
 def processar_jogada(call):
     user_id = call.from_user.id

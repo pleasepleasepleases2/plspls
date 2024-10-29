@@ -2060,7 +2060,8 @@ from telebot import types
 # Armazenamento de jogadores no labirinto
 jogadores_labirinto = {}
 
-# Função para criar o labirinto com um caminho garantido até a saída
+import random
+
 def gerar_labirinto_com_caminho_e_validacao(tamanho=10):
     labirinto = [['🪨' for _ in range(tamanho)] for _ in range(tamanho)]
     
@@ -2068,7 +2069,7 @@ def gerar_labirinto_com_caminho_e_validacao(tamanho=10):
     x, y = 1, 1  # Início
     saida_x, saida_y = tamanho - 2, random.randint(1, tamanho - 2)  # Saída aleatória
     
-    # Backtracking para garantir caminho à saída
+    # Caminho garantido até a saída usando backtracking
     caminho = [(x, y)]
     labirinto[x][y] = '⬜'
     
@@ -2095,7 +2096,28 @@ def gerar_labirinto_com_caminho_e_validacao(tamanho=10):
     # Define a saída
     labirinto[saida_x][saida_y] = '🚪'
     
-    # Adiciona monstros e recompensas
+    # Criar caminhos adicionais complexos ao redor do caminho principal
+    def criar_caminho_ramificado(start_x, start_y, max_ramos=3):
+        for _ in range(max_ramos):
+            comprimento_ramo = random.randint(2, 4)  # Comprimento aleatório para o ramo
+            ramo_x, ramo_y = start_x, start_y
+            for _ in range(comprimento_ramo):
+                direcoes = [
+                    (dx, dy) for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]
+                    if 1 <= ramo_x + dx < tamanho - 1 and 1 <= ramo_y + dy < tamanho - 1
+                    and labirinto[ramo_x + dx][ramo_y + dy] == '🪨'
+                ]
+                if not direcoes:
+                    break
+                dx, dy = random.choice(direcoes)
+                ramo_x, ramo_y = ramo_x + dx, ramo_y + dy
+                labirinto[ramo_x][ramo_y] = '⬜'
+    
+    # Adicionar ramificações a partir de alguns pontos do caminho principal
+    for i in range(0, len(caminho), max(1, len(caminho) // 5)):
+        criar_caminho_ramificado(*caminho[i])
+
+    # Adicionar monstros e recompensas
     for _ in range(5):
         while True:
             mx, my = random.randint(1, tamanho - 2), random.randint(1, tamanho - 2)
@@ -2111,6 +2133,7 @@ def gerar_labirinto_com_caminho_e_validacao(tamanho=10):
                 break
 
     return labirinto
+
 
 # Função para mostrar o labirinto parcialmente, baseado na posição do jogador
 def mostrar_labirinto(labirinto, posicao):

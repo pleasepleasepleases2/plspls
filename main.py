@@ -2512,7 +2512,7 @@ def realizar_halloween_travessura(user_id, chat_id):
         elif chance == 8:
             minutes = random.randint(2, 30)
             fim_travessura = datetime.now() + timedelta(minutes)
-        
+            conn, cursor = conectar_banco_dados()
                 # Inserir ou atualizar a travessura no banco de dados
             cursor.execute("""
                     INSERT INTO travessuras (id_usuario, tipo_travessura, fim_travessura)

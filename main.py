@@ -396,12 +396,13 @@ def iniciar_jogo_da_velha(chat_id, user_id):
     }
     bot.send_message(chat_id, "Faça sua jogada clicando em uma posição.", reply_markup=criar_tabuleiro_markup(jogos_em_andamento[user_id]['tabuleiro']))
 @bot.message_handler(commands=['praga'])
+@bot.message_handler(func=lambda message: message.text.startswith('+praga'))
 def handle_passar_praga(message):
     try:
         # IDs do usuário atual (que possui a praga) e do alvo (para quem vai passar)
         user_id = message.from_user.id
         chat_id = message.chat.id
-        
+
         # Verificar se o comando é respondido a alguém para definir o alvo
         if not message.reply_to_message:
             bot.send_message(chat_id, "👻 Você deve responder a uma mensagem de alguém para passar a praga!")
@@ -410,6 +411,12 @@ def handle_passar_praga(message):
         
         target_user_id = message.reply_to_message.from_user.id
         
+        # Validar que o chat_id e target_user_id são válidos para o envio
+        if not isinstance(chat_id, int) or not isinstance(target_user_id, int):
+            print(f"ERRO: `chat_id` ou `target_user_id` inválidos. chat_id: {chat_id}, target_user_id: {target_user_id}")
+            bot.send_message(user_id, "Houve um problema ao identificar o alvo. Por favor, tente novamente.")
+            return
+
         print(f"DEBUG: {user_id} tentando passar a praga para {target_user_id} no chat {chat_id}")
 
         # Verificar se o usuário atual realmente tem a praga
@@ -442,6 +449,7 @@ def handle_passar_praga(message):
         
     except Exception as e:
         print(f"Erro ao passar praga: {e}")
+
 @bot.callback_query_handler(func=lambda call: call.data.startswith("jogada_"))
 def processar_jogada(call):
     user_id = call.from_user.id

@@ -1021,8 +1021,7 @@ def realizar_combo_gostosura(user_id, chat_id):
         print(f"Erro ao realizar combo de gostosuras: {e}")
     finally:
         fechar_conexao(cursor, conn)
-# Dicionário para armazenar quem está com a praga e o tempo restante
-praga_ativa = {}
+
 @bot.message_handler(commands=['setgif'])
 def handle_setgif(message):
     enviar_gif(message)
@@ -1131,123 +1130,116 @@ def receber_link_gif(message, id_personagem):
             bot.send_message(message.chat.id, "Erro ao processar o link do GIF. ID de usuário inválido.")
     else:
         bot.send_message(message.chat.id, "Erro ao processar o link do GIF. ID de usuário inválido.")
+from apscheduler.schedulers.background import BackgroundScheduler
+from datetime import datetime, timedelta
+import time
+
+# Dicionário para armazenar o status da praga ativa
+praga_ativa = {}
+scheduler = BackgroundScheduler()
+scheduler.start()
+
 def iniciar_pega_pega(user_id, chat_id):
     try:
-        # Definir a pessoa inicial com a praga
+        # Definir o usuário inicial com a praga e definir tempo
+        fim_praga = datetime.now() + timedelta(minutes=10)
         praga_ativa[chat_id] = {
             "usuario_atual": user_id,
-            "tempo_inicial": time.time(),
-            "tempo_final": time.time() + 600  # 10 minutos de duração
+            "fim_praga": fim_praga
         }
 
-        # Anunciar o início do pega-pega com praga
-        bot.send_message(chat_id, f"👻 {user_id} está com a praga! Use +praga para passar a praga para outra pessoa!")
+        # Salvar praga no banco
+        registrar_praga_no_banco(user_id, chat_id, fim_praga)
 
-        # Iniciar uma thread para monitorar o tempo e aplicar a travessura
-        threading.Thread(target=monitorar_praga, args=(chat_id,)).start()
+        # Agendar a verificação para a penalidade
+        scheduler.add_job(verificar_expiracao_praga, 'date', run_date=fim_praga, args=[chat_id])
 
+        # Mensagem inicial
+        bot.send_message(chat_id, f"👻 {user_id} está com a praga! Use +praga para passá-la a outra pessoa!")
     except Exception as e:
         print(f"Erro ao iniciar o Pega-Pega com praga: {e}")
-        bot.send_message(chat_id, "Ocorreu um erro ao iniciar o Pega-Pega com praga.")
 
-def monitorar_praga(chat_id):
+def verificar_expiracao_praga(chat_id):
+    # Checa se o tempo expirou e aplica a penalidade se a praga ainda estiver ativa
     try:
-        while True:
-            # Verificar se o tempo da praga acabou
-            if praga_ativa[chat_id]["tempo_final"] <= time.time():
-                # O tempo acabou, a pessoa que está com a praga sofre a travessura
-                usuario_com_praga = praga_ativa[chat_id]["usuario_atual"]
-                bot.send_message(chat_id, f"⏰ O tempo acabou! {usuario_com_praga} ainda está com a praga e vai sofrer uma travessura!")
-                
-                # Aplique a travessura aqui, como uma penalidade
-                realizar_travessura_final(usuario_com_praga, chat_id)
-                
-                # Remover a praga do chat
-                del praga_ativa[chat_id]
-                break
-
-            time.sleep(10)  # Verificar a cada 10 segundos
-
+        if chat_id in praga_ativa and datetime.now() >= praga_ativa[chat_id]["fim_praga"]:
+            usuario_com_praga = praga_ativa[chat_id]["usuario_atual"]
+            bot.send_message(chat_id, f"⏰ O tempo acabou! {usuario_com_praga} ainda está com a praga e vai sofrer uma travessura!")
+            
+            # Aplicar a penalidade e limpar praga
+            realizar_travessura_final(usuario_com_praga, chat_id)
+            remover_praga_do_banco(usuario_com_praga)
+            del praga_ativa[chat_id]
     except Exception as e:
-        print(f"Erro ao monitorar a praga: {e}")
+        print(f"Erro ao verificar expiração da praga: {e}")
 
-def verificar_praga(user_id):
+def registrar_praga_no_banco(user_id, chat_id, fim_praga):
+    # Função para registrar a praga no banco de dados
+    conn, cursor = conectar_banco_dados()
+    inicio_praga = datetime.now()
     try:
-        conn, cursor = conectar_banco_dados()
-
-        # Verificar se o usuário tem a praga ativa
-        cursor.execute("SELECT fim_praga FROM pragas WHERE id_usuario = %s", (user_id,))
-        resultado = cursor.fetchone()
-
-        if resultado:
-            fim_praga = resultado[0]
-            # Verificar se a praga ainda está ativa
-            if datetime.now() < fim_praga:
-                return True
-
-        return False  # Não tem praga ativa ou já expirou
-
-    except Exception as e:
-        print(f"Erro ao verificar praga: {e}")
-        return False
-
-    finally:
-        fechar_conexao(cursor, conn)
-
-# Função para dar a praga a um usuário
-def dar_praga(user_id, duracao_minutos=10):
-    try:
-        conn, cursor = conectar_banco_dados()
-
-        fim_praga = datetime.now() + timedelta(minutes=duracao_minutos)
-
-        # Inserir ou atualizar o status da praga no banco de dados
         cursor.execute("""
-            INSERT INTO pragas (id_usuario, fim_praga)
-            VALUES (%s, %s)
-            ON DUPLICATE KEY UPDATE fim_praga = VALUES(fim_praga)
-        """, (user_id, fim_praga))
+            INSERT INTO pragas_ativas (id_usuario, chat_id, inicio_praga, fim_praga)
+            VALUES (%s, %s, %s, %s)
+        """, (user_id, chat_id, inicio_praga, fim_praga))
         conn.commit()
-
-        bot.send_message(user_id, f"👻 Você foi amaldiçoado com a praga! Passe-a para alguém nos próximos {duracao_minutos} minutos.")
-    
     except Exception as e:
-        print(f"Erro ao dar praga: {e}")
-    
+        print(f"Erro ao registrar praga no banco: {e}")
     finally:
         fechar_conexao(cursor, conn)
 
-# Função para passar a praga para outro usuário
-def passar_praga(user_id, target_user_id):
+def passar_praga(user_id, target_user_id, chat_id):
     try:
-        conn, cursor = conectar_banco_dados()
-
-        # Verificar se o usuário realmente tem a praga
+        # Verifica se o usuário realmente tem a praga
         if not verificar_praga(user_id):
             bot.send_message(user_id, "👻 Você não tem uma praga para passar.")
             return
 
-        # Dar a praga ao usuário alvo
-        dar_praga(target_user_id)
+        # Atualiza o novo detentor da praga e o tempo restante
+        tempo_restante = (praga_ativa[chat_id]["fim_praga"] - datetime.now()).total_seconds()
+        nova_fim_praga = datetime.now() + timedelta(seconds=tempo_restante)
+        praga_ativa[chat_id]["usuario_atual"] = target_user_id
+        praga_ativa[chat_id]["fim_praga"] = nova_fim_praga
 
-        # Remover a praga do usuário atual
-        cursor.execute("DELETE FROM pragas WHERE id_usuario = %s", (user_id,))
-        conn.commit()
+        # Atualiza no banco de dados
+        atualizar_praga_no_banco(user_id, target_user_id, chat_id, nova_fim_praga)
 
-        bot.send_message(user_id, f"🎃 Você passou a praga para {bot.get_chat_member(user_id, target_user_id).user.first_name}!")
-        bot.send_message(target_user_id, "👻 Você recebeu uma praga! Passe-a para alguém nos próximos 10 minutos.")
-
+        # Notifica o novo usuário
+        bot.send_message(user_id, f"🎃 Você passou a praga para {target_user_id}!")
+        bot.send_message(target_user_id, f"👻 Você agora tem a praga! Passe-a para alguém nos próximos {int(tempo_restante / 60)} minutos.")
     except Exception as e:
         print(f"Erro ao passar praga: {e}")
 
+def atualizar_praga_no_banco(old_user_id, new_user_id, chat_id, fim_praga):
+    # Atualiza o detentor da praga no banco
+    conn, cursor = conectar_banco_dados()
+    try:
+        cursor.execute("""
+            UPDATE pragas_ativas 
+            SET id_usuario = %s, fim_praga = %s 
+            WHERE id_usuario = %s AND chat_id = %s
+        """, (new_user_id, fim_praga, old_user_id, chat_id))
+        conn.commit()
+    except Exception as e:
+        print(f"Erro ao atualizar praga no banco: {e}")
+    finally:
+        fechar_conexao(cursor, conn)
+
+def remover_praga_do_banco(user_id):
+    # Remove a praga do banco quando expira
+    conn, cursor = conectar_banco_dados()
+    try:
+        cursor.execute("DELETE FROM pragas_ativas WHERE id_usuario = %s", (user_id,))
+        conn.commit()
+    except Exception as e:
+        print(f"Erro ao remover praga do banco: {e}")
     finally:
         fechar_conexao(cursor, conn)
 
 def realizar_travessura_final(usuario_com_praga, chat_id):
-    # Implemente aqui a travessura final que será aplicada ao usuário com a praga
-    # Por exemplo, roubar cenouras ou remover cartas
+    # Exemplo de penalidade
     bot.send_message(chat_id, f"👻 {usuario_com_praga} sofreu uma travessura! Uma carta foi removida do seu inventário.")
-   
+
 def ativar_dobro_cenouras(user_id):
     try:
         conn, cursor = conectar_banco_dados()

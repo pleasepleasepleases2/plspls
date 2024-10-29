@@ -668,65 +668,6 @@ def handle_halloween(message):
         print(f"DEBUG: Executando travessura para o usuário {user_id}")
         realizar_halloween_travessura(user_id, chat_id)  # Executa uma das funções de travessura
         
-
-def aplicar_praga(user_id):
-    """
-    Aplica a praga inicial ao usuário com um temporizador de 10 minutos.
-    """
-    fim_praga = datetime.now() + timedelta(minutes=10)
-    pragas_ativas[user_id] = {
-        "fim_praga": fim_praga,
-        "ultimos_passadores": [user_id]  # Histórico dos passadores
-    }
-    bot.send_message(user_id, "👻 Você foi amaldiçoado! Passe a praga para outro usuário em 10 minutos, ou ela cairá sobre você!")
-
-def verificar_tempo_praga():
-    """
-    Verifica se o tempo da praga expirou para cada usuário.
-    """
-    agora = datetime.now()
-    for user_id, info in list(pragas_ativas.items()):
-        if agora >= info["fim_praga"]:
-            praga_encerra(user_id)
-            del pragas_ativas[user_id]  # Remove a praga depois de expirar
-
-def praga_encerra(user_id):
-    """
-    Lida com o término da praga, aplicando penalidade ao último portador.
-    """
-    bot.send_message(user_id, "👻 A praga caiu sobre você! Você não conseguiu passá-la a tempo.")
-
-def passar_praga(origem_id, destino_id):
-    """
-    Passa a praga de origem_id para destino_id, com o tempo restante até o fim da praga.
-    """
-    if origem_id not in pragas_ativas:
-        bot.send_message(origem_id, "Você não está amaldiçoado, não pode passar a praga.")
-        return
-
-    tempo_restante = (pragas_ativas[origem_id]["fim_praga"] - datetime.now()).total_seconds()
-    if tempo_restante <= 0:
-        praga_encerra(origem_id)
-        return
-
-    fim_praga = datetime.now() + timedelta(seconds=tempo_restante)
-    pragas_ativas[destino_id] = {
-        "fim_praga": fim_praga,
-        "ultimos_passadores": pragas_ativas[origem_id]["ultimos_passadores"] + [destino_id]
-    }
-    del pragas_ativas[origem_id]  # Remove a praga do portador anterior
-
-    bot.send_message(origem_id, "👻 Você passou a praga com sucesso!")
-    bot.send_message(destino_id, f"👻 A praga foi passada para você! Você tem {int(tempo_restante / 60)} minutos para passá-la a outra pessoa.")
-
-# Configura o agendador para verificar a praga a cada 10 segundos
-scheduler.add_job(verificar_tempo_praga, 'interval', seconds=10)
-scheduler.start()
-
-# Função para parar o agendador ao final do programa
-def parar_agendador():
-    scheduler.shutdown()
-
 def aplicar_travessura(id_usuario, tipo_travessura):
     """
     Aplica a travessura ao usuário com base no tipo de travessura.

@@ -2497,16 +2497,16 @@ def realizar_halloween_travessura(user_id, chat_id):
             bloquear_comandos_usuario(user_id, duracao_bloqueio_comandos,chat_id)
             
         elif chance == 8:
-                minutes = random.randint(2, 30)
-                fim_travessura = datetime.now() + timedelta(minutes)
+            minutes = random.randint(2, 30)
+            fim_travessura = datetime.now() + timedelta(minutes)
         
                 # Inserir ou atualizar a travessura no banco de dados
-                cursor.execute("""
+            cursor.execute("""
                     INSERT INTO travessuras (id_usuario, tipo_travessura, fim_travessura)
                     VALUES (%s, %s, %s)
                     ON DUPLICATE KEY UPDATE tipo_travessura = VALUES(tipo_travessura), fim_travessura = VALUES(fim_travessura)
                 """, (user_id, 'embaralhar_mensagem', fim_travessura))
-                conn.commit()
+            conn.commit()
             bot.send_message(chat_id, f"🎃 Travessura! Suas mensagens estarão embaralhadas temporariamente. ΛƧ MΣПƧΛGΣПƧ PӨDΣM ΣƧƬΛЯ ЦM PӨЦᄃӨ... ΣƧƬЯΛПΗΛƧ.")
 
         elif chance == 9:

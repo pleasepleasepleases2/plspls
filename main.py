@@ -345,7 +345,10 @@ from telebot import types
 
 # Inicializar o dicionário de jogos
 jogos_da_velha = {}
-
+# Callback handler para processar jogadas
+@bot.callback_query_handler(func=lambda call: call.data.startswith("jogada_"))
+def callback_jogada(bot, call):
+    processar_jogada(bot, call)
 # Função para inicializar um novo tabuleiro vazio
 def inicializar_tabuleiro():
     return np.full((3, 3), '⬜')

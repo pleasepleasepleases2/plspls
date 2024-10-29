@@ -398,55 +398,59 @@ def iniciar_jogo_da_velha(chat_id, user_id):
 @bot.message_handler(commands=['praga'])
 def handle_passar_praga(message):
     try:
-        user_id = message.from_user.id
-        chat_id = message.chat.id
-
-        # Confirmação de que o comando está respondendo a uma mensagem
+        user_id = message.from_user.id  # ID do usuário que tenta passar a praga
         if not message.reply_to_message:
-            bot.send_message(chat_id, "👻 Responda à mensagem de alguém para passar a praga!")
+            bot.send_message(message.chat.id, "👻 Responda à mensagem de alguém para passar a praga!")
             print("DEBUG: Comando +praga não foi respondido a ninguém.")
             return
 
         target_user_id = message.reply_to_message.from_user.id
-        print(f"DEBUG: {user_id} tentando passar a praga para {target_user_id} no chat {chat_id}")
+        print(f"DEBUG: {user_id} tentando passar a praga para {target_user_id}")
 
-        # Verificar se a praga está ativa para o chat_id
-        if chat_id not in praga_ativa:
-            bot.send_message(chat_id, "👻 A praga não está ativa neste chat. Use o comando para iniciá-la.")
-            print(f"DEBUG: Nenhuma praga ativa para o chat {chat_id}")
-            return
-
-        # Verificar se o usuário atual tem a praga
-        if not verificar_praga(user_id):
-            bot.send_message(chat_id, "👻 Você não tem uma praga para passar.")
+        # Verificar se a praga está ativa para o user_id que está tentando passá-la
+        if user_id not in praga_ativa:
+            bot.send_message(message.chat.id, "👻 Você não tem uma praga para passar.")
             print(f"DEBUG: Usuário {user_id} tentou passar a praga, mas não a possui.")
             return
 
         # Calcular o tempo restante da praga
-        tempo_restante = (praga_ativa[chat_id]["fim_praga"] - datetime.now()).total_seconds()
+        tempo_restante = (praga_ativa[user_id]["fim_praga"] - datetime.now()).total_seconds()
         nova_fim_praga = datetime.now() + timedelta(seconds=tempo_restante)
 
         # Atualizar o detentor e o tempo da praga
-        praga_ativa[chat_id] = {
+        praga_ativa[target_user_id] = {
             "usuario_atual": target_user_id,
             "fim_praga": nova_fim_praga
         }
+        del praga_ativa[user_id]  # Remover a praga do usuário atual
 
         # Atualizar no banco de dados
-        atualizar_praga_no_banco(user_id, target_user_id, chat_id, nova_fim_praga)
+        atualizar_praga_no_banco(user_id, target_user_id, nova_fim_praga)
 
         # Notificar os usuários sobre a nova praga
-        target_user_name = bot.get_chat_member(chat_id, target_user_id).user.first_name
-        bot.send_message(chat_id, f"🎃 Praga passada para {target_user_name}!")
+        target_user_name = bot.get_chat_member(message.chat.id, target_user_id).user.first_name
+        bot.send_message(message.chat.id, f"🎃 Praga passada para {target_user_name}!")
         bot.send_message(target_user_id, f"👻 Você agora tem a praga! Passe-a para alguém nos próximos {int(tempo_restante / 60)} minutos.")
         print(f"DEBUG: Praga passada de {user_id} para {target_user_id} com {int(tempo_restante / 60)} minutos restantes.")
-        
-    except KeyError as ke:
-        print(f"Erro de chave: {ke}")
-        
+
     except Exception as e:
-        print(f"Erro ao bloquear comandos para o usuário {user_id}: {e}")
-        traceback.print_exc()
+        print(f"Erro ao passar praga: {e}")
+
+# Atualiza a praga no banco para o novo detentor
+def atualizar_praga_no_banco(old_user_id, new_user_id, fim_praga):
+    conn, cursor = conectar_banco_dados()
+    try:
+        cursor.execute("""
+            UPDATE pragas_ativas 
+            SET id_usuario = %s, fim_praga = %s 
+            WHERE id_usuario = %s
+        """, (new_user_id, fim_praga, old_user_id))
+        conn.commit()
+    except Exception as e:
+        print(f"Erro ao atualizar praga no banco: {e}")
+    finally:
+        fechar_conexao(cursor, conn)
+
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("jogada_"))
 def processar_jogada(call):
@@ -1201,22 +1205,6 @@ def verificar_praga(user_id):
     except Exception as e:
         print(f"Erro ao verificar praga: {e}")
         return False
-    finally:
-        fechar_conexao(cursor, conn)
-
-
-def atualizar_praga_no_banco(old_user_id, new_user_id, chat_id, fim_praga):
-    conn, cursor = conectar_banco_dados()
-    try:
-        cursor.execute("""
-            UPDATE pragas_ativas 
-            SET id_usuario = %s, fim_praga = %s 
-            WHERE id_usuario = %s AND chat_id = %s
-        """, (new_user_id, fim_praga, old_user_id, chat_id))
-        conn.commit()
-        print(f"DEBUG: Banco de dados atualizado para {new_user_id} no chat {chat_id} com novo fim da praga: {fim_praga}")
-    except Exception as e:
-        print(f"Erro ao atualizar praga no banco: {e}")
     finally:
         fechar_conexao(cursor, conn)
 

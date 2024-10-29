@@ -350,7 +350,7 @@ def inicializar_tabuleiro():
 def mostrar_tabuleiro(tabuleiro):
     return '\n'.join([' '.join(row) for row in tabuleiro])
 
-# Verifica se há uma vitória (adaptado para garantir que a lógica é aplicada corretamente)
+# Verifica se há uma vitória
 def verificar_vitoria(tabuleiro, simbolo):
     # Verificar linhas e colunas
     for i in range(3):
@@ -383,6 +383,7 @@ def processar_jogada(call):
 
     # Jogada do jogador
     tabuleiro[i][j] = '✔️'
+    # Verificação imediata para ver se o jogador venceu
     if verificar_vitoria(tabuleiro, '✔️'):
         finalizar_jogo_da_velha(user_id, call.message.chat.id, "vitoria")
         return
@@ -394,6 +395,7 @@ def processar_jogada(call):
 
     # Jogada do bot
     bot_fazer_jogada(tabuleiro, '❌', '✔️')
+    # Verificação imediata para ver se o bot venceu
     if verificar_vitoria(tabuleiro, '❌'):
         finalizar_jogo_da_velha(user_id, call.message.chat.id, "derrota")
         return
@@ -423,7 +425,6 @@ def finalizar_jogo_da_velha(user_id, chat_id, resultado):
     # Remover o jogo da lista ativa
     if user_id in jogos_da_velha:
         del jogos_da_velha[user_id]
-
 
 # Verifica se o tabuleiro está completo (empate)
 def verificar_empate(tabuleiro):

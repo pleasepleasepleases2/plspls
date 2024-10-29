@@ -1144,11 +1144,20 @@ def verificar_praga(user_id):
         """, (user_id,))
         resultado = cursor.fetchone()
 
+        # Debugging logs
         if resultado:
             fim_praga = resultado[0]
+            print(f"DEBUG: Praga encontrada para o usuário {user_id}. Fim da praga: {fim_praga}")
+            print(f"DEBUG: Hora atual: {datetime.now()}")
+            
             # Verifica se o tempo atual ainda está dentro do período da praga
             if datetime.now() < fim_praga:
+                print("DEBUG: A praga ainda está ativa.")
                 return True
+            else:
+                print("DEBUG: A praga já expirou.")
+        else:
+            print(f"DEBUG: Nenhuma praga ativa encontrada para o usuário {user_id}.")
 
         return False  # Praga não ativa ou já expirou
     except Exception as e:
@@ -1156,6 +1165,7 @@ def verificar_praga(user_id):
         return False
     finally:
         fechar_conexao(cursor, conn)
+
 
 
 def passar_praga(user_id, target_user_id, chat_id):

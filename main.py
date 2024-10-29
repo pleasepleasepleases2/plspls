@@ -396,30 +396,27 @@ def iniciar_jogo_da_velha(chat_id, user_id):
     }
     bot.send_message(chat_id, "Faça sua jogada clicando em uma posição.", reply_markup=criar_tabuleiro_markup(jogos_em_andamento[user_id]['tabuleiro']))
 @bot.message_handler(commands=['praga'])
-@bot.message_handler(func=lambda message: message.text.startswith('+praga'))
 def handle_passar_praga(message):
     try:
-        # IDs do usuário atual (que possui a praga) e do alvo (para quem vai passar)
         user_id = message.from_user.id
         chat_id = message.chat.id
 
-        # Verificar se o comando é respondido a alguém para definir o alvo
+        # Confirmação de que o comando está respondendo a uma mensagem
         if not message.reply_to_message:
-            bot.send_message(chat_id, "👻 Você deve responder a uma mensagem de alguém para passar a praga!")
+            bot.send_message(chat_id, "👻 Responda à mensagem de alguém para passar a praga!")
             print("DEBUG: Comando +praga não foi respondido a ninguém.")
             return
-        
-        target_user_id = message.reply_to_message.from_user.id
-        
-        # Validar que o chat_id e target_user_id são válidos para o envio
-        if not isinstance(chat_id, int) or not isinstance(target_user_id, int):
-            print(f"ERRO: `chat_id` ou `target_user_id` inválidos. chat_id: {chat_id}, target_user_id: {target_user_id}")
-            bot.send_message(user_id, "Houve um problema ao identificar o alvo. Por favor, tente novamente.")
-            return
 
+        target_user_id = message.reply_to_message.from_user.id
         print(f"DEBUG: {user_id} tentando passar a praga para {target_user_id} no chat {chat_id}")
 
-        # Verificar se o usuário atual realmente tem a praga
+        # Verificar se a praga está ativa para o chat_id
+        if chat_id not in praga_ativa:
+            bot.send_message(chat_id, "👻 A praga não está ativa neste chat. Use o comando para iniciá-la.")
+            print(f"DEBUG: Nenhuma praga ativa para o chat {chat_id}")
+            return
+
+        # Verificar se o usuário atual tem a praga
         if not verificar_praga(user_id):
             bot.send_message(chat_id, "👻 Você não tem uma praga para passar.")
             print(f"DEBUG: Usuário {user_id} tentou passar a praga, mas não a possui.")
@@ -429,7 +426,7 @@ def handle_passar_praga(message):
         tempo_restante = (praga_ativa[chat_id]["fim_praga"] - datetime.now()).total_seconds()
         nova_fim_praga = datetime.now() + timedelta(seconds=tempo_restante)
 
-        # Atualizar o novo detentor da praga e o tempo final
+        # Atualizar o detentor e o tempo da praga
         praga_ativa[chat_id] = {
             "usuario_atual": target_user_id,
             "fim_praga": nova_fim_praga
@@ -438,14 +435,14 @@ def handle_passar_praga(message):
         # Atualizar no banco de dados
         atualizar_praga_no_banco(user_id, target_user_id, chat_id, nova_fim_praga)
 
-        # Mensagem para notificar a transferência da praga
-        try:
-            target_user_name = bot.get_chat_member(chat_id, target_user_id).user.first_name
-            bot.send_message(chat_id, f"🎃 Você passou a praga para {target_user_name}!")
-            bot.send_message(target_user_id, f"👻 Você agora tem a praga! Passe-a para alguém nos próximos {int(tempo_restante / 60)} minutos.")
-            print(f"DEBUG: Praga passada de {user_id} para {target_user_id} com {int(tempo_restante / 60)} minutos restantes.")
-        except Exception as e:
-            print(f"Erro ao obter nome do usuário {target_user_id} no chat {chat_id}: {e}")
+        # Notificar os usuários sobre a nova praga
+        target_user_name = bot.get_chat_member(chat_id, target_user_id).user.first_name
+        bot.send_message(chat_id, f"🎃 Praga passada para {target_user_name}!")
+        bot.send_message(target_user_id, f"👻 Você agora tem a praga! Passe-a para alguém nos próximos {int(tempo_restante / 60)} minutos.")
+        print(f"DEBUG: Praga passada de {user_id} para {target_user_id} com {int(tempo_restante / 60)} minutos restantes.")
+        
+    except KeyError as ke:
+        print(f"Erro de chave: {ke}")
         
     except Exception as e:
         print(f"Erro ao bloquear comandos para o usuário {user_id}: {e}")

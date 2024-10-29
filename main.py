@@ -395,7 +395,7 @@ def iniciar_jogo_da_velha(chat_id, user_id):
         'ativo': True
     }
     bot.send_message(chat_id, "Faça sua jogada clicando em uma posição.", reply_markup=criar_tabuleiro_markup(jogos_em_andamento[user_id]['tabuleiro']))
-@bot.message_handler(func=lambda message: message.text.startswith('+praga'))
+@bot.message_handler(commands=['praga'])
 def handle_passar_praga(message):
     try:
         # Extrair IDs do usuário atual e do alvo (deve ser respondido a alguém para definir o alvo)

@@ -338,13 +338,12 @@ def travessura_grupal(chat_id, user_id):
 
     except Exception as e:
         print(f"Erro ao realizar travessura grupal: {e}")
-
 # Dicionário para controlar o estado dos jogos em andamento
 jogos_em_andamento = {}
 
 # Variáveis de jogo
-jogador = 'X'
-bot_jogador = 'O'
+jogador = '❌'
+bot_jogador = '⭕️'
 
 def criar_tabuleiro():
     """Cria um tabuleiro vazio de jogo da velha."""
@@ -368,11 +367,6 @@ def criar_tabuleiro_markup(tabuleiro):
 def iniciar_jogo_da_velha(chat_id, user_id):
     """Inicia um jogo da velha quando o usuário é desafiado."""
     global jogos_em_andamento
-    if user_id in jogos_em_andamento and jogos_em_andamento[user_id]['ativo']:
-        bot.send_message(chat_id, "Você já está em um jogo da velha em andamento! Termine o jogo atual antes de começar outro.")
-        return
-
-    # Define o estado inicial do jogo
     jogos_em_andamento[user_id] = {
         'tabuleiro': criar_tabuleiro(),
         'ativo': True
@@ -441,14 +435,16 @@ def checar_empate(tabuleiro):
     return ' ' not in tabuleiro
 
 def bot_jogada(tabuleiro):
-    """Jogada simples do bot usando minimax."""
-    # Implementação simplificada da jogada do bot
-    pass  # Insira aqui a implementação do algoritmo do bot
+    """Jogada simples do bot: escolhe a primeira posição vazia."""
+    for i in range(3):
+        for j in range(3):
+            if tabuleiro[i, j] == ' ':
+                tabuleiro[i, j] = bot_jogador
+                return
 
 def mostrar_tabuleiro(tabuleiro):
     """Função para retornar o tabuleiro como string"""
     return "\n".join([" | ".join(row) for row in tabuleiro])
-
 # Função para aplicar a travessura ao usuário
 def aplicar_travessura(user_id, chat_id):
     try:

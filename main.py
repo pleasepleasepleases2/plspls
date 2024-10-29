@@ -345,16 +345,19 @@ jogador = 'X'
 bot_jogador = 'O'
 
 def criar_tabuleiro_markup():
-    """Cria um markup inline para o tabuleiro de jogo da velha"""
+    """Cria um markup inline para o tabuleiro de jogo da velha, organizado em uma grade 3x3."""
     markup = InlineKeyboardMarkup(row_width=3)
     for i in range(3):
+        linha = []
         for j in range(3):
             simbolo = tabuleiro[i][j]
+            # Cada botão representa uma posição no tabuleiro
             button = InlineKeyboardButton(
                 text=simbolo if simbolo != ' ' else ' ',
                 callback_data=f"jogada_{i}_{j}"
             )
-            markup.add(button)
+            linha.append(button)
+        markup.add(*linha)  # Adiciona a linha completa de uma vez para criar a grade
     return markup
 
 def checar_vitoria(simbolo):

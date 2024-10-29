@@ -2507,7 +2507,7 @@ def realizar_halloween_travessura(user_id, chat_id):
                     ON DUPLICATE KEY UPDATE tipo_travessura = VALUES(tipo_travessura), fim_travessura = VALUES(fim_travessura)
                 """, (user_id, 'embaralhar_mensagem', fim_travessura))
                 conn.commit()
-            bot.send_message(chat_id, ("🎃 Travessura! Suas mensagens estarão embaralhadas temporariamente. sɐɥuɐɹʇsǝ ˙˙˙oɔnod ɯn ɹɐʇsǝ ɯǝpod suǝƃɐsuǝɯ s∀"))
+            bot.send_message(chat_id, ("🎃 Travessura! Suas mensagens estarão embaralhadas temporariamente. ΛƧ MΣПƧΛGΣПƧ PӨDΣM ΣƧƬΛЯ ЦM PӨЦᄃӨ... ΣƧƬЯΛПΗΛƧ."))
 
         elif chance == 9:
             # Pega-pega (passar uma praga para outros usuários)

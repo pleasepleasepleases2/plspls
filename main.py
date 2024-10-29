@@ -125,13 +125,26 @@ def set_webhook():
 def index():
     return 'Server is running.'
 
+from datetime import datetime, timedelta
+
 def bloquear_acao(user_id, acao, minutos):
     # Bloquear a ação por x minutos
     conn, cursor = conectar_banco_dados()
-    fim_bloqueio = datetime.now() + timedelta(minutes=minutos)
-    cursor.execute("INSERT INTO bloqueios (id_usuario, acao, fim_bloqueio) VALUES (%s, %s, %s)", (user_id, acao, fim_bloqueio))
-    conn.commit()
-    fechar_conexao(cursor, conn)
+    
+    # Garante que fim_bloqueio está no formato de string esperado pelo MySQL
+    fim_bloqueio = (datetime.now() + timedelta(minutes=minutos)).strftime("%Y-%m-%d %H:%M:%S")
+    
+    try:
+        cursor.execute(
+            "INSERT INTO bloqueios (id_usuario, acao, fim_bloqueio) VALUES (%s, %s, %s)",
+            (user_id, acao, fim_bloqueio)
+        )
+        conn.commit()
+    except Exception as e:
+        print(f"Erro ao inserir bloqueio: {e}")
+    finally:
+        fechar_conexao(cursor, conn)
+
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith('votar_'))
 def votar_usuario(call):

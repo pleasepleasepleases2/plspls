@@ -1166,12 +1166,11 @@ def verificar_praga(user_id):
     finally:
         fechar_conexao(cursor, conn)
 
-
-
 def passar_praga(user_id, target_user_id, chat_id):
     try:
         # Verifica se o usuário realmente tem a praga
         if not verificar_praga(user_id):
+            print(verificar_praga(user_id))
             bot.send_message(user_id, "👻 Você não tem uma praga para passar.")
             return
 

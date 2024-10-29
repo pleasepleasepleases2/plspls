@@ -1231,9 +1231,12 @@ def realizar_travessura_final(usuario_com_praga, chat_id):
         penalidade = random.choice(["cenouras", "carta", "ambos"])
         mensagem = f"👻 {usuario_com_praga} sofreu uma travessura! "
 
+        print(f"DEBUG: Aplicando travessura para o usuário {usuario_com_praga}. Tipo de penalidade: {penalidade}")
+
         # Penalidade de perda de cenouras
         if penalidade in ["cenouras", "ambos"]:
-            cenouras_perdidas = random.randint(10, 50)  # Valor aleatório de cenouras perdidas
+            cenouras_perdidas = random.randint(10, 50)
+            print(f"DEBUG: Usuário {usuario_com_praga} perderá {cenouras_perdidas} cenouras.")
             cursor.execute("UPDATE usuarios SET cenouras = GREATEST(0, cenouras - %s) WHERE id_usuario = %s", (cenouras_perdidas, usuario_com_praga))
             mensagem += f"Perdeu {cenouras_perdidas} cenouras. "
 
@@ -1241,17 +1244,23 @@ def realizar_travessura_final(usuario_com_praga, chat_id):
         if penalidade in ["carta", "ambos"]:
             cursor.execute("SELECT id_carta FROM cartas WHERE id_usuario = %s ORDER BY RAND() LIMIT 1", (usuario_com_praga,))
             carta_perdida = cursor.fetchone()
+            print(f"DEBUG: Carta selecionada para remoção: {carta_perdida}")
+
             if carta_perdida:
                 cursor.execute("DELETE FROM cartas WHERE id_usuario = %s AND id_carta = %s", (usuario_com_praga, carta_perdida[0]))
                 mensagem += "Perdeu uma carta do inventário."
+            else:
+                print(f"DEBUG: Nenhuma carta encontrada para o usuário {usuario_com_praga}. Nenhuma carta será removida.")
 
         conn.commit()
         bot.send_message(chat_id, mensagem)
+        print(f"DEBUG: Mensagem de travessura enviada para o chat {chat_id}: {mensagem}")
 
     except Exception as e:
         print(f"Erro ao aplicar travessura: {e}")
     finally:
         fechar_conexao(cursor, conn)
+
 def ativar_dobro_cenouras(user_id):
     try:
         conn, cursor = conectar_banco_dados()

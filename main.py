@@ -1872,9 +1872,6 @@ def adicionar_inverter_travessura(user_id, quantidade=1):
     finally:
         fechar_conexao(cursor, conn)
 
-
-
-
 def verificar_inverter_travessura(user_id, atacante_id):
     try:
         conn, cursor = conectar_banco_dados()

@@ -261,7 +261,20 @@ def confirmar_compra_carta(call):
     )
     
     bot.edit_message_text(mensagem_confirmacao, chat_id, call.message.message_id, reply_markup=markup)
-# Comando para listar as travessuras ativas e a quantidade de inversões disponíveis
+import pytz
+from datetime import datetime
+
+# Defina o fuso horário local desejado (exemplo: 'America/Sao_Paulo')
+FUSO_HORARIO_LOCAL = pytz.timezone('America/Sao_Paulo')
+
+# Dicionário para mapeamento de nomes estilizados das travessuras
+NOMES_TRAVESSURAS_ESTILIZADOS = {
+    "categoria_errada": "Categoria Errada",
+    "embaralhamento": "Embaralhamento",
+    "embaralhar_mensagem": "Mensagem Embaralhada",
+    "troca_invertida": "Troca Invertida"
+}
+
 @bot.message_handler(commands=['travessuras'])
 def handle_inverter(message):
     user_id = message.from_user.id
@@ -283,9 +296,15 @@ def handle_inverter(message):
         if inversoes_disponiveis > 0:
             mensagem = f"🪄 Você tem {inversoes_disponiveis} inversões disponíveis.\n\nTravessuras ativas:\n"
             if travessuras_ativas:
-                for travessura in travessuras_ativas:
-                    tipo, fim = travessura
-                    mensagem += f"- {tipo} (expira em {fim.strftime('%d/%m/%Y %H:%M')})\n"
+                for tipo, fim in travessuras_ativas:
+                    # Converter fim_travessura para o fuso horário local
+                    fim_utc = fim.replace(tzinfo=pytz.utc)
+                    fim_local = fim_utc.astimezone(FUSO_HORARIO_LOCAL)
+
+                    # Verificar se existe um nome estilizado para a travessura
+                    nome_estilizado = NOMES_TRAVESSURAS_ESTILIZADOS.get(tipo, tipo)
+                    
+                    mensagem += f"- {nome_estilizado} (expira em {fim_local.strftime('%d/%m/%Y %H:%M')})\n"
                 mensagem += "\nPara inverter uma travessura, use /inverter <nomedatravessura>"
             else:
                 mensagem += "🎉 Você não tem travessuras ativas!"
@@ -300,19 +319,41 @@ def handle_inverter(message):
         fechar_conexao(cursor, conn)
 
 
+# Mapeamento para nomes estilizados das travessuras
+NOMES_TRAVESSURAS_ESTILIZADOS = {
+    "categoria_errada": "Categoria Errada",
+    "embaralhamento": "Embaralhamento",
+    "embaralhar_mensagem": "Mensagem Embaralhada",
+    "troca_invertida": "Troca Invertida",
+    "sombra_rouba_cenouras": "Sombra Rouba Cenouras"
+}
+
+# Função para buscar o nome técnico da travessura com base no estilizado
+def obter_nome_tecnico(nome_estilizado):
+    for nome_tecnico, nome_formatado in NOMES_TRAVESSURAS_ESTILIZADOS.items():
+        if nome_estilizado.lower() == nome_formatado.lower():
+            return nome_tecnico
+    return None
+
 # Comando para aplicar a inversão em uma travessura específica
 @bot.message_handler(commands=['inverter'])
 def handle_inverter_travessura(message):
     user_id = message.from_user.id
     chat_id = message.chat.id
     comando = message.text.split()
-    
+
     # Verificar se o usuário especificou o nome de uma travessura
     if len(comando) < 2:
-        bot.send_message(chat_id, "⚠️ Especifique a travessura a ser invertida. Exemplo: /inverter sombra_rouba_cenouras")
+        bot.send_message(chat_id, "⚠️ Especifique a travessura a ser invertida. Exemplo: /inverter Categoria Errada")
         return
 
-    nome_travessura = comando[1]
+    # Obter o nome estilizado e converter para o nome técnico
+    nome_estilizado = ' '.join(comando[1:])  # Suporte para nomes com espaço
+    nome_travessura = obter_nome_tecnico(nome_estilizado)
+
+    if not nome_travessura:
+        bot.send_message(chat_id, f"⚠️ A travessura '{nome_estilizado}' não existe ou não pode ser invertida.")
+        return
 
     try:
         conn, cursor = conectar_banco_dados()
@@ -329,7 +370,7 @@ def handle_inverter_travessura(message):
         travessura_ativa = cursor.fetchone()
         
         if not travessura_ativa:
-            bot.send_message(chat_id, f"⚠️ A travessura '{nome_travessura}' não está ativa ou não existe.")
+            bot.send_message(chat_id, f"⚠️ A travessura '{nome_estilizado}' não está ativa ou não existe.")
             return
 
         # Remover uma inversão e a travessura
@@ -337,14 +378,15 @@ def handle_inverter_travessura(message):
         cursor.execute("DELETE FROM travessuras WHERE id_usuario = %s AND tipo_travessura = %s", (user_id, nome_travessura))
         conn.commit()
 
-        bot.send_message(chat_id, f"✨ A travessura '{nome_travessura}' foi invertida e removida com sucesso!")
-        print(f"DEBUG: Travessura '{nome_travessura}' removida para o usuário {user_id}")
+        bot.send_message(chat_id, f"✨ A travessura '{nome_estilizado}' foi invertida e removida com sucesso!")
+        print(f"DEBUG: Travessura '{nome_estilizado}' removida para o usuário {user_id}")
 
     except Exception as e:
         print(f"Erro ao inverter: {e}")
         traceback.print_exc()
     finally:
         fechar_conexao(cursor, conn)
+
 
 # Função para processar a compra confirmada da carta
 @bot.callback_query_handler(func=lambda call: call.data.startswith('compra_confirmada_'))

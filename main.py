@@ -396,7 +396,7 @@ def iniciar_jogo_da_velha(chat_id, user_id):
     }
     bot.send_message(chat_id, "Faça sua jogada clicando em uma posição.", reply_markup=criar_tabuleiro_markup(jogos_em_andamento[user_id]['tabuleiro']))
 @bot.message_handler(commands=['praga'])
-def passar_praga(user_id, target_user_id, chat_id):
+def handle_passar_praga(message):
     try:
         if chat_id not in praga_ativa or praga_ativa[chat_id]["usuario_atual"] != user_id:
             bot.send_message(user_id, "👻 Você não tem uma praga para passar.")

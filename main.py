@@ -1859,6 +1859,7 @@ def adicionar_inverter_travessura(user_id, quantidade=1):
             """, (nova_quantidade, user_id))
             print(f"DEBUG: Quantidade atualizada para o usuário {user_id}. Nova quantidade: {nova_quantidade}")
         else:
+            quantidade = 1
             # Se o usuário não possui um registro, cria o registro inicial com `quantidade`
             print(f"DEBUG: Nenhum registro encontrado para o usuário {user_id}. Criando com quantidade inicial: {quantidade}")
             cursor.execute("""

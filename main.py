@@ -2077,62 +2077,71 @@ def realizar_halloween_gostosura(user_id, chat_id):
             cenouras_ganhas = random.randint(50, 100)
             aumentar_cenouras(user_id, cenouras_ganhas)
             emoji = random.choice(emojis_gostosura)
-            bot.send_message(chat_id, f"{emoji} Você encontrou um saco de doces! Parabéns, recebeu {cenouras_ganhas} cenouras!")
+            bot.send_photo(chat_id, url_imagem, caption=f"{emoji} 🍬 Você tropeçou em um saco de doces! Dentro dele, estavam {cenouras_ganhas} cenouras. Aproveite a sorte!")
             print(f"DEBUG: {cenouras_ganhas} cenouras enviadas ao usuário {user_id}")
 
         elif chance == 2:
             print(f"DEBUG: Adicionando carta faltante de Halloween para o usuário {user_id}")
+            bot.send_photo(chat_id, url_imagem, caption="🎃 Uma carta rara do evento Halloween foi adicionada ao seu inventário!")
             adicionar_carta_faltante_halloween(user_id, chat_id)
 
         elif chance == 3:
             print(f"DEBUG: Adicionando VIP temporário para o usuário {user_id}")
-            adicionar_vip_temporario(user_id, GRUPO_SUGESTAO,chat_id)
+            bot.send_photo(chat_id, url_imagem, caption="🎩 Você foi agraciado com o status VIP! Aproveite os benefícios!")
+            adicionar_vip_temporario(user_id, GRUPO_SUGESTAO, chat_id)
 
         elif chance == 4:
             print(f"DEBUG: Adicionando proteção temporária para o usuário {user_id}")
-            adicionar_protecao_temporaria(user_id,chat_id)
+            bot.send_photo(chat_id, url_imagem, caption="🛡️ Você ganhou uma proteção mágica temporária! Travessuras não te atingem.")
+            adicionar_protecao_temporaria(user_id, chat_id)
 
         elif chance == 5:
             print(f"DEBUG: Realizando combo de gostosura para o usuário {user_id}")
+            bot.send_photo(chat_id, url_imagem, caption="✨ Um combo mágico de gostosuras chegou para você!")
             realizar_combo_gostosura(user_id, chat_id)
 
         elif chance == 6:
             print(f"DEBUG: Encontrando abóbora para o usuário {user_id}")
-            encontrar_abobora(user_id,chat_id)
+            bot.send_photo(chat_id, url_imagem, caption="🎃 Você encontrou uma abóbora mística cheia de surpresas!")
+            encontrar_abobora(user_id, chat_id)
 
         elif chance == 7:
             print(f"DEBUG: Ganhando caixa misteriosa para o usuário {user_id}")
-            bot.send_message(chat_id, f"🎃 Uma caixa miseriosa foi enviada para seu endereço!")
-            ganhar_caixa_misteriosa(user_id,chat_id)
+            bot.send_photo(chat_id, url_imagem, caption="📦 Uma caixa misteriosa apareceu na sua porta!")
+            ganhar_caixa_misteriosa(user_id, chat_id)
 
         elif chance == 8:
             print(f"DEBUG: Mostrando portas de escolha para o usuário {user_id}")
-            
+            bot.send_photo(chat_id, url_imagem, caption="🚪 Três portas mágicas surgem à sua frente. Escolha sabiamente!")
             mostrar_portas_escolha(user_id)
 
         elif chance == 9:
             print(f"DEBUG: Ativando fonte extra para o usuário {user_id}")
-            bot.send_message(chat_id, f"🎃 Parabéns! A fonte fez uma breve aparição no seu privado, corra antes que ela suma!")
+            bot.send_photo(chat_id, url_imagem, caption="⛲ Uma fonte mágica apareceu no seu caminho. Pegue antes que desapareça!")
             ativar_fonte_extra(user_id, chat_id)
 
         elif chance == 10:
             print(f"DEBUG: Adicionando inversão de travessura para o usuário {user_id}")
-            adicionar_inverter_travessura(user_id,chat_id)
+            bot.send_photo(chat_id, url_imagem, caption="🔄 Você recebeu o poder de inverter uma travessura!")
+            adicionar_inverter_travessura(user_id, chat_id)
 
         elif chance == 11:
             print(f"DEBUG: Adicionando super boost de cenouras para o usuário {user_id}")
-            duracao_horas = random.randint(1, 6)
-            multiplicador= random.randint(2, 4)
-            adicionar_super_boost_cenouras(user_id, multiplicador, duracao_horas,chat_id)
+            duracao_horas = random.randint(1, 3)
+            multiplicador = random.randint(2, 4)
+            bot.send_photo(chat_id, url_imagem, caption=    f"🎃✨ *Um feitiço raro foi lançado!* 🌿 Todas as cenouras que você colher serão multiplicadas por {multiplicador} nas próximas {duracao_horas} horas. Aproveite essa magia enquanto dura! 🍂🥕",
+            adicionar_super_boost_cenouras(user_id, multiplicador, duracao_horas, chat_id)
 
         elif chance == 12:
             print(f"DEBUG: Iniciando compartilhamento de gostosura para o usuário {user_id}")
-            iniciar_compartilhamento(user_id,chat_id)
+            bot.send_photo(chat_id, url_imagem, caption="🎁 Você ganhou um presente mágico! Escolha alguém para compartilhar.")
+            iniciar_compartilhamento(user_id, chat_id)
 
     except Exception as e:
         print(f"DEBUG: Erro ao realizar gostosura para o usuário {user_id}: {e}")
         traceback.print_exc()
-        bot.send_message(user_id, "Ocorreu um erro ao realizar a gostosura.")
+        bot.send_message(user_id, "⚠️ Ocorreu um erro ao realizar a gostosura.")
+
 
 def mudar_favorito_usuario(user_id,chat_id):
     try:

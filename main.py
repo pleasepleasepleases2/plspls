@@ -507,8 +507,19 @@ def iniciar_jogo_da_velha(chat_id, user_id):
 @bot.message_handler(commands=['praga'])
 def handle_passar_praga(message):
     try:
+        chat_id = message.chat.id
+        user_id = message.from_user.id
+
+        # Definir o target_user_id como o ID do usuário para quem a praga será passada
+        if not message.reply_to_message:
+            bot.send_message(chat_id, "Você precisa responder à mensagem de alguém para passar a praga.")
+            return
+
+        target_user_id = message.reply_to_message.from_user.id
+
+        # Verifica se o usuário tem a praga ativa
         if chat_id not in praga_ativa or praga_ativa[chat_id]["usuario_atual"] != user_id:
-            bot.send_message(user_id, "👻 Você não tem uma praga para passar.")
+            bot.send_message(chat_id, "👻 Você não tem uma praga para passar.")
             return
 
         # Diminuir a quantidade de passagens restantes
@@ -523,11 +534,12 @@ def handle_passar_praga(message):
         else:
             # Atualizar o detentor da praga
             praga_ativa[chat_id]["usuario_atual"] = target_user_id
-            bot.send_message(user_id, f"🎃 Você passou a praga para {target_user_id}!")
+            bot.send_message(chat_id, f"🎃 Você passou a praga para {target_user_id}! Passe-a para mais {passagens_restantes} pessoas para se livrar dela!")
             bot.send_message(target_user_id, f"👻 Você recebeu a praga! Passe-a para mais {passagens_restantes} pessoas para se livrar dela!")
 
     except Exception as e:
         print(f"Erro ao passar praga: {e}")
+
 
 # Atualiza a praga no banco para o novo detentor
 def atualizar_praga_no_banco(old_user_id, new_user_id, fim_praga):

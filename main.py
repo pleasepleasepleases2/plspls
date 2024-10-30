@@ -1552,21 +1552,22 @@ def callback_descartar_ou_recusar_caixa(call):
     finally:
         fechar_conexao(cursor, conn)
 
-def encontrar_abobora(user_id,chat_id):
+def encontrar_abobora(user_id, chat_id):
     try:
         conn, cursor = conectar_banco_dados()
 
         # Verificar quais abóboras o usuário já ganhou
         cursor.execute("SELECT id_abobora FROM aboboras_ganhas WHERE id_usuario = %s", (user_id,))
         aboboras_ganhas = cursor.fetchall()
-
         aboboras_ganhas_ids = [row[0] for row in aboboras_ganhas]
 
         # Filtrar as abóboras que ainda não foram ganhas
         aboboras_disponiveis = {id_abobora: aboboras[id_abobora] for id_abobora in aboboras if id_abobora not in aboboras_ganhas_ids}
 
+        # Se todas as abóboras já foram encontradas, conceder recompensa final
         if not aboboras_disponiveis:
-            bot.send_message(chat_id, "🎃 Você já encontrou todas as abóboras disponíveis! Mas vai levar como recompensa 100 cenouras.")
+            bot.send_message(chat_id, "🎃 Você já encontrou todas as abóboras disponíveis! Como recompensa, você recebe 100 cenouras adicionais.")
+            aumentar_cenouras(user_id, 100)
             return
 
         # Escolher uma abóbora aleatória entre as disponíveis
@@ -1577,19 +1578,13 @@ def encontrar_abobora(user_id,chat_id):
         cursor.execute("INSERT INTO aboboras_ganhas (id_usuario, id_abobora) VALUES (%s, %s)", (user_id, id_abobora))
         conn.commit()
 
-        # Entregar o prêmio
-        if "cenouras" in abobora["premio"]:
-            quantidade = int(abobora["premio"].split()[0])
-            aumentar_cenouras(user_id, quantidade)
-            bot.send_message(chat_id, f"🎃 {abobora['nome']} encontrada! Parabéns, você recebeu {quantidade} cenouras!")
-        elif abobora["premio"] == "Carta Faltante":
-            adicionar_carta_faltante_halloween(user_id, chat_id)
-            bot.send_message(chat_id, f"🎃 {abobora['nome']} encontrada! Parabéns, você recebeu uma carta faltante do evento!")
-        
-        # Adicione outras possíveis premiações aqui
+        # Exibir a mensagem temática e entregar o prêmio
+        mensagem = f"{abobora['descricao']} Ela te dá como recompensa: {abobora['premio']}."
+    
 
     except Exception as e:
         print(f"Erro ao encontrar abóbora: {e}")
+        bot.send_message(chat_id, "⚠️ Ocorreu um erro ao processar sua abóbora. Tente novamente mais tarde.")
     
     finally:
         fechar_conexao(cursor, conn)

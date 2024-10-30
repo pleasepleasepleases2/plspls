@@ -261,6 +261,89 @@ def confirmar_compra_carta(call):
     )
     
     bot.edit_message_text(mensagem_confirmacao, chat_id, call.message.message_id, reply_markup=markup)
+# Comando para listar as travessuras ativas e a quantidade de inversões disponíveis
+@bot.message_handler(commands=['travessuras'])
+def handle_inverter(message):
+    user_id = message.from_user.id
+    chat_id = message.chat.id
+
+    try:
+        conn, cursor = conectar_banco_dados()
+        
+        # Obter quantidade de inversões
+        cursor.execute("SELECT quantidade FROM inversoes WHERE id_usuario = %s", (user_id,))
+        inversoes = cursor.fetchone()
+        inversoes_disponiveis = inversoes[0] if inversoes else 0
+        
+        # Obter travessuras ativas
+        cursor.execute("SELECT tipo_travessura, fim_travessura FROM travessuras WHERE id_usuario = %s", (user_id,))
+        travessuras_ativas = cursor.fetchall()
+        
+        # Montar a mensagem
+        if inversoes_disponiveis > 0:
+            mensagem = f"🪄 Você tem {inversoes_disponiveis} inversões disponíveis.\n\nTravessuras ativas:\n"
+            if travessuras_ativas:
+                for travessura in travessuras_ativas:
+                    tipo, fim = travessura
+                    mensagem += f"- {tipo} (expira em {fim.strftime('%d/%m/%Y %H:%M')})\n"
+                mensagem += "\nPara inverter uma travessura, use /inverter <nomedatravessura>"
+            else:
+                mensagem += "🎉 Você não tem travessuras ativas!"
+        else:
+            mensagem = "👻 Você não tem inversões disponíveis. Ganhe uma com travessuras e gostosuras!"
+
+        bot.send_message(chat_id, mensagem)
+
+    except Exception as e:
+        print(f"Erro ao listar travessuras e inversões: {e}")
+    finally:
+        fechar_conexao(cursor, conn)
+
+
+# Comando para aplicar a inversão em uma travessura específica
+@bot.message_handler(commands=['inverter'])
+def handle_inverter_travessura(message):
+    user_id = message.from_user.id
+    chat_id = message.chat.id
+    comando = message.text.split()
+    
+    # Verificar se o usuário especificou o nome de uma travessura
+    if len(comando) < 2:
+        bot.send_message(chat_id, "⚠️ Especifique a travessura a ser invertida. Exemplo: /inverter sombra_rouba_cenouras")
+        return
+
+    nome_travessura = comando[1]
+
+    try:
+        conn, cursor = conectar_banco_dados()
+        
+        # Verificar se há inversões disponíveis
+        cursor.execute("SELECT quantidade FROM inversoes WHERE id_usuario = %s", (user_id,))
+        inversoes = cursor.fetchone()
+        if not inversoes or inversoes[0] <= 0:
+            bot.send_message(chat_id, "👻 Você não possui inversões disponíveis.")
+            return
+
+        # Verificar se a travessura especificada está ativa
+        cursor.execute("SELECT fim_travessura FROM travessuras WHERE id_usuario = %s AND tipo_travessura = %s", (user_id, nome_travessura))
+        travessura_ativa = cursor.fetchone()
+        
+        if not travessura_ativa:
+            bot.send_message(chat_id, f"⚠️ A travessura '{nome_travessura}' não está ativa ou não existe.")
+            return
+
+        # Remover uma inversão e a travessura
+        cursor.execute("UPDATE inversoes SET quantidade = quantidade - 1 WHERE id_usuario = %s", (user_id,))
+        cursor.execute("DELETE FROM travessuras WHERE id_usuario = %s AND tipo_travessura = %s", (user_id, nome_travessura))
+        conn.commit()
+
+        bot.send_message(chat_id, f"✨ A travessura '{nome_travessura}' foi invertida e removida com sucesso!")
+        print(f"DEBUG: Travessura '{nome_travessura}' removida para o usuário {user_id}")
+
+    except Exception as e:
+        print(f"Erro ao inverter travessura: {e}")
+    finally:
+        fechar_conexao(cursor, conn)
 
 # Função para processar a compra confirmada da carta
 @bot.callback_query_handler(func=lambda call: call.data.startswith('compra_confirmada_'))

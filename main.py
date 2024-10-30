@@ -1849,6 +1849,7 @@ def adicionar_inverter_travessura(user_id, quantidade=1):
         resultado = cursor.fetchone()
         
         if resultado:
+            quantidade = 1
             # Se o usuário já possui um registro, adiciona `quantidade` ao valor atual
             quantidade_atual = resultado[0]
             nova_quantidade = quantidade_atual + quantidade

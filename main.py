@@ -982,7 +982,7 @@ def iniciar_sombra_roubo_cenouras(user_id, duracao_minutos=10):
                 print(f"DEBUG: Tentativa de roubo de {quantidade_roubada} cenouras para {user_id}, sucesso: {sucesso}, cenouras restantes: {cenouras_restantes}")
         
                 if sucesso:
-                    bot.send_message(user_id, f"👻 A sombra roubou {quantidade_roubada} cenouras! Total atual: {cenouras_restantes} cenouras. Use /exorcizar para deter a sombra!")
+                    bot.send_message(user_id, f"👻 <i>A sombra sussurra, estendendo suas garras e pegando {quantidade_roubada} cenouras! Restam apenas {cenouras_restantes} cenouras... a escuridão está faminta.</i>\n\n <b> Tente usar /exorcizar para espantá-la!</b>",parse_mode="HTML")
                 else:
                     break  # Finaliza o roubo se o usuário não tem cenouras suficientes
         

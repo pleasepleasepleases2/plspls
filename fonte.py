@@ -149,29 +149,55 @@ def handle_poco_dos_desejos(call):
     bot.edit_message_media(media, chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=create_wish_buttons())
 
 def handle_fazer_pedido(call):
-    user_id = call.from_user.id  # Adicionando a identificação do usuário
+    user_id = call.from_user.id  # Identificação do usuário
+    
+    conn, cursor = conectar_banco_dados()
+    try:
+        # Verificar se o usuário está bloqueado para a ação "raspadinha"
+        cursor.execute("""
+            SELECT fim_bloqueio FROM bloqueios 
+            WHERE id_usuario = %s AND acao = 'raspadinha' AND fim_bloqueio > NOW()
+        """, (user_id,))
+        bloqueio = cursor.fetchone()
 
-    can_make_wish, time_remaining = check_wish_time(user_id)
-    if not can_make_wish:
-        hours, remainder = divmod(time_remaining.total_seconds(), 3600)
-        minutes, _ = divmod(remainder, 60)
-        image_url = "https://telegra.ph/file/94c9c66af4ca4d6f0a3e5.jpg"
-        caption = (f"<b>Você já fez um pedido recentemente.</b> Por favor, aguarde {int(hours)} horas e {int(minutes)} minutos "
-                   "para fazer um novo pedido.")
-        media = InputMediaPhoto(image_url, caption=caption, parse_mode="HTML")
-        bot.send_photo(chat_id=call.message.chat.id, photo=image_url, caption=caption, parse_mode="HTML")
-        return
-    else:
+        if bloqueio:
+            fim_bloqueio = bloqueio[0]
+            tempo_restante = fim_bloqueio - datetime.now()
+            hours, remainder = divmod(tempo_restante.total_seconds(), 3600)
+            minutes, _ = divmod(remainder, 60)
+            image_url = "https://telegra.ph/file/94c9c66af4ca4d6f0a3e5.jpg"
+            caption = (f"<b>Travessura ativa!</b> Você está bloqueado de fazer pedidos. "
+                       f"Tente novamente em {int(hours)} horas e {int(minutes)} minutos.")
+            bot.send_photo(chat_id=call.message.chat.id, photo=image_url, caption=caption, parse_mode="HTML")
+            return
+        
+        # Verificar tempo do último pedido de sorte
+        can_make_wish, time_remaining = check_wish_time(user_id)
+        if not can_make_wish:
+            hours, remainder = divmod(time_remaining.total_seconds(), 3600)
+            minutes, _ = divmod(remainder, 60)
+            image_url = "https://telegra.ph/file/94c9c66af4ca4d6f0a3e5.jpg"
+            caption = (f"<b>Você já fez um pedido recentemente.</b> Por favor, aguarde {int(hours)} horas e {int(minutes)} minutos "
+                       "para fazer um novo pedido.")
+            bot.send_photo(chat_id=call.message.chat.id, photo=image_url, caption=caption, parse_mode="HTML")
+            return
+        
+        # Continuar com o processo de pedido se não houver bloqueios
         image_url = "https://telegra.ph/file/94c9c66af4ca4d6f0a3e5.jpg"
         caption = ("<b>⛲: Para pedir os seus peixes é simples!</b> \n\nMe envie até <b>5 IDs</b> dos peixes e a quantidade de cenouras que você quer doar "
                    "\n(eu aceito qualquer quantidade entre 10 e 20 cenouras...) \n\n<i>exemplo: ID1 ID2 ID3 ID4 ID5 cenouras</i>")
-        media = InputMediaPhoto(image_url, caption=caption, parse_mode="HTML")
         if verificar_travessura_embaralhamento(user_id):
             caption = embaralhar_mensagem(caption)  # Embaralha a mensagem se a travessura estiver ativa
-    
+        media = InputMediaPhoto(image_url, caption=caption, parse_mode="HTML")
         bot.edit_message_media(media, chat_id=call.message.chat.id, message_id=call.message.message_id)
         
         bot.register_next_step_handler(call.message, process_wish)
+        
+    except Exception as e:
+        bot.send_message(call.message.chat.id, f"Erro ao processar o pedido: {e}")
+    finally:
+        fechar_conexao(cursor, conn)
+
 def processar_pedido_peixes(call):
     try:
         print(f"DEBUG: Entrando no 'processar_pedido_peixes' com call data: {call.data}")

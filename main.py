@@ -672,38 +672,35 @@ def iniciar_jogo_da_velha(chat_id, user_id):
         'ativo': True
     }
     bot.send_message(chat_id, "Faça sua jogada clicando em uma posição.", reply_markup=criar_tabuleiro_markup(jogos_em_andamento[user_id]['tabuleiro']))
+
 @bot.message_handler(commands=['praga'])
 def handle_passar_praga(message):
     try:
         chat_id = message.chat.id
         user_id = message.from_user.id
+        user_name = message.from_user.first_name
 
-        # Definir o target_user_id como o ID do usuário para quem a praga será passada
+        # Verificar se há uma resposta para a mensagem com o alvo da praga
         if not message.reply_to_message:
             bot.send_message(chat_id, "Você precisa responder à mensagem de alguém para passar a praga.")
             return
 
         target_user_id = message.reply_to_message.from_user.id
+        target_user_name = message.reply_to_message.from_user.first_name
+        print(f"DEBUG: {user_name} tentando passar a praga para {target_user_name} no chat {chat_id}")
 
-        # Verifica se o usuário tem a praga ativa
+        # Verificar se o usuário realmente possui a praga ativa
         if chat_id not in praga_ativa or praga_ativa[chat_id]["usuario_atual"] != user_id:
             bot.send_message(chat_id, "👻 Você não tem uma praga para passar.")
+            print(f"DEBUG: Praga ativa para o chat {chat_id}: {praga_ativa.get(chat_id)}")
             return
 
-        # Diminuir a quantidade de passagens restantes
-        praga_ativa[chat_id]["passagens_restantes"] -= 1
-        passagens_restantes = praga_ativa[chat_id]["passagens_restantes"]
+        # Atualizar o usuário atual com a praga
+        praga_ativa[chat_id]["usuario_atual"] = target_user_id
+        bot.send_message(chat_id, f"🎃 {user_name} passou a praga para {target_user_name}! Agora ele deve passar para outra pessoa antes que o tempo acabe!")
+        bot.send_message(target_user_id, f"👻 {target_user_name}, você recebeu a praga! Passe-a para outra pessoa antes do tempo acabar!")
 
-        # Verificar se esta é a última passagem necessária
-        if passagens_restantes <= 0:
-            bot.send_message(chat_id, f"⏰ O tempo acabou! {target_user_id} está infectado e vai sofrer uma travessura!")
-            realizar_travessura_final(target_user_id, chat_id)
-            del praga_ativa[chat_id]
-        else:
-            # Atualizar o detentor da praga
-            praga_ativa[chat_id]["usuario_atual"] = target_user_id
-            bot.send_message(chat_id, f"🎃 Você passou a praga para {target_user_id}! Passe-a para mais {passagens_restantes} pessoas para se livrar dela!")
-            bot.send_message(target_user_id, f"👻 Você recebeu a praga! Passe-a para mais {passagens_restantes} pessoas para se livrar dela!")
+        print(f"DEBUG: Praga passada para {target_user_name} (ID: {target_user_id}) no chat {chat_id}")
 
     except Exception as e:
         print(f"Erro ao passar praga: {e}")

@@ -1312,105 +1312,85 @@ scheduler.start()
 # Dicionário para armazenar pragas ativas
 praga_ativa = {}
 
+@bot.message_handler(commands=['praga'])
+def handle_passar_praga(message):
+    try:
+        chat_id = message.chat.id
+        user_id = message.from_user.id
+
+        # Verificar se há uma resposta para a mensagem com o alvo da praga
+        if not message.reply_to_message:
+            bot.send_message(chat_id, "Você precisa responder à mensagem de alguém para passar a praga.")
+            return
+
+        target_user_id = message.reply_to_message.from_user.id
+        print(f"DEBUG: {user_id} tentando passar a praga para {target_user_id} no chat {chat_id}")
+
+        # Verificar se o usuário realmente possui a praga ativa
+        if chat_id not in praga_ativa or praga_ativa[chat_id]["usuario_atual"] != user_id:
+            bot.send_message(chat_id, "👻 Você não tem uma praga para passar.")
+            print(f"DEBUG: Praga ativa para o chat {chat_id}: {praga_ativa.get(chat_id)}")
+            return
+
+        # Diminuir o contador de passagens
+        praga_ativa[chat_id]["passagens_restantes"] -= 1
+        passagens_restantes = praga_ativa[chat_id]["passagens_restantes"]
+        print(f"DEBUG: Passagens restantes para a praga no chat {chat_id}: {passagens_restantes}")
+
+        # Verificar se essa foi a última passagem
+        if passagens_restantes <= 0:
+            bot.send_message(chat_id, f"⏰ O tempo acabou! {target_user_id} está infectado e vai sofrer uma travessura!")
+            realizar_travessura_final(target_user_id, chat_id)
+            del praga_ativa[chat_id]
+            print(f"DEBUG: Praga finalizada para o chat {chat_id}")
+        else:
+            # Atualizar o usuário atual com a praga
+            praga_ativa[chat_id]["usuario_atual"] = target_user_id
+            bot.send_message(chat_id, f"🎃 Você passou a praga para {target_user_id}! Passe-a para mais {passagens_restantes} pessoas para se livrar dela!")
+            bot.send_message(target_user_id, f"👻 Você recebeu a praga! Passe-a para mais {passagens_restantes} pessoas para se livrar dela!")
+            print(f"DEBUG: Praga passada para {target_user_id} com {passagens_restantes} passagens restantes")
+
+    except Exception as e:
+        print(f"Erro ao passar praga: {e}")
+
+# Função para iniciar a praga com contagem de passagens
 def iniciar_pega_pega(user_id, chat_id):
     try:
-        # Definir o usuário inicial com a praga e a quantidade de passagens
         passagens_necessarias = random.randint(2, 20)  # Número de passagens entre 2 e 20
         praga_ativa[chat_id] = {
             "usuario_atual": user_id,
             "passagens_restantes": passagens_necessarias
         }
-
-        # Mensagem inicial
+        print(f"DEBUG: Praga iniciada para o usuário {user_id} no chat {chat_id} com {passagens_necessarias} passagens necessárias")
         bot.send_message(chat_id, f"👻 {user_id} está com a praga! Passe-a para {passagens_necessarias} pessoas para se livrar!")
     except Exception as e:
         print(f"Erro ao iniciar o Pega-Pega com praga: {e}")
 
-
-def verificar_expiracao_praga(user_id):
-    try:
-        if user_id in praga_ativa and datetime.now() >= praga_ativa[user_id]["fim_praga"]:
-            chat_id = praga_ativa[user_id]["chat_id"]
-            bot.send_message(chat_id, f"⏰ O tempo acabou! {user_id} ainda está com a praga e vai sofrer uma travessura!")
-
-            # Aplicar a penalidade e limpar praga
-            realizar_travessura_final(user_id, chat_id)
-            remover_praga_do_banco(user_id)
-            del praga_ativa[user_id]
-        else:
-            print(f"DEBUG: Praga para o usuário {user_id} já foi removida ou transferida.")
-    except Exception as e:
-        print(f"Erro ao verificar expiração da praga: {e}")
-
-def registrar_praga_no_banco(user_id, chat_id, fim_praga):
-    # Função para registrar a praga no banco de dados
-    conn, cursor = conectar_banco_dados()
-    inicio_praga = datetime.now()
-    try:
-        cursor.execute("""
-            INSERT INTO pragas_ativas (id_usuario, chat_id, inicio_praga, fim_praga)
-            VALUES (%s, %s, %s, %s)
-        """, (user_id, chat_id, inicio_praga, fim_praga))
-        conn.commit()
-    except Exception as e:
-        print(f"Erro ao registrar praga no banco: {e}")
-    finally:
-        fechar_conexao(cursor, conn)
-
-
-def verificar_praga(user_id):
-    # Verifica se o usuário tem uma praga ativa
-    for chat_id, praga in praga_ativa.items():
-        if praga["usuario_atual"] == user_id:
-            print(f"DEBUG: {user_id} possui a praga.")
-            return True
-    print(f"DEBUG: {user_id} não possui a praga.")
-    return False
-
-
-def remover_praga_do_banco(user_id):
-    conn, cursor = conectar_banco_dados()
-    try:
-        cursor.execute("DELETE FROM pragas_ativas WHERE id_usuario = %s", (user_id,))
-        conn.commit()
-        print(f"DEBUG: Praga removida do banco para o usuário {user_id}")
-    except Exception as e:
-        print(f"Erro ao remover praga do banco: {e}")
-    finally:
-        fechar_conexao(cursor, conn)
-
+# Função para aplicar a travessura final
 def realizar_travessura_final(usuario_com_praga, chat_id):
-    """
-    Aplica uma penalidade ao usuário com praga. A penalidade pode ser:
-    - Perda de cenouras
-    - Perda de uma carta aleatória
-    - Perda de ambos
-    """
     conn, cursor = conectar_banco_dados()
     try:
         penalidade = random.choice(["cenouras", "carta", "ambos"])
         mensagem = f"👻 {usuario_com_praga} sofreu uma travessura! "
-
         print(f"DEBUG: Aplicando travessura para o usuário {usuario_com_praga}. Tipo de penalidade: {penalidade}")
 
         # Penalidade de perda de cenouras
         if penalidade in ["cenouras", "ambos"]:
             cenouras_perdidas = random.randint(10, 50)
-            print(f"DEBUG: Usuário {usuario_com_praga} perderá {cenouras_perdidas} cenouras.")
             cursor.execute("UPDATE usuarios SET cenouras = GREATEST(0, cenouras - %s) WHERE id_usuario = %s", (cenouras_perdidas, usuario_com_praga))
             mensagem += f"Perdeu {cenouras_perdidas} cenouras. "
+            print(f"DEBUG: Usuário {usuario_com_praga} perdeu {cenouras_perdidas} cenouras")
 
         # Penalidade de perda de carta aleatória
         if penalidade in ["carta", "ambos"]:
             cursor.execute("SELECT id_carta FROM cartas WHERE id_usuario = %s ORDER BY RAND() LIMIT 1", (usuario_com_praga,))
             carta_perdida = cursor.fetchone()
-            print(f"DEBUG: Carta selecionada para remoção: {carta_perdida}")
-
             if carta_perdida:
                 cursor.execute("DELETE FROM cartas WHERE id_usuario = %s AND id_carta = %s", (usuario_com_praga, carta_perdida[0]))
                 mensagem += "Perdeu uma carta do inventário."
+                print(f"DEBUG: Usuário {usuario_com_praga} perdeu a carta {carta_perdida[0]}")
             else:
-                print(f"DEBUG: Nenhuma carta encontrada para o usuário {usuario_com_praga}. Nenhuma carta será removida.")
+                print(f"DEBUG: Nenhuma carta encontrada para o usuário {usuario_com_praga}")
 
         conn.commit()
         bot.send_message(chat_id, mensagem)
@@ -1420,6 +1400,7 @@ def realizar_travessura_final(usuario_com_praga, chat_id):
         print(f"Erro ao aplicar travessura: {e}")
     finally:
         fechar_conexao(cursor, conn)
+
 
 def ativar_dobro_cenouras(user_id):
     try:

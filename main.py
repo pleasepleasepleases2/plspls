@@ -1847,21 +1847,23 @@ def adicionar_inverter_travessura(user_id, quantidade=1):
         # Consulta para verificar se o usuário já possui um registro de inversão
         cursor.execute("SELECT quantidade FROM inversoes WHERE id_usuario = %s", (user_id,))
         resultado = cursor.fetchone()
-
+        
         if resultado:
             # Se o usuário já possui um registro, adiciona `quantidade` ao valor atual
             quantidade_atual = resultado[0]
             nova_quantidade = quantidade_atual + quantidade
+            print(f"DEBUG: Quantidade atual para o usuário {user_id}: {quantidade_atual}, Tentativa de adicionar: {quantidade}, Nova quantidade: {nova_quantidade}")
+            
             cursor.execute("""
                 UPDATE inversoes SET quantidade = %s WHERE id_usuario = %s
             """, (nova_quantidade, user_id))
             print(f"DEBUG: Quantidade atualizada para o usuário {user_id}. Nova quantidade: {nova_quantidade}")
         else:
             # Se o usuário não possui um registro, cria o registro inicial com `quantidade`
+            print(f"DEBUG: Nenhum registro encontrado para o usuário {user_id}. Criando com quantidade inicial: {quantidade}")
             cursor.execute("""
                 INSERT INTO inversoes (id_usuario, quantidade) VALUES (%s, %s)
             """, (user_id, quantidade))
-            print(f"DEBUG: Registro criado para o usuário {user_id} com quantidade inicial: {quantidade}")
 
         conn.commit()
     except Exception as e:

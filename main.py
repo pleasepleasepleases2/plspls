@@ -936,7 +936,11 @@ import threading
 import time
 from datetime import datetime, timedelta
 
-# Função para iniciar a sombra roubando cenouras periodicamente
+import threading
+import time
+from datetime import datetime, timedelta
+
+# Função para iniciar a sombra que rouba cenouras periodicamente
 def iniciar_sombra_roubo_cenouras(user_id, duracao_minutos=10):
     try:
         conn, cursor = conectar_banco_dados()
@@ -952,6 +956,7 @@ def iniciar_sombra_roubo_cenouras(user_id, duracao_minutos=10):
             fim_travessura = resultado[0]
             if datetime.now() < fim_travessura:
                 bot.send_message(user_id, "👻 A sombra já está roubando suas cenouras! Use /exorcizar para se livrar dela!")
+                print(f"DEBUG: Sombra já ativa para {user_id}, expira em {fim_travessura}")
                 return
 
         # Registrar a travessura com duração no banco de dados
@@ -972,13 +977,13 @@ def iniciar_sombra_roubo_cenouras(user_id, duracao_minutos=10):
         # Função interna para o roubo de cenouras periodicamente
         def roubar_cenouras_periodicamente():
             while datetime.now() < fim_roubo and roubo_ativo.get(user_id, False):
-                sucesso = diminuir_cenouras(user_id, 1)  # Chama a função para diminuir 1 cenoura
-                print(f"DEBUG: Tentativa de roubo de cenoura para {user_id}, sucesso: {sucesso}")
+                sucesso, cenouras_restantes = diminuir_cenouras(user_id, 10)  # Tentativa de roubo de 10 cenouras
+                print(f"DEBUG: Tentativa de roubo de 10 cenouras para {user_id}, sucesso: {sucesso}, cenouras restantes: {cenouras_restantes}")
                 
                 if sucesso:
-                    bot.send_message(user_id, "👻 A sombra roubou 1 cenoura! Use /exorcizar para deter a sombra!")
+                    bot.send_message(user_id, f"👻 A sombra roubou 10 cenouras! Total atual: {cenouras_restantes} cenouras. Use /exorcizar para deter a sombra!")
                 else:
-                    print(f"DEBUG: Usuário {user_id} não possui mais cenouras para serem roubadas.")
+                    print(f"DEBUG: Usuário {user_id} não possui cenouras suficientes para serem roubadas.")
                     break  # Finaliza o roubo se o usuário não tem cenouras
                 
                 time.sleep(10)  # Intervalo de 10 segundos entre cada roubo
@@ -997,6 +1002,33 @@ def iniciar_sombra_roubo_cenouras(user_id, duracao_minutos=10):
         print(f"Erro ao iniciar sombra para roubar cenouras: {e}")
     finally:
         fechar_conexao(cursor, conn)
+
+# Função para diminuir as cenouras do usuário e retornar o total atualizado
+def diminuir_cenouras(user_id, quantidade):
+    conn, cursor = conectar_banco_dados()
+    try:
+        # Verificar se o usuário possui cenouras suficientes
+        cursor.execute("SELECT cenouras FROM usuarios WHERE id_usuario = %s", (user_id,))
+        cenouras = cursor.fetchone()
+        
+        if cenouras and cenouras[0] >= quantidade:
+            cursor.execute("UPDATE usuarios SET cenouras = cenouras - %s WHERE id_usuario = %s", (quantidade, user_id))
+            conn.commit()
+            
+            # Consultar o total atualizado de cenouras
+            cursor.execute("SELECT cenouras FROM usuarios WHERE id_usuario = %s", (user_id,))
+            cenouras_restantes = cursor.fetchone()[0]
+            
+            print(f"DEBUG: Cenouras de {user_id} após roubo: {cenouras_restantes}")
+            return True, cenouras_restantes
+        else:
+            return False, cenouras[0] if cenouras else 0  # Retorna 0 se não houver cenouras suficientes
+    except Exception as e:
+        print(f"Erro ao diminuir cenouras: {e}")
+        return False, 0
+    finally:
+        fechar_conexao(cursor, conn)
+
 
 
 @bot.message_handler(commands=['exorcizar'])

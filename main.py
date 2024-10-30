@@ -88,19 +88,34 @@ from game import *
 from gif import *
 from apscheduler.schedulers.background import BackgroundScheduler
 from datetime import datetime, timedelta
-import time
-# Dicionário para rastrear as threads e o status do roubo para cada usuário
-roubo_ativo = {}
-
 import threading
 import time
-from datetime import datetime, timedelta
 
-# Dicionário para armazenar pragas ativas com tempo restante
+roubo_ativo = {}
+jogos_em_andamento = {}
 praga_ativa = {}
-
-# Inicializa o agendador
 scheduler = BackgroundScheduler()
+scheduler.start()
+# Dicionário para mapeamento de nomes estilizados das travessuras
+NOMES_TRAVESSURAS_ESTILIZADOS = {
+    "categoria_errada": "Categoria Errada",
+    "embaralhamento": "Embaralhamento",
+    "embaralhar_mensagem": "Mensagem Embaralhada",
+    "troca_invertida": "Troca Invertida"
+}
+
+# Mapeamento para nomes estilizados das travessuras
+NOMES_TRAVESSURAS_ESTILIZADOS = {
+    "categoria_errada": "Categoria Errada",
+    "embaralhamento": "Embaralhamento",
+    "embaralhar_mensagem": "Mensagem Embaralhada",
+    "troca_invertida": "Troca Invertida",
+    "sombra_rouba_cenouras": "Sombra Rouba Cenouras"
+}
+
+# Variáveis de jogo
+jogador = '❌'
+bot_jogador = '⭕️'
 # Configuração de Webhook
 WEBHOOK_URL_PATH = '/' + API_TOKEN + '/'
 WEBHOOK_LISTEN = "0.0.0.0"
@@ -116,6 +131,14 @@ cache = dc.Cache('./cache')
 task_queue = Queue()
 conn, cursor = conectar_banco_dados()
 GRUPO_SUGESTAO = -4546359573
+from datetime import datetime, timedelta
+import pytz
+# Defina o fuso horário local desejado (exemplo: 'America/Sao_Paulo')
+FUSO_HORARIO_LOCAL = pytz.timezone('America/Sao_Paulo')
+
+
+
+
 @app.route("/")
 def set_webhook():
 
@@ -130,8 +153,6 @@ def set_webhook():
 @app.route('/', methods=['GET', 'HEAD'])
 def index():
     return 'Server is running.'
-
-from datetime import datetime, timedelta
 
 def bloquear_acao(user_id, acao, minutos):
     # Bloquear a ação por x minutos
@@ -150,7 +171,6 @@ def bloquear_acao(user_id, acao, minutos):
         print(f"Erro ao inserir bloqueio: {e}")
     finally:
         fechar_conexao(cursor, conn)
-
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith('votar_'))
 def votar_usuario(call):
@@ -188,10 +208,6 @@ def mudar_nome_usuario(user_id, nome_novo,chat_id):
     bot.send_message(chat_id, f"😂 Travessura! Seu nome agora é {nome_novo}!")
 
 def verificar_travessura(id_usuario):
-    """
-    Verifica quais travessuras estão ativas para o usuário.
-    Retorna uma lista com os tipos de travessuras ativas.
-    """
     conn, cursor = conectar_banco_dados()
     try:
         cursor.execute("""
@@ -207,6 +223,7 @@ def verificar_travessura(id_usuario):
         return []
     finally:
         fechar_conexao(cursor, conn)
+        
 # Função para exibir a loja da bruxa com opções de categoria
 @bot.message_handler(commands=['bruxa'])
 def exibir_categorias_bruxa(message):
@@ -261,19 +278,6 @@ def confirmar_compra_carta(call):
     )
     
     bot.edit_message_text(mensagem_confirmacao, chat_id, call.message.message_id, reply_markup=markup)
-import pytz
-from datetime import datetime
-
-# Defina o fuso horário local desejado (exemplo: 'America/Sao_Paulo')
-FUSO_HORARIO_LOCAL = pytz.timezone('America/Sao_Paulo')
-
-# Dicionário para mapeamento de nomes estilizados das travessuras
-NOMES_TRAVESSURAS_ESTILIZADOS = {
-    "categoria_errada": "Categoria Errada",
-    "embaralhamento": "Embaralhamento",
-    "embaralhar_mensagem": "Mensagem Embaralhada",
-    "troca_invertida": "Troca Invertida"
-}
 
 @bot.message_handler(commands=['travessuras'])
 def handle_inverter(message):
@@ -307,7 +311,7 @@ def handle_inverter(message):
                     mensagem += f"- {nome_estilizado} (expira em {fim_local.strftime('%d/%m/%Y %H:%M')})\n"
                 mensagem += "\nPara inverter uma travessura, use /inverter <nomedatravessura>"
             else:
-                mensagem += "🎉 Você não tem travessuras ativas!"
+                mensagem += "🍂 Todos os ventos estão a seu favor; nenhuma travessura à vista!"
         else:
             mensagem = "🔮 Você não possui poções de inversão. Busque mais com travessuras e gostosuras para encher seu caldeirão de magia!"
 
@@ -317,16 +321,6 @@ def handle_inverter(message):
         print(f"Erro ao listar travessuras e inversões: {e}")
     finally:
         fechar_conexao(cursor, conn)
-
-
-# Mapeamento para nomes estilizados das travessuras
-NOMES_TRAVESSURAS_ESTILIZADOS = {
-    "categoria_errada": "Categoria Errada",
-    "embaralhamento": "Embaralhamento",
-    "embaralhar_mensagem": "Mensagem Embaralhada",
-    "troca_invertida": "Troca Invertida",
-    "sombra_rouba_cenouras": "Sombra Rouba Cenouras"
-}
 
 # Função para buscar o nome técnico da travessura com base no estilizado
 def obter_nome_tecnico(nome_estilizado):
@@ -387,8 +381,6 @@ def handle_inverter_travessura(message):
     finally:
         fechar_conexao(cursor, conn)
 
-
-# Função para processar a compra confirmada da carta
 @bot.callback_query_handler(func=lambda call: call.data.startswith('compra_confirmada_'))
 def processar_compra_bruxa(call):
     chat_id = call.message.chat.id
@@ -434,8 +426,6 @@ def verificar_cenouras(user_id):
     fechar_conexao(cursor, conn)
     return resultado[0] if resultado else 0
 
-import random
-
 def apreender_cartas_cenouras(user_id):
     conn, cursor = conectar_banco_dados()
 
@@ -457,7 +447,6 @@ def apreender_cartas_cenouras(user_id):
 
     conn.commit()
     fechar_conexao(cursor, conn)
-
 
 def comprar_carta(user_id, carta_id):
     # Desconta as cenouras e adiciona a carta ao inventário do usuário
@@ -599,52 +588,6 @@ def adicionar_carta_faltante_halloween(user_id, chat_id):
     finally:
         fechar_conexao(cursor, conn)
 
-
-
-def travessura_grupal(chat_id, user_id):
-    try:
-        chat_info = bot.get_chat(chat_id)
-
-        # Verificar se o chat é um grupo (não precisa verificar se é privado, porque é acionado em grupo)
-        if chat_info.type not in ["group", "supergroup"]:
-            bot.send_message(chat_id, "👻 Travessuras grupais só podem ser realizadas em grupos ou supergrupos!")
-            return
-
-        # Obter a lista de participantes do grupo
-        membros = bot.get_chat_members_count(chat_id)
-        todos_participantes = [user.user.id for user in bot.get_chat_members(chat_id, 0, membros)]
-
-        # Garantir que o usuário que acionou o comando esteja na lista
-        if user_id not in todos_participantes:
-            todos_participantes.append(user_id)
-
-        # Sortear de 1 a 10 pessoas (incluindo quem acionou)
-        num_pessoas = random.randint(1, 10)
-        sorteados = random.sample(todos_participantes, min(num_pessoas, len(todos_participantes)))
-
-        # Aplicar a travessura a cada usuário sorteado
-        for usuario_sorteado in sorteados:
-            aplicar_travessura(usuario_sorteado, chat_id)
-
-        # Enviar mensagem informando quem foi sorteado
-        nomes_sorteados = []
-        for usuario_id in sorteados:
-            user_info = bot.get_chat_member(chat_id, usuario_id).user
-            nomes_sorteados.append(user_info.first_name)
-
-        mensagem = f"👻 As seguintes pessoas foram amaldiçoadas pela travessura grupal: {', '.join(nomes_sorteados)}!"
-        bot.send_message(chat_id, mensagem)
-
-    except Exception as e:
-        print(f"Erro ao realizar travessura grupal: {e}")
-# Dicionário para controlar o estado dos jogos em andamento
-jogos_em_andamento = {}
-
-# Variáveis de jogo
-jogador = '❌'
-bot_jogador = '⭕️'
-
-
 def criar_tabuleiro():
     """Cria um tabuleiro vazio de jogo da velha."""
     return np.full((3, 3), ' ')
@@ -705,7 +648,6 @@ def handle_passar_praga(message):
     except Exception as e:
         print(f"Erro ao passar praga: {e}")
 
-
 # Atualiza a praga no banco para o novo detentor
 def atualizar_praga_no_banco(old_user_id, new_user_id, fim_praga):
     conn, cursor = conectar_banco_dados()
@@ -720,7 +662,6 @@ def atualizar_praga_no_banco(old_user_id, new_user_id, fim_praga):
         print(f"Erro ao atualizar praga no banco: {e}")
     finally:
         fechar_conexao(cursor, conn)
-
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("jogada_"))
 def processar_jogada(call):
@@ -1057,17 +998,11 @@ def verificar_travessuras(id_usuario):
     
     finally:
         fechar_conexao(cursor, conn)
-        
-import threading
-import time
-from datetime import datetime, timedelta
 
-# Função para iniciar a sombra que rouba cenouras periodicamente
 def iniciar_sombra_roubo_cenouras(user_id, duracao_minutos=10):
     try:
         conn, cursor = conectar_banco_dados()
 
-        # Verificar se o usuário já tem a travessura ativa
         cursor.execute("""
             SELECT fim_travessura FROM travessuras
             WHERE id_usuario = %s AND tipo_travessura = 'sombra_rouba_cenouras'
@@ -1127,7 +1062,6 @@ def iniciar_sombra_roubo_cenouras(user_id, duracao_minutos=10):
     finally:
         fechar_conexao(cursor, conn)
 
-# Função para diminuir as cenouras do usuário e retornar o total atualizado
 def diminuir_cenouras(user_id, quantidade):
     conn, cursor = conectar_banco_dados()
     try:
@@ -1151,14 +1085,12 @@ def diminuir_cenouras(user_id, quantidade):
     finally:
         fechar_conexao(cursor, conn)
 
-
 @bot.message_handler(commands=['exorcizar'])
 def exorcizar_sombra(message):
     user_id = message.from_user.id
     try:
         conn, cursor = conectar_banco_dados()
 
-        # Verificar se o usuário está com a travessura ativa
         cursor.execute("""
             SELECT fim_travessura FROM travessuras
             WHERE id_usuario = %s AND tipo_travessura = 'sombra_rouba_cenouras'
@@ -1168,7 +1100,7 @@ def exorcizar_sombra(message):
         if resultado:
             chance_sucesso = random.randint(1, 100)
 
-            if chance_sucesso <= 30:  # Sucesso em 30% das tentativas
+            if chance_sucesso <= 25:  # Sucesso em 30% das tentativas
                 # Exorcismo bem-sucedido: parar o roubo e remover a travessura
                 roubo_ativo[user_id] = False  # Parar o roubo
                 cursor.execute("DELETE FROM travessuras WHERE id_usuario = %s AND tipo_travessura = 'sombra_rouba_cenouras'", (user_id,))
@@ -1183,7 +1115,6 @@ def exorcizar_sombra(message):
         bot.send_message(message.chat.id, f"Erro ao exorcizar a sombra: {e}")
     finally:
         fechar_conexao(cursor, conn)
-
 
 def adicionar_vip_temporario(user_id, grupo_sugestao,chat_id):
     try:
@@ -1214,16 +1145,12 @@ def adicionar_vip_temporario(user_id, grupo_sugestao,chat_id):
             # Informar o usuário que ganhou VIP
             bot.send_message(chat_id, f"🌟 Parabéns, alma iluminada! Você foi agraciado com o privilégio VIP por {dias_vip} dias. Aproveite os encantos dessa jornada mágica!")
 
-
     except Exception as e:
         print(f"Erro ao adicionar VIP temporário: {e}")
     finally:
         fechar_conexao(cursor, conn)
 
 def alterar_usuario(user_id, coluna, valor_novo,chat_id):
-    """
-    Função genérica para alterar um campo específico na tabela `usuarios`.
-    """
     try:
         conn, cursor = conectar_banco_dados()
 
@@ -1231,8 +1158,6 @@ def alterar_usuario(user_id, coluna, valor_novo,chat_id):
         query = f"UPDATE usuarios SET {coluna} = %s WHERE id_usuario = %s"
         cursor.execute(query, (valor_novo, user_id))
         conn.commit()
-
-        print(f"DEBUG: {coluna} do usuário {user_id} alterada para {valor_novo}")
     except Exception as e:
         print(f"Erro ao alterar {coluna} para o usuário {user_id}: {e}")
     finally:
@@ -1241,9 +1166,7 @@ def alterar_usuario(user_id, coluna, valor_novo,chat_id):
 def adicionar_protecao_temporaria(user_id,chat_id):
     try:
         conn, cursor = conectar_banco_dados()
-
-        # Definir o período de proteção entre 3 e 12 horas
-        horas_protecao = random.randint(1, 6)
+        horas_protecao = random.randint(1, 3,)
         fim_protecao = datetime.now() + timedelta(hours=horas_protecao)
 
         # Atualizar ou inserir a proteção na tabela de usuários
@@ -1420,16 +1343,6 @@ def receber_link_gif(message, id_personagem):
             bot.send_message(message.chat.id, "Erro ao processar o link do GIF. ID de usuário inválido.")
     else:
         bot.send_message(message.chat.id, "Erro ao processar o link do GIF. ID de usuário inválido.")
-
-from apscheduler.schedulers.background import BackgroundScheduler
-from datetime import datetime, timedelta
-import time
-
-scheduler = BackgroundScheduler()
-scheduler.start()
-
-# Dicionário para armazenar pragas ativas
-praga_ativa = {}
 
 @bot.message_handler(commands=['praga'])
 def handle_passar_praga(message):

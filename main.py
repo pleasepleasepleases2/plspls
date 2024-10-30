@@ -2204,7 +2204,7 @@ def gerar_labirinto_com_caminho_e_validacao(tamanho=10):
     for _ in range(5):
         while True:
             mx, my = random.randint(1, tamanho - 2), random.randint(1, tamanho - 2)
-            if labirinto[mx][my] == '⬜' and (mx, my) != (x, y):  # Verifica se não é saída ou caminho principal
+            if labirinto[mx][my] == '⬜' and (mx, my) != (saida_x, saida_y):  # Não coloca sobre a saída
                 labirinto[mx][my] = '👻'
                 break
     

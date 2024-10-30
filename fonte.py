@@ -70,6 +70,25 @@ def comando_sorte(message):
         user_id = message.from_user.id
         conn, cursor = conectar_banco_dados()
 
+        # Verificar se o usuário está bloqueado para a ação "raspadinha"
+        cursor.execute("""
+            SELECT fim_bloqueio FROM bloqueios 
+            WHERE id_usuario = %s AND acao = 'raspadinha' AND fim_bloqueio > NOW()
+        """, (user_id,))
+        bloqueio = cursor.fetchone()
+
+        if bloqueio:
+            fim_bloqueio = bloqueio[0]
+            tempo_restante = fim_bloqueio - datetime.now()
+            horas, remainder = divmod(tempo_restante.total_seconds(), 3600)
+            minutos, _ = divmod(remainder, 60)
+            bot.send_message(
+                message.chat.id, 
+                f"🎰 Travessura! Você está bloqueado de jogar raspadinha por mais {int(horas)} horas e {int(minutos)} minutos."
+            )
+            return
+
+        # Verificar o uso anterior do comando /raspadinha
         cursor.execute("SELECT MAX(timestamp) FROM sorte_log WHERE id_usuario = %s", (user_id,))
         last_use = cursor.fetchone()[0]
 
@@ -78,7 +97,10 @@ def comando_sorte(message):
             if time_since_last_use.total_seconds() < 43200:
                 hours, remainder = divmod(43200 - time_since_last_use.total_seconds(), 3600)
                 minutes, _ = divmod(remainder, 60)
-                bot.send_message(message.chat.id, f"Você já usou o comando /raspadinha recentemente. Tente novamente em {int(hours)} horas e {int(minutes)} minutos.")
+                bot.send_message(
+                    message.chat.id, 
+                    f"Você já usou o comando /raspadinha recentemente. Tente novamente em {int(hours)} horas e {int(minutes)} minutos."
+                )
                 return
 
         cursor.execute("SELECT SUM(quantidade_cenouras) FROM banco_cidade")
@@ -88,7 +110,7 @@ def comando_sorte(message):
             bot.send_message(message.chat.id, "O banco da cidade está vazio. Tente novamente mais tarde.")
             return
 
-        # Sorteio usando distribuição uniforme para garantir valores não negativos
+        # Sorteio usando distribuição uniforme
         sorteio = random.randint(0, min(100, total_cenouras))
 
         cursor.execute("UPDATE banco_cidade SET quantidade_cenouras = quantidade_cenouras - %s WHERE quantidade_cenouras >= %s", (sorteio, sorteio))
@@ -102,13 +124,16 @@ def comando_sorte(message):
 
         cursor.execute("INSERT INTO sorte_log (id_usuario, quantidade_ganha, timestamp) VALUES (%s, %s, %s)", (user_id, sorteio, datetime.now()))
         conn.commit()
-        texto=f"<i>A sorte está ao seu favor!</i> \nVocê comprou uma raspadinha e ganhou <b>{sorteio}</b> cenouras!"
+        
+        texto = f"<i>A sorte está ao seu favor!</i> \nVocê comprou uma raspadinha e ganhou <b>{sorteio}</b> cenouras!"
         if verificar_travessura_embaralhamento(user_id):
             texto = embaralhar_mensagem(texto)  # Embaralha a mensagem se a travessura estiver ativa
-    
+        
         bot.send_message(message.chat.id, text=texto, parse_mode="HTML")
+    
     except Exception as e:
         bot.send_message(message.chat.id, f"Ocorreu um erro ao processar o comando /raspadinha: {e}")
+    
     finally:
         fechar_conexao(cursor, conn)
 

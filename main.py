@@ -1852,7 +1852,8 @@ def adicionar_inverter_travessura(user_id, quantidade=1):
         conn.commit()
         print(f"DEBUG: {quantidade} inversão(ões) adicionada(s) para o usuário {user_id}")
     except Exception as e:
-        print(f"Erro ao adicionar inversão: {e}")
+        print(f"Erro ao inverter: {e}")
+        traceback.print_exc()
     finally:
         fechar_conexao(cursor, conn)
 

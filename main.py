@@ -180,6 +180,7 @@ def mudar_musica_usuario(user_id, musica_nova,chat_id):
 def mudar_nome_usuario(user_id, nome_novo,chat_id):
     alterar_usuario(user_id, "nome", nome_novo,chat_id)
     bot.send_message(chat_id, f"😂 Travessura! Seu nome agora é {nome_novo}!")
+
 def verificar_travessura(id_usuario):
     """
     Verifica quais travessuras estão ativas para o usuário.
@@ -200,6 +201,114 @@ def verificar_travessura(id_usuario):
         return []
     finally:
         fechar_conexao(cursor, conn)
+from telebot import types
+import random
+
+# Função para iniciar a bruxa e mostrar as categorias
+@bot.message_handler(commands=['bruxa'])
+def iniciar_bruxa(message):
+    categorias = ['Música', 'Séries', 'Filmes', 'Miscelânea', 'Jogos', 'Animangá']
+    keyboard = types.InlineKeyboardMarkup(row_width=2)
+
+    for categoria in categorias:
+        keyboard.add(types.InlineKeyboardButton(categoria, callback_data=f"bruxa_categoria_{categoria}"))
+
+    bot.send_message(message.chat.id, "🧙‍♀️ Bem-vindo à loja da bruxa! Escolha uma categoria para ver as cartas disponíveis:", reply_markup=keyboard)
+
+# Callback para exibir cartas da categoria selecionada
+@bot.callback_query_handler(func=lambda call: call.data.startswith("bruxa_categoria_"))
+def mostrar_cartas_categoria(call):
+    categoria = call.data.split("_")[2]
+    cartas = obter_cartas_por_categoria(categoria)
+
+    # Verificar se existem cartas na categoria
+    if not cartas:
+        bot.send_message(call.message.chat.id, f"Não há cartas disponíveis na categoria {categoria}.")
+        return
+
+    # Exibir cartas da categoria
+    keyboard = types.InlineKeyboardMarkup(row_width=3)
+    for idx, carta in enumerate(cartas):
+        botao = types.InlineKeyboardButton(carta['nome'], callback_data=f"bruxa_carta_{categoria}_{carta['id']}")
+        keyboard.add(botao)
+
+    bot.send_message(call.message.chat.id, f"🧙‍♀️ Cartas disponíveis na categoria {categoria}:", reply_markup=keyboard)
+
+# Callback para tentar comprar uma carta
+@bot.callback_query_handler(func=lambda call: call.data.startswith("bruxa_carta_"))
+def tentar_comprar_carta(call):
+    _, categoria, carta_id = call.data.split("_")
+    user_id = call.from_user.id
+
+    # Verificar se o usuário tem cenouras suficientes
+    cenouras = verificar_cenouras(user_id)
+    if cenouras < 10:
+        bot.send_message(call.message.chat.id, "Você não tem cenouras suficientes para comprar essa carta.")
+        return
+
+    # Tentar a compra com risco de apreensão
+    chance_policia = random.random()
+    if chance_policia < 0.3:  # 30% de chance da polícia apreender
+        apreender_cartas_cenouras(user_id)
+        bot.send_message(call.message.chat.id, "🚨 A polícia chegou e apreendeu suas cenouras e cartas!")
+    else:
+        # Desconta cenouras e adiciona a carta
+        comprar_carta(user_id, carta_id)
+        bot.send_message(call.message.chat.id, f"🎉 Você comprou a carta com sucesso! Ela agora faz parte da sua coleção.")
+
+# Funções auxiliares
+
+def verificar_cenouras(user_id):
+    # Consulta para verificar quantas cenouras o usuário possui
+    conn, cursor = conectar_banco_dados()
+    cursor.execute("SELECT cenouras FROM usuarios WHERE id_usuario = %s", (user_id,))
+    resultado = cursor.fetchone()
+    fechar_conexao(cursor, conn)
+    return resultado[0] if resultado else 0
+
+import random
+
+def apreender_cartas_cenouras(user_id):
+    conn, cursor = conectar_banco_dados()
+
+    # Remover entre 10 e 50 cenouras
+    cenouras_removidas = random.randint(10, 50)
+    cursor.execute("UPDATE usuarios SET cenouras = GREATEST(0, cenouras - %s) WHERE id_usuario = %s", (cenouras_removidas, user_id))
+
+    # Selecionar até 3 cartas aleatórias do inventário
+    cursor.execute("SELECT id_personagem, quantidade FROM inventario WHERE id_usuario = %s ORDER BY RAND() LIMIT 3", (user_id,))
+    cartas_para_apreender = cursor.fetchall()
+
+    for carta_id, quantidade in cartas_para_apreender:
+        if quantidade > 1:
+            # Diminui a quantidade se for maior que 1
+            cursor.execute("UPDATE inventario SET quantidade = quantidade - 1 WHERE id_usuario = %s AND id_personagem = %s", (user_id, carta_id))
+        else:
+            # Deleta a carta se a quantidade for 1
+            cursor.execute("DELETE FROM inventario WHERE id_usuario = %s AND id_personagem = %s", (user_id, carta_id))
+
+    conn.commit()
+    fechar_conexao(cursor, conn)
+
+
+def comprar_carta(user_id, carta_id):
+    # Desconta as cenouras e adiciona a carta ao inventário do usuário
+    conn, cursor = conectar_banco_dados()
+    cursor.execute("UPDATE usuarios SET cenouras = cenouras - 10 WHERE id_usuario = %s", (user_id,))
+    cursor.execute("INSERT INTO colecao_usuario (id_usuario, id_personagem) VALUES (%s, %s)", (user_id, carta_id))
+    conn.commit()
+    fechar_conexao(cursor, conn)
+
+def obter_cartas_por_categoria(categoria):
+    # Consulta para obter as cartas disponíveis de uma categoria específica
+    conn, cursor = conectar_banco_dados()
+    cursor.execute(
+        "SELECT id_personagem, nome, imagem, emoji FROM personagens WHERE categoria = %s AND imagem IS NOT NULL ORDER BY RAND() LIMIT 6",
+        (categoria,)
+    )
+    cartas = [{"id": row[0], "nome": row[1], "imagem": row[2], "emoji": row[3]} for row in cursor.fetchall()]
+    fechar_conexao(cursor, conn)
+    return cartas
 
 def iniciar_demonio_roubo_carta(user_id, chat_id):
     try:

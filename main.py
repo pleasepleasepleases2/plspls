@@ -1454,9 +1454,6 @@ def ativar_peixes_em_dobro(user_id):
         print(f"Erro ao ativar bônus de peixes em dobro: {e}")
     finally:
         fechar_conexao(cursor, conn)
-import random
-from datetime import datetime
-
 # Função para iniciar o compartilhamento de cenouras
 def iniciar_compartilhamento(user_id, chat_id):
     try:
@@ -1466,10 +1463,13 @@ def iniciar_compartilhamento(user_id, chat_id):
         cursor.execute("SELECT ativo FROM compartilhamentos WHERE id_usuario = %s", (user_id,))
         resultado = cursor.fetchone()
 
-        # DEBUG: Exibir o valor de 'ativo' que foi retornado do banco de dados
+        # DEBUG: Exibir o valor de 'ativo' retornado pelo banco de dados
         print(f"DEBUG: Resultado da consulta de compartilhamento ativo para {user_id}: {resultado}")
 
-        if resultado and resultado[0]:  # Se já tiver um compartilhamento ativo
+        # Interpretar o valor de 'ativo' explicitamente como booleano
+        compartilhamento_ativo = bool(resultado[0]) if resultado else False
+
+        if compartilhamento_ativo:  # Se já tiver um compartilhamento ativo
             bot.send_message(user_id, "👻 Você já tem um compartilhamento ativo! Compartilhe antes de ganhar mais.")
             return
 
@@ -1523,10 +1523,10 @@ def compartilhar_cenouras(user_id, target_user_id, chat_id, user_name, target_us
         cursor.execute("SELECT quantidade_cenouras, ativo FROM compartilhamentos WHERE id_usuario = %s", (user_id,))
         resultado = cursor.fetchone()
 
-        # DEBUG: Exibir os valores de 'quantidade_cenouras' e 'ativo' que foram retornados
+        # DEBUG: Exibir os valores de 'quantidade_cenouras' e 'ativo' retornados pelo banco de dados
         print(f"DEBUG: Resultado da consulta de compartilhamento para {user_id}: {resultado}")
 
-        if not resultado or not resultado[1]:  # Checar se não está ativo
+        if not resultado or not bool(resultado[1]):  # Verificar se não está ativo
             bot.send_message(chat_id, "👻 Você não tem nenhum compartilhamento ativo. Ative um compartilhamento primeiro com o comando +halloween.")
             return
 
@@ -1549,6 +1549,7 @@ def compartilhar_cenouras(user_id, target_user_id, chat_id, user_name, target_us
     
     finally:
         fechar_conexao(cursor, conn)
+
 
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("descartar_caixa") or call.data == "recusar_caixa")

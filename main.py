@@ -396,42 +396,26 @@ def iniciar_jogo_da_velha(chat_id, user_id):
     }
     bot.send_message(chat_id, "Faça sua jogada clicando em uma posição.", reply_markup=criar_tabuleiro_markup(jogos_em_andamento[user_id]['tabuleiro']))
 @bot.message_handler(commands=['praga'])
-def handle_passar_praga(message):
+def passar_praga(user_id, target_user_id, chat_id):
     try:
-        user_id = message.from_user.id  # ID do usuário que tenta passar a praga
-        if not message.reply_to_message:
-            bot.send_message(message.chat.id, "👻 Responda à mensagem de alguém para passar a praga!")
-            print("DEBUG: Comando +praga não foi respondido a ninguém.")
+        if chat_id not in praga_ativa or praga_ativa[chat_id]["usuario_atual"] != user_id:
+            bot.send_message(user_id, "👻 Você não tem uma praga para passar.")
             return
 
-        target_user_id = message.reply_to_message.from_user.id
-        print(f"DEBUG: {user_id} tentando passar a praga para {target_user_id}")
+        # Diminuir a quantidade de passagens restantes
+        praga_ativa[chat_id]["passagens_restantes"] -= 1
+        passagens_restantes = praga_ativa[chat_id]["passagens_restantes"]
 
-        # Verificar se a praga está ativa para o user_id que está tentando passá-la
-        if user_id not in praga_ativa:
-            bot.send_message(message.chat.id, "👻 Você não tem uma praga para passar.")
-            print(f"DEBUG: Usuário {user_id} tentou passar a praga, mas não a possui.")
-            return
-
-        # Calcular o tempo restante da praga
-        tempo_restante = (praga_ativa[user_id]["fim_praga"] - datetime.now()).total_seconds()
-        nova_fim_praga = datetime.now() + timedelta(seconds=tempo_restante)
-
-        # Atualizar o detentor e o tempo da praga
-        praga_ativa[target_user_id] = {
-            "usuario_atual": target_user_id,
-            "fim_praga": nova_fim_praga
-        }
-        del praga_ativa[user_id]  # Remover a praga do usuário atual
-
-        # Atualizar no banco de dados
-        atualizar_praga_no_banco(user_id, target_user_id, nova_fim_praga)
-
-        # Notificar os usuários sobre a nova praga
-        target_user_name = bot.get_chat_member(message.chat.id, target_user_id).user.first_name
-        bot.send_message(message.chat.id, f"🦠 Praga passada para {target_user_name}!")
-        bot.send_message(target_user_id, f"🦠 Você agora tem a praga! Passe-a para alguém nos próximos {int(tempo_restante / 60)} minutos.")
-        print(f"DEBUG: Praga passada de {user_id} para {target_user_id} com {int(tempo_restante / 60)} minutos restantes.")
+        # Verificar se esta é a última passagem necessária
+        if passagens_restantes <= 0:
+            bot.send_message(chat_id, f"⏰ O tempo acabou! {target_user_id} está infectado e vai sofrer uma travessura!")
+            realizar_travessura_final(target_user_id, chat_id)
+            del praga_ativa[chat_id]
+        else:
+            # Atualizar o detentor da praga
+            praga_ativa[chat_id]["usuario_atual"] = target_user_id
+            bot.send_message(user_id, f"🎃 Você passou a praga para {target_user_id}!")
+            bot.send_message(target_user_id, f"👻 Você recebeu a praga! Passe-a para mais {passagens_restantes} pessoas para se livrar dela!")
 
     except Exception as e:
         print(f"Erro ao passar praga: {e}")
@@ -1146,23 +1130,18 @@ praga_ativa = {}
 
 def iniciar_pega_pega(user_id, chat_id):
     try:
-        # Definir o usuário inicial com a praga e definir tempo
-        fim_praga = datetime.now() + timedelta(minutes=10)
-        praga_ativa[user_id] = {
-            "chat_id": chat_id,
-            "fim_praga": fim_praga
+        # Definir o usuário inicial com a praga e a quantidade de passagens
+        passagens_necessarias = random.randint(2, 20)  # Número de passagens entre 2 e 20
+        praga_ativa[chat_id] = {
+            "usuario_atual": user_id,
+            "passagens_restantes": passagens_necessarias
         }
 
-        # Salvar praga no banco
-        registrar_praga_no_banco(user_id, chat_id, fim_praga)
-
-        # Agendar a verificação para a penalidade
-        scheduler.add_job(verificar_expiracao_praga, 'date', run_date=fim_praga, args=[user_id])
-
         # Mensagem inicial
-        bot.send_message(chat_id, f"👻 {user_id} está com a praga! Use +praga para passá-la a outra pessoa!")
+        bot.send_message(chat_id, f"👻 {user_id} está com a praga! Passe-a para {passagens_necessarias} pessoas para se livrar!")
     except Exception as e:
         print(f"Erro ao iniciar o Pega-Pega com praga: {e}")
+
 
 def verificar_expiracao_praga(user_id):
     try:
@@ -1196,35 +1175,14 @@ def registrar_praga_no_banco(user_id, chat_id, fim_praga):
 
 
 def verificar_praga(user_id):
-    conn, cursor = conectar_banco_dados()
-    try:
-        cursor.execute("""
-            SELECT fim_praga 
-            FROM pragas_ativas 
-            WHERE id_usuario = %s 
-            ORDER BY fim_praga DESC LIMIT 1
-        """, (user_id,))
-        resultado = cursor.fetchone()
+    # Verifica se o usuário tem uma praga ativa
+    for chat_id, praga in praga_ativa.items():
+        if praga["usuario_atual"] == user_id:
+            print(f"DEBUG: {user_id} possui a praga.")
+            return True
+    print(f"DEBUG: {user_id} não possui a praga.")
+    return False
 
-        if resultado:
-            fim_praga = resultado[0]
-            print(f"DEBUG: Praga encontrada para o usuário {user_id}. Fim da praga: {fim_praga}")
-            print(f"DEBUG: Hora atual: {datetime.now()}")
-            
-            if datetime.now() < fim_praga:
-                print("DEBUG: A praga ainda está ativa.")
-                return True
-            else:
-                print("DEBUG: A praga já expirou.")
-        else:
-            print(f"DEBUG: Nenhuma praga ativa encontrada para o usuário {user_id}.")
-
-        return False
-    except Exception as e:
-        print(f"Erro ao verificar praga: {e}")
-        return False
-    finally:
-        fechar_conexao(cursor, conn)
 
 def remover_praga_do_banco(user_id):
     conn, cursor = conectar_banco_dados()

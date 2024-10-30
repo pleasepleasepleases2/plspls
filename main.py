@@ -1055,20 +1055,6 @@ def adicionar_vip_temporario(user_id, grupo_sugestao,chat_id):
     finally:
         fechar_conexao(cursor, conn)
 
-# Função para aumentar as cenouras de um usuário
-def aumentar_cenouras(user_id, quantidade):
-    try:
-        conn = conectar_banco_dados()
-        cursor = conn.cursor()
-        # Atualiza o campo `cenouras` na tabela `usuarios` adicionando a quantidade
-        cursor.execute("UPDATE usuarios SET cenouras = cenouras + %s WHERE id_usuario = %s", (quantidade, user_id))
-        conn.commit()
-        cursor.close()
-        conn.close()
-        print(f"DEBUG: Cenouras aumentadas em {quantidade} para o usuário {user_id}.")
-    except Exception as e:
-        print(f"Erro ao aumentar cenouras para o usuário {user_id}: {e}")
-
 def alterar_usuario(user_id, coluna, valor_novo,chat_id):
     """
     Função genérica para alterar um campo específico na tabela `usuarios`.

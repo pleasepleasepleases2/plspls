@@ -341,7 +341,8 @@ def handle_inverter_travessura(message):
         print(f"DEBUG: Travessura '{nome_travessura}' removida para o usuário {user_id}")
 
     except Exception as e:
-        print(f"Erro ao inverter travessura: {e}")
+        print(f"Erro ao inverter: {e}")
+        traceback.print_exc()
     finally:
         fechar_conexao(cursor, conn)
 

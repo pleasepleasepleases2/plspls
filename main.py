@@ -916,6 +916,7 @@ def callback_query_cesta(call):
         bot.answer_callback_query(call.id, "Erro ao processar o callback.")
     finally:
         processing_lock.release()
+
 @bot.message_handler(commands=['halloween'])
 def handle_halloween(message):
     user_id = message.from_user.id  # Obtém o ID do usuário
@@ -924,17 +925,34 @@ def handle_halloween(message):
     print(f"DEBUG: Comando /halloween acionado pelo usuário {user_id}")
     chance = random.random()  # Gera um número entre 0 e 1
     print(f"DEBUG: Chance sorteada para gostosura ou travessura: {chance}")
+    
     # Verifica se o usuário já está em um jogo ativo
     if user_id in jogos_em_andamento and jogos_em_andamento[user_id]['ativo']:
-        bot.send_message(chat_id, "Você já está em um jogo da velha em andamento! Termine o jogo atual antes de tentar novamente.")
+        bot.send_message(chat_id, "🕸️ Você já está enredado em um jogo! Termine seu feitiço atual antes de buscar outra aventura.")
         return
+
+    # Chance de travessura ou gostosura
     if chance < 0.5:
         print(f"DEBUG: Executando gostosura para o usuário {user_id}")
         realizar_halloween_gostosura(user_id, chat_id)  # Executa uma das funções de gostosura
     else:
         print(f"DEBUG: Executando travessura para o usuário {user_id}")
-        realizar_halloween_travessura(user_id, chat_id, nome)  # Executa uma das funções de travessura
         
+        # Verificar se a proteção está ativa
+        if verificar_protecao_travessura(user_id):
+            # Se a proteção está ativa, remover e informar ao usuário
+            conn, cursor = conectar_banco_dados()
+            cursor.execute("DELETE FROM protecoes_travessura WHERE id_usuario = %s", (user_id,))
+            conn.commit()
+            fechar_conexao(cursor, conn)
+            
+            # Mensagem de proteção ativa
+            bot.send_message(chat_id, f"🌙 Uma proteção mágica brilha ao seu redor, {nome}! A travessura se dissolve no ar, e agora sua proteção foi dissipada. Tome cuidado, pois novas sombras podem se aproximar...")
+            print(f"DEBUG: Proteção ativada e gasta para o usuário {user_id}")
+        else:
+            # Se não há proteção, aplicar travessura
+            realizar_halloween_travessura(user_id, chat_id, nome)
+
 def aplicar_travessura(id_usuario, tipo_travessura):
     """
     Aplica a travessura ao usuário com base no tipo de travessura.

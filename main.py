@@ -204,35 +204,78 @@ def verificar_travessura(id_usuario):
 from telebot import types
 import random
 
-# Função para iniciar a bruxa e mostrar as categorias
 @bot.message_handler(commands=['bruxa'])
-def iniciar_bruxa(message):
-    categorias = ['Música', 'Séries', 'Filmes', 'Miscelânea', 'Jogos', 'Animangá']
-    keyboard = types.InlineKeyboardMarkup(row_width=2)
+def exibir_loja_bruxa(message):
+    chat_id = message.chat.id
+    data_atual_str = dt_module.date.today().strftime("%Y-%m-%d")
+    
+    try:
+        # Obter cartas aleatórias para a loja da bruxa (6 cartas)
+        cartas_bruxa = obter_cartas_aleatorias(quantidade=6)
 
-    for categoria in categorias:
-        keyboard.add(types.InlineKeyboardButton(categoria, callback_data=f"bruxa_categoria_{categoria}"))
+        if not cartas_bruxa:
+            bot.send_message(chat_id, "Não foi possível obter cartas para a loja da bruxa.")
+            return
 
-    bot.send_message(message.chat.id, "🧙‍♀️ Bem-vindo à loja da bruxa! Escolha uma categoria para ver as cartas disponíveis:", reply_markup=keyboard)
+        # Construir a mensagem de apresentação da loja da bruxa
+        mensagem_loja = "🧙‍♀️ Bem-vindo(a) à Loja da Bruxa!\nCada carta custa 10 cenouras, mas cuidado! Existe o risco de apreensão!\n\n"
+        
+        for idx, carta in enumerate(cartas_bruxa, start=1):
+            mensagem_loja += f"{idx} - {carta['nome']}, de {carta['subcategoria']}\n"
 
-# Callback para exibir cartas da categoria selecionada
-@bot.callback_query_handler(func=lambda call: call.data.startswith("bruxa_categoria_"))
-def mostrar_cartas_categoria(call):
-    categoria = call.data.split("_")[2]
-    cartas = obter_cartas_por_categoria(categoria)
+        # Criar os botões 1 a 6
+        markup = telebot.types.InlineKeyboardMarkup(row_width=3)
+        for idx in range(1, 7):
+            markup.add(telebot.types.InlineKeyboardButton(text=str(idx), callback_data=f"compra_bruxa_{idx}_{message.from_user.id}"))
 
-    # Verificar se existem cartas na categoria
-    if not cartas:
-        bot.send_message(call.message.chat.id, f"Não há cartas disponíveis na categoria {categoria}.")
-        return
+        # Enviar a mensagem com a lista e botões
+        bot.send_message(chat_id, mensagem_loja, reply_markup=markup)
 
-    # Exibir cartas da categoria
-    keyboard = types.InlineKeyboardMarkup(row_width=3)
-    for idx, carta in enumerate(cartas):
-        botao = types.InlineKeyboardButton(carta['nome'], callback_data=f"bruxa_carta_{categoria}_{carta['id']}")
-        keyboard.add(botao)
+    except Exception as e:
+        print(f"Erro ao exibir a loja da bruxa: {e}")
+        bot.send_message(chat_id, "Erro ao exibir a loja da bruxa.")
 
-    bot.send_message(call.message.chat.id, f"🧙‍♀️ Cartas disponíveis na categoria {categoria}:", reply_markup=keyboard)
+@bot.callback_query_handler(func=lambda call: call.data.startswith('compra_bruxa_'))
+def processar_compra_bruxa(call):
+    try:
+        chat_id = call.message.chat.id
+        data = call.data.split('_')
+        numero_carta = int(data[2]) - 1  # Índice da carta selecionada (1 a 6)
+        user_id = int(data[3])
+
+        # Verificar cenouras e processar a compra
+        conn, cursor = conectar_banco_dados()
+        cursor.execute("SELECT cenouras FROM usuarios WHERE id_usuario = %s", (user_id,))
+        resultado = cursor.fetchone()
+
+        if resultado and resultado[0] >= 10:
+            # Deduzir de 10 a 50 cenouras com chance de apreensão
+            cenouras_deduzidas = random.randint(10, 50)
+            cursor.execute("UPDATE usuarios SET cenouras = cenouras - %s WHERE id_usuario = %s", (cenouras_deduzidas, user_id))
+
+            # Inserir carta no inventário do usuário
+            carta_selecionada = cartas_bruxa[numero_carta]
+            id_personagem = carta_selecionada['id']
+            cursor.execute("SELECT quantidade FROM inventario WHERE id_usuario = %s AND id_personagem = %s", (user_id, id_personagem))
+            inventario_result = cursor.fetchone()
+
+            if inventario_result:
+                if inventario_result[0] > 1:
+                    cursor.execute("UPDATE inventario SET quantidade = quantidade - 1 WHERE id_usuario = %s AND id_personagem = %s", (user_id, id_personagem))
+                else:
+                    cursor.execute("DELETE FROM inventario WHERE id_usuario = %s AND id_personagem = %s", (user_id, id_personagem))
+
+            conn.commit()
+            bot.send_message(chat_id, f"🎃 Compra bem-sucedida! Cenouras deduzidas: {cenouras_deduzidas}")
+
+        else:
+            bot.send_message(chat_id, "Você não possui cenouras suficientes para comprar essa carta.")
+
+    except Exception as e:
+        print(f"Erro ao processar compra da bruxa: {e}")
+
+    finally:
+        fechar_conexao(cursor, conn)
 
 # Callback para tentar comprar uma carta
 @bot.callback_query_handler(func=lambda call: call.data.startswith("bruxa_carta_"))

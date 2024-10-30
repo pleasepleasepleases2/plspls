@@ -976,23 +976,25 @@ def iniciar_sombra_roubo_cenouras(user_id, duracao_minutos=10):
             while datetime.now() < fim_roubo and roubo_ativo.get(user_id, False):
                 # Nova conexão em cada ciclo
                 conn, cursor = conectar_banco_dados()
-                sucesso, cenouras_restantes = diminuir_cenouras(user_id, 10) 
-                print(f"DEBUG: Tentativa de roubo de 10 cenouras para {user_id}, sucesso: {sucesso}, cenouras restantes: {cenouras_restantes}")
+                quantidade_roubada = random.randint(1, 10)  # Quantidade aleatória de cenouras entre 1 e 10
+                sucesso, cenouras_restantes = diminuir_cenouras(user_id, quantidade_roubada)
                 
+                print(f"DEBUG: Tentativa de roubo de {quantidade_roubada} cenouras para {user_id}, sucesso: {sucesso}, cenouras restantes: {cenouras_restantes}")
+        
                 if sucesso:
-                    bot.send_message(user_id, f"👻 A sombra roubou 10 cenouras! Total atual: {cenouras_restantes} cenouras. Use /exorcizar para deter a sombra!")
+                    bot.send_message(user_id, f"👻 A sombra roubou {quantidade_roubada} cenouras! Total atual: {cenouras_restantes} cenouras. Use /exorcizar para deter a sombra!")
                 else:
-                    print(f"DEBUG: Usuário {user_id} não possui cenouras suficientes para serem roubadas.")
-                    break  # Finaliza o roubo se o usuário não tem cenouras
-
-                time.sleep(10) 
-
-            if roubo_ativo.get(user_id, False):
+                    break  # Finaliza o roubo se o usuário não tem cenouras suficientes
+        
+                time.sleep(2)  # Roubo a cada 2 segundos
+        
+            # Limpar travessura após o tempo acabar
+            if roubo_ativo.get(user_id, False):  # Se o exorcismo não foi usado
                 cursor.execute("DELETE FROM travessuras WHERE id_usuario = %s AND tipo_travessura = 'sombra_rouba_cenouras'", (user_id,))
                 conn.commit()
                 bot.send_message(user_id, "🕯️ A sombra desapareceu, suas cenouras estão seguras por enquanto.")
                 print(f"DEBUG: Sombra removida para o usuário {user_id}")
-
+        
             fechar_conexao(cursor, conn)  # Fecha a conexão no final da thread
 
         threading.Thread(target=roubar_cenouras_periodicamente).start()

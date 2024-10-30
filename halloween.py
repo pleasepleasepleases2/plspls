@@ -11,10 +11,36 @@ from telebot import types
 import globals
 from collections import defaultdict
 aboboras = {
-    1: {"nome": "Abóbora 1", "premio": "50 cenouras"},
-    2: {"nome": "Abóbora 2", "premio": "100 cenouras"},
-    3: {"nome": "Abóbora 3", "premio": "Carta Faltante"},
-    # Continue para as 30 abóboras com prêmios diferentes
+    1: {"nome": "Abóbora Assustadora", "premio": "50 cenouras", "descricao": "🎃👻 Você encontrou uma abóbora assombrada escondida no quintal!"},
+    2: {"nome": "Abóbora Macabra", "premio": "100 cenouras", "descricao": "🎃🕸️ Um vizinho misterioso deixou uma abóbora macabra na sua porta."},
+    3: {"nome": "Abóbora da Morte", "premio": "Carta Faltante", "descricao": "🎃💀 No silêncio da noite, uma abóbora da morte apareceu em seu caminho."},
+    4: {"nome": "Abóbora Doce", "premio": "50% de chance de encontrar cartas de uma subcategoria favorita nas próximas 10 pescas", "descricao": "🍬🎃 Você tropeçou em uma abóbora doce, e ela exala um aroma encantador."},
+    5: {"nome": "Abóbora Encantada", "premio": "Pesca extra ao encontrar uma carta de evento", "descricao": "🎃✨ Uma abóbora encantada surge do nada e flutua em sua direção!"},
+    6: {"nome": "Abóbora Brilhante", "premio": "Escolha entre 10 opções de séries em cada giro", "descricao": "🌕🎃 No brilho da lua, você vê uma abóbora brilhante esperando por você."},
+    7: {"nome": "Abóbora Dourada", "premio": "20 cartas de uma série comum à sua escolha após 50 pescas", "descricao": "💰🎃 Uma abóbora dourada reluzente surge na beira da estrada escura."},
+    8: {"nome": "Abóbora Misteriosa", "premio": "Pesca de evento a cada 10 giros", "descricao": "🎩🎃 Você encontrou uma abóbora misteriosa em um baú antigo."},
+    9: {"nome": "Abóbora Favorita", "premio": "Aumenta a chance de encontrar um personagem favorito em 35% por um dia", "descricao": "🎃❤️ Uma abóbora favorita foi deixada com uma carta ao seu nome."},
+    10: {"nome": "Abóbora Espectral", "premio": "Aumenta a chance de duplicar cartas ao pescar", "descricao": "🌫️👻 Uma abóbora espectral surge entre as sombras, reluzente e tentadora."},
+    11: {"nome": "Abóbora da Sorte", "premio": "Chance de multiplicar recompensas em pescas de cartas de evento", "descricao": "🍀🎃 Você encontrou uma abóbora da sorte escondida entre as folhas secas."},
+    12: {"nome": "Abóbora Gélida", "premio": "Desconto em compras de cartas durante 24 horas", "descricao": "❄️🎃 Do frio da madrugada, uma abóbora gélida aparece com um leve brilho."},
+    13: {"nome": "Abóbora Enfeitiçada", "premio": "Aumenta as chances de cartas duplicadas por 24 horas", "descricao": "✨🎃 Uma abóbora enfeitiçada dança ao seu redor, cercada por luzes mágicas."},
+    14: {"nome": "Abóbora Estelar", "premio": "Ganha uma carta estrela após 30 giros", "descricao": "🌌🎃 Você se depara com uma abóbora estelar, caída de uma constelação distante."},
+    15: {"nome": "Abóbora Espinhenta", "premio": "Próxima pesca gratuita de evento após 10 cartas comuns", "descricao": "🌵🎃 Entre espinhos e folhas, você encontrou uma abóbora espinhenta."},
+    16: {"nome": "Abóbora Serenidade Sombria", "premio": "Reduz a chance de cartas repetidas por 24 horas", "descricao": "🌙🎃 Uma abóbora de serenidade repousa tranquilamente em seu jardim."},
+    17: {"nome": "Abóbora Rara", "premio": "Cria pescas especiais com personagens das séries favoritas", "descricao": "🌟🎃 De uma caixa antiga, você retira uma rara e preciosa abóbora."},
+    18: {"nome": "Abóbora Fumegante", "premio": "Cada carta tem chance de liberar uma semente por 24 horas", "descricao": "🔥🎃 Uma abóbora fumegante aparece, soltando vapores enigmáticos."},
+    19: {"nome": "Abóbora Lunar", "premio": "Aumenta a chance de cartas de evento durante a noite", "descricao": "🌕🎃 No luar, você encontra uma abóbora lunar, brilhando intensamente."},
+    20: {"nome": "Abóbora Realçada", "premio": "50% de chance de cartas favoritas em 'Estou com sorte' por 12 horas", "descricao": "💫🎃 Uma abóbora realçada surge, envolta em um leve brilho encantador."},
+    21: {"nome": "Abóbora Carismática", "premio": "Selecione um personagem que aparece a cada 50 giros", "descricao": "🎭🎃 Em uma noite calma, uma abóbora carismática é deixada em sua porta."},
+    22: {"nome": "Abóbora Fantástica", "premio": "Permite alterar a foto de qualquer personagem após 15 pescas", "descricao": "✨🎃 De repente, uma abóbora fantástica aparece, cheia de surpresas."},
+    23: {"nome": "Abóbora Sortuda", "premio": "Chance de ganhar um item raro a cada 20 giros", "descricao": "🍀🎃 Escondida entre as árvores, uma abóbora sortuda chama sua atenção."},
+    24: {"nome": "Abóbora Colorida", "premio": "Ganha uma borda colorida em uma carta aleatória a cada 10 giros", "descricao": "🌈🎃 Você vê uma abóbora colorida entre as folhas secas do jardim."},
+    25: {"nome": "Abóbora Cristalina", "premio": "Cartas têm chance de serem transformadas em cartas de Halloween", "descricao": "💎🎃 Uma abóbora cristalina surge, cintilando como uma joia rara."},
+    26: {"nome": "Abóbora Especial", "premio": "Aumenta em 10% a chance de encontrar cartas raras durante eventos", "descricao": "✨🎃 Entre os arbustos, você encontra uma abóbora especial e reluzente."},
+    27: {"nome": "Abóbora Mágica", "premio": "Garante uma carta de alta raridade a cada 10 giros por um dia", "descricao": "🔮🎃 Uma abóbora mágica flutua até você, com um brilho suave."},
+    28: {"nome": "Abóbora Assombrosa", "premio": "Cartas de Halloween aparecem com mais frequência por 24 horas", "descricao": "👻🎃 No escuro, uma abóbora assombrosa surge inesperadamente."},
+    29: {"nome": "Abóbora Sombria", "premio": "Encontre até 2 cartas de Halloween por pesca durante eventos", "descricao": "🌫️🎃 Do nevoeiro, uma abóbora sombria aparece silenciosamente."},
+    30: {"nome": "Abóbora Eterna", "premio": "Chance permanente de 15% para cartas de evento", "descricao": "🌅🎃 No amanhecer, uma abóbora eterna repousa à sua porta."}
 }
 
 

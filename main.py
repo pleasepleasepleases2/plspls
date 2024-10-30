@@ -1840,21 +1840,18 @@ def processar_premio(user_id, premio):
         # Dar uma carta faltante do evento
         dar_carta_faltante(user_id, "Halloween")
 
-def adicionar_inverter_travessura(user_id,chat_id):
+def adicionar_inverter_travessura(user_id, quantidade=1):
+    conn, cursor = conectar_banco_dados()
     try:
-        conn, cursor = conectar_banco_dados()
-
-        # Inserir ou atualizar a habilidade de inverter travessura
         cursor.execute("""
-            INSERT INTO inverter_travessuras (id_usuario, pode_inverter)
+            INSERT INTO inversoes (id_usuario, quantidade)
             VALUES (%s, %s)
-            ON DUPLICATE KEY UPDATE pode_inverter = VALUES(pode_inverter)
-        """, (user_id, True))
+            ON DUPLICATE KEY UPDATE quantidade = quantidade + %s
+        """, (user_id, quantidade, quantidade))
         conn.commit()
-
-        bot.send_message(chat_id, "🪄 Você ganhou a habilidade de inverter uma travessura! Quando for alvo, poderá reverter o efeito.")
+        print(f"DEBUG: {quantidade} inversão(ões) adicionada(s) para o usuário {user_id}")
     except Exception as e:
-        print(f"Erro ao adicionar a chance de inverter a travessura: {e}")
+        print(f"Erro ao adicionar inversão: {e}")
     finally:
         fechar_conexao(cursor, conn)
 

@@ -991,3 +991,37 @@ def verificar_travessura_embaralhamento(user_id):
         return False
     finally:
         fechar_conexao(cursor, conn)
+# Inicializa a tabela de inversões, caso ainda não exista
+def inicializar_tabela_inversoes():
+    conn, cursor = conectar_banco_dados()
+    try:
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS inversoes (
+                id_usuario BIGINT PRIMARY KEY,
+                quantidade INT DEFAULT 0
+            )
+        """)
+        conn.commit()
+    except Exception as e:
+        print(f"Erro ao inicializar a tabela de inversões: {e}")
+    finally:
+        fechar_conexao(cursor, conn)
+
+
+
+
+# Função para adicionar uma inversão ao usuário
+def adicionar_inversao(user_id, quantidade=1):
+    conn, cursor = conectar_banco_dados()
+    try:
+        cursor.execute("""
+            INSERT INTO inversoes (id_usuario, quantidade)
+            VALUES (%s, %s)
+            ON DUPLICATE KEY UPDATE quantidade = quantidade + %s
+        """, (user_id, quantidade, quantidade))
+        conn.commit()
+        print(f"DEBUG: {quantidade} inversão(ões) adicionada(s) para o usuário {user_id}")
+    except Exception as e:
+        print(f"Erro ao adicionar inversão: {e}")
+    finally:
+        fechar_conexao(cursor, conn)

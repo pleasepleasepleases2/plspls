@@ -309,7 +309,7 @@ def handle_inverter(message):
             else:
                 mensagem += "🎉 Você não tem travessuras ativas!"
         else:
-            mensagem = "👻 Você não tem inversões disponíveis. Ganhe uma com travessuras e gostosuras!"
+            mensagem = "🔮 Você não possui poções de inversão. Busque mais com travessuras e gostosuras para encher seu caldeirão de magia!"
 
         bot.send_message(chat_id, mensagem)
 
@@ -982,7 +982,7 @@ def callback_query_cesta(call):
 def handle_halloween(message):
     user_id = message.from_user.id  # Obtém o ID do usuário
     chat_id = message.chat.id
-
+    nome = message.from_user.first_name
     print(f"DEBUG: Comando /halloween acionado pelo usuário {user_id}")
     chance = random.random()  # Gera um número entre 0 e 1
     print(f"DEBUG: Chance sorteada para gostosura ou travessura: {chance}")
@@ -995,7 +995,7 @@ def handle_halloween(message):
         realizar_halloween_gostosura(user_id, chat_id)  # Executa uma das funções de gostosura
     else:
         print(f"DEBUG: Executando travessura para o usuário {user_id}")
-        realizar_halloween_travessura(user_id, chat_id)  # Executa uma das funções de travessura
+        realizar_halloween_travessura(user_id, chat_id, nome)  # Executa uma das funções de travessura
         
 def aplicar_travessura(id_usuario, tipo_travessura):
     """
@@ -1176,11 +1176,11 @@ def exorcizar_sombra(message):
                 roubo_ativo[user_id] = False  # Parar o roubo
                 cursor.execute("DELETE FROM travessuras WHERE id_usuario = %s AND tipo_travessura = 'sombra_rouba_cenouras'", (user_id,))
                 conn.commit()
-                bot.send_message(message.chat.id, "🕯️ Você exorcizou a sombra! Suas cenouras estão seguras.")
+                bot.send_message(message.chat.id, "🎃 Um suspiro de alívio enquanto a sombra desaparece nas profundezas da floresta. Você está seguro... por enquanto.")
             else:
-                bot.send_message(message.chat.id, "👻 O exorcismo falhou! A sombra continua a roubar suas cenouras.")
+                bot.send_message(message.chat.id, "👻 Seu feitiço falhou! A sombra persiste, furtiva, entre suas cenouras. Cuide-se bem!")
         else:
-            bot.send_message(message.chat.id, "👻 Não há nenhuma sombra para exorcizar.")
+            bot.send_message(message.chat.id, "🌙 A calma reina... Não há sombras assombrando para exorcizar.")
 
     except Exception as e:
         bot.send_message(message.chat.id, f"Erro ao exorcizar a sombra: {e}")
@@ -1215,7 +1215,8 @@ def adicionar_vip_temporario(user_id, grupo_sugestao,chat_id):
             bot.send_message(grupo_sugestao, f"🎉 O usuário {user_id} ganhou VIP por {dias_vip} dias!")
 
             # Informar o usuário que ganhou VIP
-            bot.send_message(chat_id, f"🎁 Parabéns! Você ganhou VIP por {dias_vip} dias. Aproveite!")
+            bot.send_message(chat_id, f"🌟 Parabéns, alma iluminada! Você foi agraciado com o privilégio VIP por {dias_vip} dias. Aproveite os encantos dessa jornada mágica!")
+
 
     except Exception as e:
         print(f"Erro ao adicionar VIP temporário: {e}")
@@ -1256,8 +1257,8 @@ def adicionar_protecao_temporaria(user_id,chat_id):
         """, (user_id, fim_protecao, fim_protecao))
         conn.commit()
 
-        # Informar o usuário sobre a proteção
-        bot.send_message(chat_id, f"🛡️ Você ganhou uma proteção mágica por {horas_protecao} horas! Durante esse tempo, você está imune a travessuras.")
+        #Informar o usuário sobre a proteção mágica
+        bot.send_message(chat_id, f"🕯️ Um encanto protetor envolve você! Por {horas_protecao} horas, sua aura está protegida de travessuras sombrias. Aproveite a calma e segurança dessa bênção!")
     
     except Exception as e:
         print(f"Erro ao adicionar proteção temporária: {e}")
@@ -1267,18 +1268,18 @@ def adicionar_protecao_temporaria(user_id,chat_id):
 def realizar_combo_gostosura(user_id, chat_id):
     try:
         conn, cursor = conectar_banco_dados()
-        mensagem_combo = "Uma senhora te deu um combo como gostosura:\n\n"
+        mensagem_combo = "🌿 Uma senhora mística lhe sorri e oferece um raro combo de gostosuras:\n\n"
 
         # Parte 1: Ganhar até 100 cenouras
         cenouras_ganhas = random.randint(50, 100)
         aumentar_cenouras(user_id, cenouras_ganhas)
-        mensagem_combo += f"🍬 {cenouras_ganhas} cenouras no Combo!\n\n"
+        mensagem_combo += f"🍬 Acolheu {cenouras_ganhas} cenouras encantadas para sua coleção!\n\n"
 
         cartas_ganhas = adicionar_carta_faltante_halloween(user_id, chat_id)
         if cartas_ganhas:
-            mensagem_combo += f"🎃 1 carta faltante do evento Halloween!\n\n"
+            mensagem_combo += "🎃 Um segredo de Halloween lhe trouxe uma carta única do evento!\n\n"
         else:
-            mensagem_combo += f"🎃 Parabéns! Mas você já tem todas as cartas do evento Halloween.\n\n"
+            mensagem_combo += "🎃 A magia do Halloween diz que você já possui todas as cartas do evento!\n\n"
 
         # Parte 3: Escolher um efeito bônus
         efeitos_bonus = [
@@ -1291,19 +1292,19 @@ def realizar_combo_gostosura(user_id, chat_id):
 
         if efeito_escolhido == "dobro de cenouras ao cenourar":
             ativar_dobro_cenouras(user_id)
-            mensagem_combo += "🥕 Bônus ativado: Você receberá o dobro de cenouras quando cenourar!\n"
+            mensagem_combo += "🥕 Encanto ativado: Cenouras dobradas ao ajudar seus amigos no jardim!\n"
         
         elif efeito_escolhido == "peixes em dobro na pesca":
             ativar_peixes_em_dobro(user_id)
-            mensagem_combo += "🐟 Bônus ativado: Você receberá peixes em dobro ao pescar!\n"
+            mensagem_combo += "🐟 Encanto ativado: Os peixes virão em dobro nas suas pescas no lago!\n"
 
         elif efeito_escolhido == "proteção contra travessuras":
-            adicionar_protecao_temporaria(user_id,chat_id)
-            mensagem_combo += "🛡️ Bônus ativado: Você está protegido contra travessuras!\n"
+            adicionar_protecao_temporaria(user_id, chat_id)
+            mensagem_combo += "🛡️ Encanto ativado: Uma luz protetora te envolverá contra travessuras sombrias!\n"
 
         elif efeito_escolhido == "VIP de 1 dia":
             adicionar_vip_temporario(user_id, chat_id, GRUPO_SUGESTAO, dias=1)
-            mensagem_combo += "⚡ Bônus ativado: Você recebeu VIP por 1 dia!\n"
+            mensagem_combo += "⚡ Encanto ativado: Você recebeu um passe VIP de 1 dia para explorar a magia oculta!\n"
 
         # Enviar a mensagem final com todas as informações
         bot.send_message(chat_id, mensagem_combo)
@@ -1312,6 +1313,7 @@ def realizar_combo_gostosura(user_id, chat_id):
         print(f"Erro ao realizar combo de gostosuras: {e}")
     finally:
         fechar_conexao(cursor, conn)
+
 
 @bot.message_handler(commands=['setgif'])
 def handle_setgif(message):
@@ -1421,12 +1423,6 @@ def receber_link_gif(message, id_personagem):
             bot.send_message(message.chat.id, "Erro ao processar o link do GIF. ID de usuário inválido.")
     else:
         bot.send_message(message.chat.id, "Erro ao processar o link do GIF. ID de usuário inválido.")
-from apscheduler.schedulers.background import BackgroundScheduler
-from datetime import datetime, timedelta
-import time
-
-scheduler = BackgroundScheduler()
-scheduler.start()
 
 from apscheduler.schedulers.background import BackgroundScheduler
 from datetime import datetime, timedelta
@@ -1446,7 +1442,7 @@ def handle_passar_praga(message):
 
         # Verificar se há uma resposta para a mensagem com o alvo da praga
         if not message.reply_to_message:
-            bot.send_message(chat_id, "Você precisa responder à mensagem de alguém para passar a praga.")
+            bot.send_message(chat_id, "👻 Para passar a praga, você precisa responder à mensagem de alguém.")
             return
 
         target_user_id = message.reply_to_message.from_user.id
@@ -1454,7 +1450,7 @@ def handle_passar_praga(message):
 
         # Verificar se o usuário realmente possui a praga ativa
         if chat_id not in praga_ativa or praga_ativa[chat_id]["usuario_atual"] != user_id:
-            bot.send_message(chat_id, "👻 Você não tem uma praga para passar.")
+            bot.send_message(chat_id, "⚠️ Você não está amaldiçoado com a praga para poder passá-la.")
             print(f"DEBUG: Praga ativa para o chat {chat_id}: {praga_ativa.get(chat_id)}")
             return
 
@@ -1465,30 +1461,32 @@ def handle_passar_praga(message):
 
         # Verificar se essa foi a última passagem
         if passagens_restantes <= 0:
-            bot.send_message(chat_id, f"⏰ O tempo acabou! {target_user_id} está infectado e vai sofrer uma travessura!")
+            bot.send_message(chat_id, f"🔔 O tempo acabou! {message.reply_to_message.from_user.first_name} agora sofre com a maldição!")
             realizar_travessura_final(target_user_id, chat_id)
             del praga_ativa[chat_id]
             print(f"DEBUG: Praga finalizada para o chat {chat_id}")
         else:
             # Atualizar o usuário atual com a praga
             praga_ativa[chat_id]["usuario_atual"] = target_user_id
-            bot.send_message(chat_id, f"🎃 Você passou a praga para {target_user_id}! Passe-a para mais {passagens_restantes} pessoas para se livrar dela!")
-            bot.send_message(target_user_id, f"👻 Você recebeu a praga! Passe-a para mais {passagens_restantes} pessoas para se livrar dela!")
+            bot.send_message(chat_id, f"🕸️ A praga foi passada para {message.reply_to_message.from_user.first_name}! Restam {passagens_restantes} transferências para se livrar dela.")
+            bot.send_message(target_user_id, f"👻 Uma praga sombria foi passada para você! Passe-a para mais {passagens_restantes} almas para se livrar dela!")
             print(f"DEBUG: Praga passada para {target_user_id} com {passagens_restantes} passagens restantes")
 
     except Exception as e:
         print(f"Erro ao passar praga: {e}")
 
+
 # Função para iniciar a praga com contagem de passagens
-def iniciar_pega_pega(user_id, chat_id):
+def iniciar_pega_pega(user_id, chat_id,nome):
     try:
         passagens_necessarias = random.randint(2, 20)  # Número de passagens entre 2 e 20
         praga_ativa[chat_id] = {
             "usuario_atual": user_id,
             "passagens_restantes": passagens_necessarias
         }
-        print(f"DEBUG: Praga iniciada para o usuário {user_id} no chat {chat_id} com {passagens_necessarias} passagens necessárias")
-        bot.send_message(chat_id, f"👻 {user_id} está com a praga! Passe-a para {passagens_necessarias} pessoas para se livrar!")
+        print(f"DEBUG: Praga iniciada para o usuário {nome} no chat {chat_id} com {passagens_necessarias} passagens necessárias")
+        bot.send_message(chat_id, f"👻 {user_name} está amaldiçoado com a praga! Ele deve passar para outra pessoa antes do tempo acabar!")
+
     except Exception as e:
         print(f"Erro ao iniciar o Pega-Pega com praga: {e}")
 
@@ -1913,29 +1911,6 @@ def adicionar_inverter_travessura(user_id, quantidade=1):
     except Exception as e:
         print(f"Erro ao adicionar inversão: {e}")
         traceback.print_exc()
-    finally:
-        fechar_conexao(cursor, conn)
-
-def verificar_inverter_travessura(user_id, atacante_id):
-    try:
-        conn, cursor = conectar_banco_dados()
-
-        # Verificar se o usuário tem a habilidade de inverter travessura
-        cursor.execute("SELECT pode_inverter FROM inverter_travessuras WHERE id_usuario = %s", (user_id,))
-        resultado = cursor.fetchone()
-
-        if resultado and resultado[0]:  # Se o usuário tem a habilidade
-            # Remove a habilidade após usá-la
-            cursor.execute("UPDATE inverter_travessuras SET pode_inverter = %s WHERE id_usuario = %s", (False, user_id))
-            conn.commit()
-
-            # Notifica o atacante e o alvo
-            bot.send_message(atacante_id, "👻 A travessura foi invertida e agora o efeito recai sobre você!")
-            bot.send_message(user_id, "🎃 Você usou sua habilidade e inverteu a travessura!")
-        else:
-            bot.send_message(user_id, "Você não possui a habilidade de inverter travessuras no momento.")
-    except Exception as e:
-        print(f"Erro ao verificar e inverter a travessura: {e}")
     finally:
         fechar_conexao(cursor, conn)
 
@@ -2555,7 +2530,7 @@ def encerrar_ou_continuar(call):
         markup = criar_botoes_navegacao()
         bot.edit_message_text(f"Movimentos restantes: {jogador['movimentos']}\n\n{mapa}", call.message.chat.id, call.message.message_id, reply_markup=markup)
 
-def realizar_halloween_travessura(user_id, chat_id):
+def realizar_halloween_travessura(user_id, chat_id, nome):
     try:
         print(f"DEBUG: Iniciando travessura para o usuário {user_id}")
                 # Verificar se o usuário tem proteção ativa
@@ -2783,7 +2758,7 @@ def realizar_halloween_travessura(user_id, chat_id):
         elif chance == 9:
             # Pega-pega (passar uma praga para outros usuários)
             bot.send_message(chat_id, f"👹 Travessura! Você foi amaldiçoado, use /praga para passar a praga para outra pessoa.")
-            iniciar_pega_pega(chat_id,user_id)
+            iniciar_pega_pega(chat_id,user_id,nome)
 
         elif chance == 10:
             # Nada acontece

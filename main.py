@@ -201,9 +201,6 @@ def verificar_travessura(id_usuario):
         return []
     finally:
         fechar_conexao(cursor, conn)
-from telebot import types
-import random
-
 # Função para exibir a loja da bruxa com opções de categoria
 @bot.message_handler(commands=['bruxa'])
 def exibir_categorias_bruxa(message):

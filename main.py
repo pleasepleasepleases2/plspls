@@ -210,15 +210,15 @@ def exibir_categorias_bruxa(message):
     # Criação de botões de categorias
     markup = telebot.types.InlineKeyboardMarkup(row_width=2)
     for categoria in categorias:
-        markup.add(telebot.types.InlineKeyboardButton(text=categoria, callback_data=f"categoria_bruxa_{categoria}"))
+        markup.add(telebot.types.InlineKeyboardButton(text=categoria, callback_data=f"bruxa_{categoria}"))
 
     bot.send_message(chat_id, "🧙‍♀️ Escolha uma categoria para ver as cartas da bruxa:", reply_markup=markup)
 
 # Função para exibir as cartas de uma categoria específica
-@bot.callback_query_handler(func=lambda call: call.data.startswith('categoria_bruxa_'))
+@bot.callback_query_handler(func=lambda call: call.data.startswith('bruxa_'))
 def exibir_cartas_categoria(call):
     chat_id = call.message.chat.id
-    categoria = call.data.split('_')[2]
+    categoria = call.data.split('_')[1]
     cartas_categoria = obter_cartas_aleatorias_por_categoria(categoria, 6)  # Obter 6 cartas da categoria
 
     # Formatação da lista de cartas

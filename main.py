@@ -1134,35 +1134,53 @@ import time
 scheduler = BackgroundScheduler()
 scheduler.start()
 
+from apscheduler.schedulers.background import BackgroundScheduler
+from datetime import datetime, timedelta
+import time
+
+scheduler = BackgroundScheduler()
+scheduler.start()
+
+# Dicionário para armazenar pragas ativas
+praga_ativa = {}
+
 def iniciar_pega_pega(user_id, chat_id):
     try:
+        # Definir o usuário inicial com a praga e definir tempo
         fim_praga = datetime.now() + timedelta(minutes=10)
-        praga_ativa[chat_id] = {
-            "usuario_atual": user_id,
+        praga_ativa[user_id] = {
+            "chat_id": chat_id,
             "fim_praga": fim_praga
         }
 
+        # Salvar praga no banco
         registrar_praga_no_banco(user_id, chat_id, fim_praga)
-        scheduler.add_job(verificar_expiracao_praga, 'date', run_date=fim_praga, args=[chat_id])
 
-        print(f"DEBUG: {user_id} iniciou o pega-pega no chat {chat_id}. Fim da praga em: {fim_praga}")
-        bot.send_message(chat_id, f"🦠 Você está com a praga! Use /praga para passá-la a outra pessoa em até 10 minutos ou sofra as consequencias!")
+        # Agendar a verificação para a penalidade
+        scheduler.add_job(verificar_expiracao_praga, 'date', run_date=fim_praga, args=[user_id])
+
+        # Mensagem inicial
+        bot.send_message(chat_id, f"👻 {user_id} está com a praga! Use +praga para passá-la a outra pessoa!")
     except Exception as e:
         print(f"Erro ao iniciar o Pega-Pega com praga: {e}")
 
-def verificar_expiracao_praga(chat_id):
+def verificar_expiracao_praga(user_id):
     try:
-        if chat_id in praga_ativa and datetime.now() >= praga_ativa[chat_id]["fim_praga"]:
-            usuario_com_praga = praga_ativa[chat_id]["usuario_atual"]
-            print(f"DEBUG: O tempo da praga expirou para o usuário {usuario_com_praga} no chat {chat_id}")
-            bot.send_message(chat_id, f"⏰ O tempo acabou! {usuario_com_praga} ainda está com a praga e vai sofrer uma travessura!")
-            realizar_travessura_final(usuario_com_praga, chat_id)
-            remover_praga_do_banco(usuario_com_praga)
-            del praga_ativa[chat_id]
+        if user_id in praga_ativa and datetime.now() >= praga_ativa[user_id]["fim_praga"]:
+            chat_id = praga_ativa[user_id]["chat_id"]
+            bot.send_message(chat_id, f"⏰ O tempo acabou! {user_id} ainda está com a praga e vai sofrer uma travessura!")
+
+            # Aplicar a penalidade e limpar praga
+            realizar_travessura_final(user_id, chat_id)
+            remover_praga_do_banco(user_id)
+            del praga_ativa[user_id]
+        else:
+            print(f"DEBUG: Praga para o usuário {user_id} já foi removida ou transferida.")
     except Exception as e:
         print(f"Erro ao verificar expiração da praga: {e}")
 
 def registrar_praga_no_banco(user_id, chat_id, fim_praga):
+    # Função para registrar a praga no banco de dados
     conn, cursor = conectar_banco_dados()
     inicio_praga = datetime.now()
     try:
@@ -1171,11 +1189,11 @@ def registrar_praga_no_banco(user_id, chat_id, fim_praga):
             VALUES (%s, %s, %s, %s)
         """, (user_id, chat_id, inicio_praga, fim_praga))
         conn.commit()
-        print(f"DEBUG: Praga registrada para o usuário {user_id} no chat {chat_id} até {fim_praga}")
     except Exception as e:
         print(f"Erro ao registrar praga no banco: {e}")
     finally:
         fechar_conexao(cursor, conn)
+
 
 def verificar_praga(user_id):
     conn, cursor = conectar_banco_dados()

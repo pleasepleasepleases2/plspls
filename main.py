@@ -1925,7 +1925,11 @@ def adicionar_super_boost_cenouras(user_id, multiplicador, duracao_horas,chat_id
         
         conn.commit()
 
-        bot.send_message(chat_id, f"🌟 Você recebeu um Super Boost de Cenouras! Todas as cenouras que você ganhar serão multiplicadas por {multiplicador} nas próximas {duracao_horas} horas.")
+        bot.send_message(
+            chat_id, 
+            f"🎃✨ *Um feitiço raro foi lançado!* 🌿 Todas as cenouras que você colher serão multiplicadas por {multiplicador} nas próximas {duracao_horas} horas. Aproveite essa magia enquanto dura! 🍂🥕",
+            parse_mode="Markdown"
+        )
     
     except Exception as e:
         print(f"Erro ao adicionar Super Boost de Cenouras: {e}")

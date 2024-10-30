@@ -2129,7 +2129,7 @@ def realizar_halloween_gostosura(user_id, chat_id):
             print(f"DEBUG: Adicionando super boost de cenouras para o usuário {user_id}")
             duracao_horas = random.randint(1, 3)
             multiplicador = random.randint(2, 4)
-            bot.send_photo(chat_id, url_imagem, caption=    f"🎃✨ *Um feitiço raro foi lançado!* 🌿 Todas as cenouras que você colher serão multiplicadas por {multiplicador} nas próximas {duracao_horas} horas. Aproveite essa magia enquanto dura! 🍂🥕",
+            bot.send_photo(chat_id, url_imagem, caption=    f"🎃✨ *Um feitiço raro foi lançado!* 🌿 Todas as cenouras que você colher serão multiplicadas por {multiplicador} nas próximas {duracao_horas} horas. Aproveite essa magia enquanto dura! 🍂🥕")
             adicionar_super_boost_cenouras(user_id, multiplicador, duracao_horas, chat_id)
 
         elif chance == 12:

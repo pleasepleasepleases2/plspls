@@ -1844,18 +1844,32 @@ def processar_premio(user_id, premio):
 def adicionar_inverter_travessura(user_id, quantidade=1):
     conn, cursor = conectar_banco_dados()
     try:
-        cursor.execute("""
-            INSERT INTO inversoes (id_usuario, quantidade)
-            VALUES (%s, %s)
-            ON DUPLICATE KEY UPDATE quantidade = quantidade + %s
-        """, (user_id, quantidade, quantidade))
+        # Consulta para verificar se o usuário já possui um registro de inversão
+        cursor.execute("SELECT quantidade FROM inversoes WHERE id_usuario = %s", (user_id,))
+        resultado = cursor.fetchone()
+
+        if resultado:
+            # Se o usuário já possui um registro, adiciona `quantidade` ao valor atual
+            quantidade_atual = resultado[0]
+            nova_quantidade = quantidade_atual + quantidade
+            cursor.execute("""
+                UPDATE inversoes SET quantidade = %s WHERE id_usuario = %s
+            """, (nova_quantidade, user_id))
+            print(f"DEBUG: Quantidade atualizada para o usuário {user_id}. Nova quantidade: {nova_quantidade}")
+        else:
+            # Se o usuário não possui um registro, cria o registro inicial com `quantidade`
+            cursor.execute("""
+                INSERT INTO inversoes (id_usuario, quantidade) VALUES (%s, %s)
+            """, (user_id, quantidade))
+            print(f"DEBUG: Registro criado para o usuário {user_id} com quantidade inicial: {quantidade}")
+
         conn.commit()
-        print(f"DEBUG: {quantidade} inversão(ões) adicionada(s) para o usuário {user_id}")
     except Exception as e:
-        print(f"Erro ao inverter: {e}")
+        print(f"Erro ao adicionar inversão: {e}")
         traceback.print_exc()
     finally:
         fechar_conexao(cursor, conn)
+
 
 
 

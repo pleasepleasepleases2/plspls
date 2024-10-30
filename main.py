@@ -2680,29 +2680,8 @@ def realizar_halloween_travessura(user_id, chat_id):
             bot.send_message(chat_id, "🎰 Travessura! Você está bloqueado de jogar raspadinha por 1 dia.")
 
         elif chance == 16:
-                        # Registrar a travessura na tabela
-            try:
-                conn, cursor = conectar_banco_dados()
-        
-                # Definir o tempo de duração da travessura (por exemplo, 1 hora)
-                fim_travessura = datetime.now() + timedelta(minutes=10)
-        
-                # Inserir ou atualizar a travessura no banco de dados
-                cursor.execute("""
-                    INSERT INTO travessuras (id_usuario, tipo_travessura, fim_travessura)
-                    VALUES (%s, %s, %s)
-                    ON DUPLICATE KEY UPDATE tipo_travessura = VALUES(tipo_travessura), fim_travessura = VALUES(fim_travessura)
-                """, (user_id, 'sombra_rouba_cenouras', fim_travessura))
-                conn.commit()
-        
-            except Exception as e:
-                print(f"Erro ao registrar travessura de categoria errada: {e}")
-        
-            finally:
-                fechar_conexao(cursor, conn)
-            # Sombra rouba cenouras a cada 10 segundos
             iniciar_sombra_roubo_cenouras(user_id)
-            bot.send_message(chat_id, "🕯️ Travessura! Uma sombra está roubando suas cenouras a cada 10 segundos. Use +exorcizar para parar!")
+            bot.send_message(chat_id, "🕯️ Travessura! Uma sombra está roubando suas cenouras a cada 10 segundos. Use /exorcizar para parar!")
 
         elif chance == 17:
             # Alucinação: mensagens incompletas

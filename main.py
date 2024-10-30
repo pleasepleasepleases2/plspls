@@ -1862,7 +1862,7 @@ def adicionar_inverter_travessura(user_id, quantidade=1):
             # Se o usuário não possui um registro, cria o registro inicial com `quantidade`
             print(f"DEBUG: Nenhum registro encontrado para o usuário {user_id}. Criando com quantidade inicial: {quantidade}")
             cursor.execute("""
-                INSERT INTO inversoes (id_usuario, quantidade) VALUES (%s, %s)
+                INSERT INTO inversoes (id_usuario, quantidade) VALUES (%s, 1)
             """, (user_id, quantidade))
 
         conn.commit()
@@ -1871,6 +1871,7 @@ def adicionar_inverter_travessura(user_id, quantidade=1):
         traceback.print_exc()
     finally:
         fechar_conexao(cursor, conn)
+
 
 def verificar_inverter_travessura(user_id, atacante_id):
     try:

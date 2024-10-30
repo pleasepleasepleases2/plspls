@@ -1848,7 +1848,7 @@ def adicionar_inverter_travessura(user_id, quantidade=1):
             INSERT INTO inversoes (id_usuario, quantidade)
             VALUES (%s, %s)
             ON DUPLICATE KEY UPDATE quantidade = quantidade + %s
-        """, (user_id, 1))
+        """, (user_id, quantidade, quantidade))
         conn.commit()
         print(f"DEBUG: {quantidade} inversão(ões) adicionada(s) para o usuário {user_id}")
     except Exception as e:
@@ -1856,6 +1856,7 @@ def adicionar_inverter_travessura(user_id, quantidade=1):
         traceback.print_exc()
     finally:
         fechar_conexao(cursor, conn)
+
 
 
 def verificar_inverter_travessura(user_id, atacante_id):

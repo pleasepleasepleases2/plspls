@@ -89,6 +89,12 @@ from gif import *
 from apscheduler.schedulers.background import BackgroundScheduler
 from datetime import datetime, timedelta
 import time
+# Dicionário para rastrear as threads e o status do roubo para cada usuário
+roubo_ativo = {}
+
+import threading
+import time
+from datetime import datetime, timedelta
 
 # Dicionário para armazenar pragas ativas com tempo restante
 praga_ativa = {}
@@ -928,18 +934,7 @@ def verificar_travessuras(id_usuario):
     
     finally:
         fechar_conexao(cursor, conn)
-
-# Dicionário para rastrear as threads e o status do roubo para cada usuário
-roubo_ativo = {}
-
-import threading
-import time
-from datetime import datetime, timedelta
-
-import threading
-import time
-from datetime import datetime, timedelta
-
+        
 # Função para iniciar a sombra que rouba cenouras periodicamente
 def iniciar_sombra_roubo_cenouras(user_id, duracao_minutos=10):
     try:
@@ -976,6 +971,7 @@ def iniciar_sombra_roubo_cenouras(user_id, duracao_minutos=10):
 
         # Função interna para o roubo de cenouras periodicamente
         def roubar_cenouras_periodicamente():
+            print(f"DEBUG: Iniciando roubo periódico de cenouras para {user_id}")
             while datetime.now() < fim_roubo and roubo_ativo.get(user_id, False):
                 sucesso, cenouras_restantes = diminuir_cenouras(user_id, 10)  # Tentativa de roubo de 10 cenouras
                 print(f"DEBUG: Tentativa de roubo de 10 cenouras para {user_id}, sucesso: {sucesso}, cenouras restantes: {cenouras_restantes}")
@@ -1022,14 +1018,13 @@ def diminuir_cenouras(user_id, quantidade):
             print(f"DEBUG: Cenouras de {user_id} após roubo: {cenouras_restantes}")
             return True, cenouras_restantes
         else:
+            print(f"DEBUG: {user_id} não tem cenouras suficientes para roubo.")
             return False, cenouras[0] if cenouras else 0  # Retorna 0 se não houver cenouras suficientes
     except Exception as e:
         print(f"Erro ao diminuir cenouras: {e}")
         return False, 0
     finally:
         fechar_conexao(cursor, conn)
-
-
 
 @bot.message_handler(commands=['exorcizar'])
 def exorcizar_sombra(message):

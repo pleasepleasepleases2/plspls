@@ -126,9 +126,6 @@ def comando_sorte(message):
         conn.commit()
         
         texto = f"<i>A sorte está ao seu favor!</i> \nVocê comprou uma raspadinha e ganhou <b>{sorteio}</b> cenouras!"
-        if verificar_travessura_embaralhamento(user_id):
-            texto = embaralhar_mensagem(texto)  # Embaralha a mensagem se a travessura estiver ativa
-        
         bot.send_message(message.chat.id, text=texto, parse_mode="HTML")
     
     except Exception as e:

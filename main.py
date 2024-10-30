@@ -2067,7 +2067,7 @@ def gerar_labirinto_com_caminho_e_validacao(tamanho=10):
     
     # Ponto inicial e final
     x, y = 1, 1  # Início
-    saida_x, saida_y = tamanho - 2, random.randint(1, tamanho - 2)  # Saída aleatória na borda inferior
+    saida_x, saida_y = tamanho - 2, random.randint(1, tamanho - 2)  # Saída aleatória
     
     # Caminho garantido até a saída usando backtracking
     caminho = [(x, y)]
@@ -2096,41 +2096,26 @@ def gerar_labirinto_com_caminho_e_validacao(tamanho=10):
     # Define a saída
     labirinto[saida_x][saida_y] = '🚪'
     
-    # Função para criar ramos extras em algumas áreas do labirinto
-    def criar_caminho_ramificado(start_x, start_y, max_ramos=2):
+    # Função para criar ramos adicionais
+    def criar_ramos_adicionais(caminho, max_ramos=5):
         for _ in range(max_ramos):
-            comprimento_ramo = random.randint(2, 3)  # Comprimento do ramo
-            ramo_x, ramo_y = start_x, start_y
-            for _ in range(comprimento_ramo):
+            posicao_ramo = random.choice(caminho)
+            x, y = posicao_ramo
+            for _ in range(random.randint(3, 5)):  # Comprimento do ramo entre 3 e 5
                 direcoes = [
                     (dx, dy) for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]
-                    if 1 <= ramo_x + dx < tamanho - 1 and 1 <= ramo_y + dy < tamanho - 1
-                    and labirinto[ramo_x + dx][ramo_y + dy] == '🪨'
+                    if 1 <= x + dx < tamanho - 1 and 1 <= y + dy < tamanho - 1
+                    and labirinto[x + dx][y + dy] == '🪨'
                 ]
                 if not direcoes:
                     break
                 dx, dy = random.choice(direcoes)
-                ramo_x, ramo_y = ramo_x + dx, ramo_y + dy
-                labirinto[ramo_x][ramo_y] = '⬜'
+                x += dx
+                y += dy
+                labirinto[x][y] = '⬜'
     
-    # Adicionar ramificações para complexidade
-    for i in range(0, len(caminho), max(1, len(caminho) // 4)):
-        criar_caminho_ramificado(*caminho[i])
-
-    # Adicionar monstros e recompensas somente nos espaços abertos ('⬜')
-    for _ in range(5):
-        while True:
-            mx, my = random.randint(1, tamanho - 2), random.randint(1, tamanho - 2)
-            if labirinto[mx][my] == '⬜' and (mx, my) != (x, y):  # Verifica se não é saída ou caminho principal
-                labirinto[mx][my] = '👻'
-                break
-    
-    for _ in range(3):
-        while True:
-            rx, ry = random.randint(1, tamanho - 2), random.randint(1, tamanho - 2)
-            if labirinto[rx][ry] == '⬜' and (rx, ry) != (saida_x, saida_y):  # Não coloca sobre a saída
-                labirinto[rx][ry] = '🎃'
-                break
+    # Adicionar ramificações para aumentar a complexidade
+    criar_ramos_adicionais(caminho)
 
     return labirinto
 

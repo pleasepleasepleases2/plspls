@@ -1454,8 +1454,11 @@ def ativar_peixes_em_dobro(user_id):
         print(f"Erro ao ativar bônus de peixes em dobro: {e}")
     finally:
         fechar_conexao(cursor, conn)
+import random
+from datetime import datetime
 
-def iniciar_compartilhamento(user_id,chat_id):
+# Função para iniciar o compartilhamento de cenouras
+def iniciar_compartilhamento(user_id, chat_id):
     try:
         conn, cursor = conectar_banco_dados()
 
@@ -1463,17 +1466,20 @@ def iniciar_compartilhamento(user_id,chat_id):
         cursor.execute("SELECT ativo FROM compartilhamentos WHERE id_usuario = %s", (user_id,))
         resultado = cursor.fetchone()
 
+        # DEBUG: Exibir o valor de 'ativo' que foi retornado do banco de dados
+        print(f"DEBUG: Resultado da consulta de compartilhamento ativo para {user_id}: {resultado}")
+
         if resultado and resultado[0]:  # Se já tiver um compartilhamento ativo
             bot.send_message(user_id, "👻 Você já tem um compartilhamento ativo! Compartilhe antes de ganhar mais.")
             return
 
         # Gerar uma quantidade de cenouras entre 50 e 100
         cenouras_ganhas = random.randint(50, 100)
-        
-        # Registrar o compartilhamento no banco de dados
+
+        # Registrar o compartilhamento no banco de dados, configurando como ativo
         cursor.execute("""
-            INSERT INTO compartilhamentos (id_usuario, quantidade_cenouras)
-            VALUES (%s, %s)
+            INSERT INTO compartilhamentos (id_usuario, quantidade_cenouras, ativo, data_inicio)
+            VALUES (%s, %s, TRUE, NOW())
             ON DUPLICATE KEY UPDATE quantidade_cenouras = %s, ativo = TRUE, data_inicio = NOW()
         """, (user_id, cenouras_ganhas, cenouras_ganhas))
         conn.commit()
@@ -1506,17 +1512,21 @@ def handle_compartilhar(message):
         return
 
     # Chamar a função para compartilhar as cenouras
-    compartilhar_cenouras(user_id, target_user_id, chat_id, message.reply_to_message.from_user.first_name)
+    compartilhar_cenouras(user_id, target_user_id, chat_id, message.from_user.first_name, message.reply_to_message.from_user.first_name)
 
+# Função para compartilhar as cenouras com outro usuário
 def compartilhar_cenouras(user_id, target_user_id, chat_id, user_name, target_user_name):
     try:
         conn, cursor = conectar_banco_dados()
 
         # Verificar se o usuário tem um compartilhamento ativo
-        cursor.execute("SELECT quantidade_cenouras FROM compartilhamentos WHERE id_usuario = %s AND ativo = TRUE", (user_id,))
+        cursor.execute("SELECT quantidade_cenouras, ativo FROM compartilhamentos WHERE id_usuario = %s", (user_id,))
         resultado = cursor.fetchone()
 
-        if not resultado:
+        # DEBUG: Exibir os valores de 'quantidade_cenouras' e 'ativo' que foram retornados
+        print(f"DEBUG: Resultado da consulta de compartilhamento para {user_id}: {resultado}")
+
+        if not resultado or not resultado[1]:  # Checar se não está ativo
             bot.send_message(chat_id, "👻 Você não tem nenhum compartilhamento ativo. Ative um compartilhamento primeiro com o comando +halloween.")
             return
 
@@ -1539,7 +1549,6 @@ def compartilhar_cenouras(user_id, target_user_id, chat_id, user_name, target_us
     
     finally:
         fechar_conexao(cursor, conn)
-
 
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("descartar_caixa") or call.data == "recusar_caixa")

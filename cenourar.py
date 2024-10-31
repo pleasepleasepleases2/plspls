@@ -34,7 +34,7 @@ def verificar_bloqueio_comandos(user_id):
                 # Se ainda estiver dentro do período de bloqueio, retorna True
                 return True, (fim_bloqueio - datetime.now()).seconds // 60
         return False, 0
-
+        print(resultado)
     except Exception as e:
         print(f"Erro ao verificar bloqueio de comandos para o usuário {user_id}: {e}")
         traceback.print_exc()

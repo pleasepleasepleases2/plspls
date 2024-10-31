@@ -1767,58 +1767,116 @@ def opcoes_descartar_caixa(user_id, caixas):
 
     bot.send_message(user_id, "Escolha uma Caixa Misteriosa para jogar fora:", reply_markup=markup)
 def mostrar_portas_escolha(user_id):
-    # Definir três prêmios aleatórios
+    # Definir prêmios de gostosura aleatórios para as portas
     premios = [
         f"{random.randint(50, 100)} cenouras",
         "VIP por 1 dia",
         "Uma carta faltante do evento Halloween"
     ]
-    
-    # Embaralhar os prêmios para cada jogador ter uma experiência diferente
-    random.shuffle(premios)
+    random.shuffle(premios)  # Embaralhar para experiência aleatória
 
-    # Salvar os prêmios para o usuário (exemplo de cache ou banco de dados)
+    # Salvar prêmios associados ao usuário
     salvar_premios_escolha(user_id, premios)
 
-    # Criar os botões das portas
-    markup = InlineKeyboardMarkup()
-    porta_1 = InlineKeyboardButton("🚪", callback_data=f"escolha_porta_1_{user_id}")
-    porta_2 = InlineKeyboardButton("🚪", callback_data=f"escolha_porta_2_{user_id}")
-    porta_3 = InlineKeyboardButton("🚪 ", callback_data=f"escolha_porta_3_{user_id}")
-    
+    # Configurar botões de escolha com callback para uma única seleção
+    markup = InlineKeyboardMarkup(row_width=3)
+    porta_1 = InlineKeyboardButton("🚪1️⃣", callback_data=f"escolha_porta_1_{user_id}")
+    porta_2 = InlineKeyboardButton("🚪2️⃣", callback_data=f"escolha_porta_2_{user_id}")
+    porta_3 = InlineKeyboardButton("🚪3️⃣", callback_data=f"escolha_porta_3_{user_id}")
     markup.add(porta_1, porta_2, porta_3)
-    # Enviar a mensagem com as três portas
-    bot.send_message(user_id, "🎃 Parabéns! Escolha uma porta com sabedoria! Todas as portas escondem algo bom:", reply_markup=markup)
+
+    # Enviar mensagem para o usuário
+    bot.send_message(user_id, "🎃 Parabéns! Três portas surgem à sua frente, escolha uma para descobrir sua gostosura!", reply_markup=markup)
+
 def salvar_premios_escolha(user_id, premios):
-    # Aqui você pode salvar os prêmios no banco de dados ou em cache
-    # Exemplo básico:
     conn, cursor = conectar_banco_dados()
-    cursor.execute("REPLACE INTO escolhas (id_usuario, premio1, premio2, premio3) VALUES (%s, %s, %s, %s)",
-                   (user_id, premios[0], premios[1], premios[2]))
+    cursor.execute("""
+        REPLACE INTO escolhas (id_usuario, premio1, premio2, premio3) 
+        VALUES (%s, %s, %s, %s)
+    """, (user_id, premios[0], premios[1], premios[2]))
     conn.commit()
     fechar_conexao(cursor, conn)
 
 def recuperar_premios_escolha(user_id):
-    # Recupera os prêmios do banco de dados ou cache
     conn, cursor = conectar_banco_dados()
     cursor.execute("SELECT premio1, premio2, premio3 FROM escolhas WHERE id_usuario = %s", (user_id,))
     premios = cursor.fetchone()
     fechar_conexao(cursor, conn)
     return premios if premios else ["", "", ""]
+
+def conceder_vip(user_id, dias, nome):
+    conn, cursor = conectar_banco_dados()
+    grupo_vip = -4546359573  # ID do grupo para enviar mensagem
+    alternativa = f"{random.randint(50, 100)} cenouras"  # Recompensa alternativa se já for VIP
+    
+    try:
+        # Verificar se o usuário já é VIP
+        cursor.execute("SELECT id_usuario FROM vips WHERE id_usuario = %s", (user_id,))
+        vip_existente = cursor.fetchone()
+        
+        if vip_existente:
+            # Usuário já é VIP, conceder recompensa alternativa
+            aumentar_cenouras(user_id, int(alternativa.split()[0]))  # Concede as cenouras extras
+            bot.send_message(user_id, f"🌟 Você já é VIP! Como recompensa alternativa, recebeu {alternativa}.")
+            return
+        
+        # Calcula a data de expiração do VIP
+        data_pagamento = datetime.now().date()
+        data_expiracao = data_pagamento + timedelta(days=dias)
+        
+        # Inserir o novo VIP no banco de dados
+        cursor.execute("""
+            INSERT INTO vips (id_usuario, nome, data_pagamento, renovou, pedidos_restantes, mes_atual, Dia_renovar, imagem)
+            VALUES (%s, %s, %s, 0, 5, %s, %s, %s)
+        """, (
+            user_id,
+            nome,
+            data_pagamento,
+            data_pagamento.strftime('%Y-%m'),  # Formato de mês atual para campo `mes_atual`
+            data_pagamento.day,
+            'https://example.com/imagem.jpg'  # Exemplo de URL de imagem
+        ))
+        conn.commit()
+        
+        # Enviar mensagem ao grupo sobre o novo VIP
+        bot.send_message(
+            grupo_vip, 
+            f"🎉 Novo VIP concedido!\nUsuário: {nome}\nPeríodo: {dias} dias\nData de Início: {data_pagamento.strftime('%d/%m/%Y')}"
+        )
+
+        # Notificar o usuário sobre o novo status VIP
+        bot.send_message(user_id, f"🌟 Parabéns, {nome}! Você agora é VIP por {dias} dias. Aproveite seus benefícios!")
+        
+    except Exception as e:
+        print(f"Erro ao conceder VIP: {e}")
+    finally:
+        fechar_conexao(cursor, conn)
+
+def aumentar_cenouras(user_id, quantidade):
+    """Concede uma quantidade específica de cenouras ao jogador como recompensa alternativa."""
+    conn, cursor = conectar_banco_dados()
+    try:
+        cursor.execute("UPDATE usuarios SET cenouras = cenouras + %s WHERE id_usuario = %s", (quantidade, user_id))
+        conn.commit()
+        bot.send_message(user_id, f"🥕 Você recebeu {quantidade} cenouras extras!")
+    except Exception as e:
+        print(f"Erro ao conceder cenouras: {e}")
+    finally:
+        fechar_conexao(cursor, conn)
+
 def processar_premio(user_id, premio):
     if "cenouras" in premio:
-        # Extrair a quantidade de cenouras
         quantidade_cenouras = int(premio.split()[0])
         aumentar_cenouras(user_id, quantidade_cenouras)
+        bot.send_message(user_id, f"🥕 Você ganhou {quantidade_cenouras} cenouras extras!")
 
     elif "VIP" in premio:
-        # Conceder VIP de 1 dia
         conceder_vip(user_id, 1)
+        bot.send_message(user_id, "🌟 Você ganhou um dia de VIP! Aproveite seus benefícios.")
 
     elif "carta faltante" in premio:
-        # Dar uma carta faltante do evento
         dar_carta_faltante(user_id, "Halloween")
-
+        bot.send_message(user_id, "🎃 Você recebeu uma carta rara do evento Halloween! Ela foi adicionada ao seu inventário.")
 def adicionar_inverter_travessura(user_id, quantidade=1):
     conn, cursor = conectar_banco_dados()
     try:
@@ -2804,27 +2862,24 @@ def pronomes(call):
 def bpronomes(call):
     mostrar_opcoes_pronome(call)
 
-@bot.callback_query_handler(func=lambda call: call.data.startswith("escolha_porta_"))
+@bot.callback_query_handler(func=lambda call: call.data.startswith("escolha_porta"))
 def callback_escolha_porta(call):
-    user_id = int(call.data.split("_")[-1])
-    porta_escolhida = call.data.split("_")[2]
+    user_id = call.from_user.id
+    chat_id = call.message.chat.id
+    porta_escolhida = int(call.data.split("_")[2]) - 1  # Convertendo porta para índice
 
-    # Recuperar os prêmios salvos para esse jogador
+    # Recuperar prêmios salvos para o usuário
     premios = recuperar_premios_escolha(user_id)
 
-    # Identificar qual prêmio foi escolhido
-    if porta_escolhida == "1":
-        premio = premios[0]
-    elif porta_escolhida == "2":
-        premio = premios[1]
-    elif porta_escolhida == "3":
-        premio = premios[2]
-
-    # Enviar a recompensa para o jogador
-    bot.send_message(user_id, f"🎉 Parabéns! Você escolheu a {porta_escolhida} e ganhou: {premio}")
-
-    # Processar o prêmio (cenouras, VIP, cartas etc.)
+    # Processar o prêmio da porta escolhida
+    premio = premios[porta_escolhida]
     processar_premio(user_id, premio)
+
+    # Mensagem de recompensa e desativação dos botões
+    bot.edit_message_text(
+        f"🎉 Você escolheu a porta e ganhou: {premio}!", 
+        chat_id=chat_id, message_id=call.message.message_id
+    )
 
 
 @bot.callback_query_handler(func=lambda call: call.data.isdigit())

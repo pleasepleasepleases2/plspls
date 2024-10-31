@@ -2302,14 +2302,15 @@ def mover_posicao(posicao_atual, direcao, labirinto):
         return (x, y - 1)
     return posicao_atual  # Movimento inválido, retorna posição atual
 
+from labirintos import escolher_labirinto
+
+# Exemplo de como iniciar o labirinto com labirinto importado
 def iniciar_labirinto(user_id, chat_id):
     try:
-        tamanho = 10  # Tamanho do labirinto
-        labirinto = gerar_labirinto_com_caminho_e_validacao(tamanho)
-        posicao_inicial = (1, 1)  # Início fixo
-        movimentos_restantes = 35  # Limite de movimentos para escapar
+        labirinto = escolher_labirinto()
+        posicao_inicial = (1, 1)
+        movimentos_restantes = 35  # Limite de movimentos
 
-        # Armazena o estado do jogador
         jogadores_labirinto[user_id] = {
             "labirinto": labirinto,
             "posicao": posicao_inicial,
@@ -2322,7 +2323,7 @@ def iniciar_labirinto(user_id, chat_id):
         bot.send_message(chat_id, f"🏰 Bem-vindo ao Labirinto! Você tem {movimentos_restantes} movimentos para escapar.\n\n{mapa}", reply_markup=markup)
     except Exception as e:
         print(f"Erro ao iniciar o labirinto: {e}")
-
+        
 # Função para criar botões de navegação
 def criar_botoes_navegacao():
     markup = types.InlineKeyboardMarkup(row_width=4)

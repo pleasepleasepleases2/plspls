@@ -641,6 +641,18 @@ def realizar_travessura_final(usuario_com_praga, chat_id):
         print(f"Erro ao aplicar travessura: {e}")
     finally:
         fechar_conexao(cursor, conn)
+# Função para iniciar a praga com contagem de passagens
+def iniciar_pega_pega(user_id, nome):
+    try:
+        passagens_necessarias = random.randint(2, 20)  # Número de passagens entre 2 e 20
+        pragas_ativas[user_id] = {
+            "usuario_atual": user_id,
+            "passagens_restantes": passagens_necessarias
+        }
+        print(f"DEBUG: Praga iniciada para o usuário {nome} com {passagens_necessarias} passagens necessárias")
+        bot.send_message(user_id, f"👻 {nome}, você está amaldiçoado com a praga! Passe-a para {passagens_necessarias} pessoas para se livrar dela!")
+    except Exception as e:
+        print(f"Erro ao iniciar o pega-pega com praga: {e}")
 
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("jogada_"))

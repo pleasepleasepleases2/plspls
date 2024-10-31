@@ -662,42 +662,54 @@ def processar_jogada(call):
     bot.edit_message_reply_markup(chat_id=chat_id, message_id=call.message.message_id,
                                   reply_markup=criar_tabuleiro_markup(tabuleiro))
 
-def checar_vitoria(tabuleiro, simbolo):
+def checar_vitoria(tabuleiro, player):
+    # Checa linhas, colunas e diagonais para ver se um jogador venceu
     for i in range(3):
-        if all(tabuleiro[i, :] == simbolo) or all(tabuleiro[:, i] == simbolo):
+        if all([tabuleiro[i, j] == player for j in range(3)]) or \
+           all([tabuleiro[j, i] == player for j in range(3)]):
             return True
-    if all([tabuleiro[i, i] == simbolo for i in range(3)]) or all([tabuleiro[i, 2 - i] == simbolo for i in range(3)]):
+    if tabuleiro[0, 0] == tabuleiro[1, 1] == tabuleiro[2, 2] == player or \
+       tabuleiro[0, 2] == tabuleiro[1, 1] == tabuleiro[2, 0] == player:
         return True
     return False
 
 def checar_empate(tabuleiro):
-    return ' ' not in tabuleiro
+    # Checa se todas as posições estão preenchidas (empate)
+    return all(tabuleiro[i, j] != ' ' for i in range(3) for j in range(3))
 
 def bot_jogada(tabuleiro):
     """Decide entre uma jogada inteligente (Minimax) e uma aleatória com 80% e 20% de chance, respectivamente."""
     if random.random() < 0.8:
-        # Jogada inteligente usando Minimax
+        print("DEBUG: Bot fazendo jogada inteligente usando Minimax.")
+        
         best_score = -np.inf
         best_move = None
+        
+        # Percorre o tabuleiro para encontrar a melhor jogada
         for i in range(3):
             for j in range(3):
                 if tabuleiro[i, j] == ' ':
                     tabuleiro[i, j] = bot_jogador
                     score = minimax(tabuleiro, 0, False)
-                    tabuleiro[i, j] = ' '
+                    tabuleiro[i, j] = ' '  # Desfazer a jogada
                     if score > best_score:
                         best_score = score
                         best_move = (i, j)
+        
         if best_move:
+            print(f"DEBUG: Bot escolheu a posição {best_move} com pontuação {best_score}.")
             tabuleiro[best_move] = bot_jogador
     else:
         # Jogada aleatória
+        print("DEBUG: Bot fazendo jogada aleatória.")
         empty_positions = [(i, j) for i in range(3) for j in range(3) if tabuleiro[i, j] == ' ']
         if empty_positions:
             move = random.choice(empty_positions)
             tabuleiro[move] = bot_jogador
+            print(f"DEBUG: Bot escolheu a posição aleatória {move}.")
 
 def minimax(tabuleiro, depth, is_maximizing):
+    # Verifica as condições de vitória, derrota ou empate
     if checar_vitoria(tabuleiro, bot_jogador):
         return 1
     elif checar_vitoria(tabuleiro, jogador):
@@ -712,7 +724,7 @@ def minimax(tabuleiro, depth, is_maximizing):
                 if tabuleiro[i, j] == ' ':
                     tabuleiro[i, j] = bot_jogador
                     score = minimax(tabuleiro, depth + 1, False)
-                    tabuleiro[i, j] = ' '
+                    tabuleiro[i, j] = ' '  # Desfazer a jogada
                     best_score = max(score, best_score)
         return best_score
     else:
@@ -722,14 +734,13 @@ def minimax(tabuleiro, depth, is_maximizing):
                 if tabuleiro[i, j] == ' ':
                     tabuleiro[i, j] = jogador
                     score = minimax(tabuleiro, depth + 1, True)
-                    tabuleiro[i, j] = ' '
+                    tabuleiro[i, j] = ' '  # Desfazer a jogada
                     best_score = min(score, best_score)
         return best_score
 
 def mostrar_tabuleiro(tabuleiro):
     """Função para retornar o tabuleiro como string"""
     return "\n".join([" | ".join(row) for row in tabuleiro])
-
 # Função para aplicar a travessura ao usuário
 def aplicar_travessura(user_id, chat_id):
     try:

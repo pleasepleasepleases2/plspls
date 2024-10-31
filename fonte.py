@@ -70,7 +70,7 @@ def comando_sorte(message):
         user_id = message.from_user.id
         conn, cursor = conectar_banco_dados()
 
-        # Verificar se o usuário está bloqueado para a ação "raspadinha"
+        # Verificar bloqueio para a ação "raspadinha"
         cursor.execute("""
             SELECT fim_bloqueio FROM bloqueios 
             WHERE id_usuario = %s AND acao = 'raspadinha' AND fim_bloqueio > NOW()

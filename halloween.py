@@ -10,6 +10,9 @@ import traceback
 from telebot import types
 import globals
 from collections import defaultdict
+
+url_imagem = "https://pub-6f23ef52e8614212a14d24b0cf55ae4a.r2.dev/BQACAgEAAxkBAAIcfGcVeT6gaLXd0DKA7aihUQJfV62hAAJMBQACSV6xRD2puYHoSyajNgQ.jpg"
+
 aboboras = {
     1: {"nome": "Abóbora Assustadora", "premio": "50 cenouras", "descricao": "🎃👻 Você encontrou uma abóbora assombrada escondida no quintal!"},
     2: {"nome": "Abóbora Macabra", "premio": "100 cenouras", "descricao": "🎃🕸️ Um vizinho misterioso deixou uma abóbora macabra na sua porta."},
@@ -61,9 +64,7 @@ def troca_invertida(user_id, chat_id):
         """, (user_id, fim_travessura, fim_travessura))
 
         conn.commit()
-
-        # Informar o usuário que ele foi amaldiçoado com a duração da travessura
-        bot.send_message(chat_id, f"🎭 Travessura! A ordem dos comandos das suas próximas trocas foi invertida por {duracao_minutos} minutos. Tome cuidado!")
+        bot.send_photo(user_id, url_imagem, caption=f"🎭 Travessura! A ordem dos comandos das suas próximas trocas foi invertida por {duracao_minutos} minutos. Tome cuidado!")
 
     except Exception as e:
         print(f"Erro ao aplicar praga: {e}")

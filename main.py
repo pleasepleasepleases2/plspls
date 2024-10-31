@@ -2160,6 +2160,7 @@ def realizar_halloween_gostosura(user_id, chat_id):
         print(f"DEBUG: Iniciando gostosura para o usuário {user_id}")
         chance = random.randint(1, 12)  # 12 tipos de gostosuras diferentes
         print(f"DEBUG: Chance sorteada: {chance}")
+        url_imagem = "https://pub-6f23ef52e8614212a14d24b0cf55ae4a.r2.dev/BQACAgEAAxkBAAIcfGcVeT6gaLXd0DKA7aihUQJfV62hAAJMBQACSV6xRD2puYHoSyajNgQ.jpg"
 
         if chance == 1:
             cenouras_ganhas = random.randint(50, 100)

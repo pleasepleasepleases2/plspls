@@ -1664,6 +1664,9 @@ def encontrar_abobora(user_id, chat_id):
     finally:
         fechar_conexao(cursor, conn)
 
+from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
+import random
+
 def ganhar_caixa_misteriosa(user_id, chat_id):
     try:
         conn, cursor = conectar_banco_dados()
@@ -1673,28 +1676,27 @@ def ganhar_caixa_misteriosa(user_id, chat_id):
         caixas = cursor.fetchall()
 
         if len(caixas) > 3:
-            # Se houver mais de 3 caixas, excluir automaticamente uma caixa extra
+            # Excluir uma caixa extra se houver mais de 3
             numero_caixa_excluir = caixas[0][0]
             cursor.execute("DELETE FROM caixas_misteriosas WHERE id_usuario = %s AND numero_caixa = %s", (user_id, numero_caixa_excluir))
             conn.commit()
-            caixas.pop(0)  # Remover a caixa extra da lista localmente
+            caixas.pop(0)  # Atualizar lista localmente
             bot.send_message(chat_id, f"🎃 Uma Caixa Misteriosa foi perdida por exceder o limite. Número excluído: {numero_caixa_excluir}")
 
         if len(caixas) >= 3:
-            # O usuário já possui 3 caixas, perguntar se deseja descartar uma para obter uma nova
+            # Informar usuário sobre as 3 caixas e oferecer descarte
             markup = InlineKeyboardMarkup(row_width=3)
-            caixa_texto = "🎃 Você já possui 3 Caixas Misteriosas. Deseja abrir espaço para uma nova?\n\nCaixas atuais:\n"
+            caixa_texto = "🎃 Você já possui 3 Caixas Misteriosas. Abra espaço para uma nova.\n\nCaixas atuais:\n"
             for idx, caixa in enumerate(caixas, start=1):
                 numero_caixa = caixa[0]
                 caixa_texto += f"{idx}️⃣ - {numero_caixa}\n"
                 markup.add(InlineKeyboardButton(text=f"{idx}️⃣", callback_data=f"descartar_caixa_{numero_caixa}"))
-            # Botão de recusa, abaixo das opções de descarte
             markup.add(InlineKeyboardButton(text="Recusar nova caixa", callback_data="recusar_caixa"))
 
             bot.send_message(chat_id, caixa_texto, reply_markup=markup)
             return
 
-        # Atribuir uma nova caixa misteriosa ao usuário
+        # Adicionar uma nova caixa misteriosa
         numero_caixa = random.randint(1, 10000)
         cursor.execute("INSERT INTO caixas_misteriosas (id_usuario, numero_caixa) VALUES (%s, %s)", (user_id, numero_caixa))
         conn.commit()
@@ -1707,40 +1709,41 @@ def ganhar_caixa_misteriosa(user_id, chat_id):
         fechar_conexao(cursor, conn)
 
 
+# Callback handler para descartar ou recusar a nova caixa
 @bot.callback_query_handler(func=lambda call: call.data.startswith("descartar_caixa") or call.data == "recusar_caixa")
 def callback_descartar_ou_recusar_caixa(call):
     user_id = call.from_user.id
     chat_id = call.message.chat.id
 
     if call.data == "recusar_caixa":
-        # Usuário optou por recusar a nova caixa
-        bot.send_message(chat_id, "🎃 Você decidiu recusar a nova Caixa Misteriosa.")
+        bot.edit_message_text("🎃 Você recusou a nova Caixa Misteriosa.", chat_id, call.message.message_id)
         return
 
-    # Extrair o número da caixa a ser descartada
     numero_caixa = int(call.data.split("_")[-1])
 
     try:
         conn, cursor = conectar_banco_dados()
 
-        # Remover a caixa específica do inventário
+        # Remover a caixa escolhida
         cursor.execute("DELETE FROM caixas_misteriosas WHERE id_usuario = %s AND numero_caixa = %s", (user_id, numero_caixa))
         conn.commit()
 
-        bot.send_message(chat_id, f"🧹 Você jogou fora a Caixa Misteriosa número {numero_caixa}.")
+        # Notificar o descarte
+        bot.edit_message_text(f"🎁 Caixa Misteriosa {numero_caixa} foi descartada. Preparando sua nova caixa...", chat_id, call.message.message_id)
 
         # Atribuir uma nova caixa misteriosa
         novo_numero_caixa = random.randint(1, 10000)
         cursor.execute("INSERT INTO caixas_misteriosas (id_usuario, numero_caixa) VALUES (%s, %s)", (user_id, novo_numero_caixa))
         conn.commit()
 
-        bot.send_message(chat_id, f"🎁 Uma nova Caixa Misteriosa apareceu! Número da nova caixa: {novo_numero_caixa}.")
+        bot.send_message(chat_id, f"🎁 Nova Caixa Misteriosa adicionada com sucesso! Número: {novo_numero_caixa}.")
 
     except Exception as e:
-        print(f"Erro ao descartar a Caixa Misteriosa: {e}")
-
+        print(f"Erro ao descartar Caixa Misteriosa: {e}")
+        bot.send_message(chat_id, "⚠️ Ocorreu um erro ao descartar a Caixa Misteriosa.")
     finally:
         fechar_conexao(cursor, conn)
+
 @bot.callback_query_handler(func=lambda call: call.data.startswith("escolha_porta_"))
 def handle_escolha_porta(call):
     user_id = call.from_user.id

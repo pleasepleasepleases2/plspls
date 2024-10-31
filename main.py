@@ -257,25 +257,6 @@ def exibir_cartas_categoria(call):
         markup.add(telebot.types.InlineKeyboardButton(text=str(idx), callback_data=f"escolher_carta_bruxa_{idx}_{categoria}"))
 
     bot.edit_message_text(mensagem_loja, chat_id, call.message.message_id, reply_markup=markup)
-# Função de Chance 13
-def executar_travessura_grupal(chat_id, user_id):
-    iniciar_travessura_grupal(chat_id, user_id, duracao_segundos=120)
-
-# Handler de Travessura Grupal
-@bot.message_handler(func=lambda message: travessura_ativa.get(message.chat.id, False))
-def travessura_grupal(message):
-    """Executa uma travessura grupal escolhendo entre eco, reação e resposta direta, enquanto ativa."""
-    chat_id = message.chat.id
-    escolha = random.choice(['eco', 'reacao', 'resposta'])
-    print(f"DEBUG: Escolha da travessura grupal no chat {chat_id} para mensagem {message.message_id}: {escolha}")
-    
-    if escolha == 'eco':
-        ecoar_mensagem(chat_id, message)
-    elif escolha == 'reacao':
-        reagir_com_emoji(chat_id, message)
-    elif escolha == 'resposta':
-        resposta_direta(chat_id, message)
-
 def iniciar_travessura_grupal(chat_id, user_id, duracao_segundos=120):
     """Inicia a travessura grupal, aplicando travessuras em mensagens do grupo por um tempo limitado."""
     travessura_ativa[chat_id] = True

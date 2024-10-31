@@ -235,8 +235,7 @@ def aumentarcenouras(id_usuario, quantidade=1):
         - quantidade: Quantidade de cenouras a adicionar (padrão é 1).
     """
     try:
-        conn = sqlite3.connect('bot_database.db')
-        cursor = conn.cursor()
+        conn, cursor = conectar_banco_dados()
         
         # Busca a quantidade atual de cenouras do usuário
         cursor.execute("SELECT cenouras FROM usuarios WHERE id_usuario = ?", (id_usuario,))
@@ -253,7 +252,7 @@ def aumentarcenouras(id_usuario, quantidade=1):
         else:
             print(f"DEBUG: Usuário {id_usuario} não encontrado no banco de dados.")
         
-    except sqlite3.Error as e:
+    except:
         print(f"Erro ao aumentar cenouras para o usuário {id_usuario}: {e}")
     
     finally:

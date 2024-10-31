@@ -1230,28 +1230,30 @@ def alterar_usuario(user_id, coluna, valor_novo,chat_id):
         fechar_conexao(cursor, conn)
 
 def adicionar_protecao_temporaria(user_id, chat_id):
+    """
+    Adiciona uma proteção temporária única para o usuário.
+    """
     try:
         conn, cursor = conectar_banco_dados()
-        horas_protecao = random.randint(1, 3)
-        fim_protecao = datetime.now() + timedelta(hours=horas_protecao)
         data_ativacao = datetime.now()
 
-        # Atualizar ou inserir a proteção na tabela de protecoes_travessura
+        # Insere ou atualiza a proteção na tabela protecoes_travessura
         cursor.execute("""
-            INSERT INTO protecoes_travessura (id_usuario, fim_protecao, data_ativacao, ativa)
-            VALUES (%s, %s, %s, 1)
-            ON DUPLICATE KEY UPDATE fim_protecao = %s, data_ativacao = %s, ativa = 1
-        """, (user_id, fim_protecao, data_ativacao, fim_protecao, data_ativacao))
+            INSERT INTO protecoes_travessura (id_usuario, data_ativacao, ativa)
+            VALUES (%s, %s, 1)
+            ON DUPLICATE KEY UPDATE data_ativacao = %s, ativa = 1, data_consumo = NULL
+        """, (user_id, data_ativacao, data_ativacao))
         
         conn.commit()
-
-        # Informar o usuário sobre a proteção mágica
-        bot.send_message(chat_id, f"🕯️ Um encanto protetor envolve você! Por {horas_protecao} horas, sua aura está protegida de travessuras sombrias. Aproveite a calma e segurança dessa bênção!")
+        
+        # Informar o usuário sobre a proteção
+        bot.send_message(chat_id, "🕯️ Você está protegido contra travessuras! A proteção foi ativada e será consumida na próxima travessura.")
     
     except Exception as e:
         print(f"Erro ao adicionar proteção temporária: {e}")
     finally:
         fechar_conexao(cursor, conn)
+
 
 def realizar_combo_gostosura(user_id, chat_id):
     try:
@@ -1698,8 +1700,38 @@ def encontrar_abobora(user_id, chat_id):
     finally:
         fechar_conexao(cursor, conn)
 
-from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
-import random
+def verificar_e_consumir_protecao(user_id, chat_id):
+    """
+    Verifica se o usuário tem proteção ativa e, caso afirmativo, consome a proteção.
+    """
+    try:
+        conn, cursor = conectar_banco_dados()
+
+        # Verifica se o usuário tem uma proteção ativa
+        cursor.execute("""
+            SELECT ativa FROM protecoes_travessura WHERE id_usuario = %s AND ativa = 1
+        """, (user_id,))
+        protecao = cursor.fetchone()
+
+        if protecao:
+            # Consome a proteção, desativa e registra a data de consumo
+            cursor.execute("""
+                UPDATE protecoes_travessura 
+                SET ativa = 0, data_consumo = %s 
+                WHERE id_usuario = %s
+            """, (datetime.now(), user_id))
+            conn.commit()
+
+            bot.send_message(chat_id, "🛡️ Sua proteção foi consumida e você está protegido desta travessura!")
+            return True
+        else:
+            bot.send_message(chat_id, "👻 Você não tem proteção contra travessuras no momento.")
+            return False
+
+    except Exception as e:
+        print(f"Erro ao verificar e consumir proteção: {e}")
+    finally:
+        fechar_conexao(cursor, conn)
 
 def ganhar_caixa_misteriosa(user_id, chat_id):
     try:

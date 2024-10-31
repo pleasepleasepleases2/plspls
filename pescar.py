@@ -433,6 +433,7 @@ def aplicar_recompensa_extra(user_id, subcategoria):
     """
     Função para conceder uma recompensa extra com base no bônus de sorte ativo.
     """
+    conn, cursor = conectar_banco_dados()
     # Escolha entre cenouras ou uma carta da mesma subcategoria
     recompensa = random.choice(["cenouras", "carta"])
     if recompensa == "cenouras":
@@ -440,7 +441,7 @@ def aplicar_recompensa_extra(user_id, subcategoria):
         aumentar_cenouras(user_id, cenouras_extras)
         return f"Você ganhou {cenouras_extras} cenouras extras!"
     else:
-        carta_extra_id = obter_carta_subcategoria(subcategoria)
+        carta_extra_id = obter_cartas_subcateg(subcategoria, conn)
         add_to_inventory(user_id, carta_extra_id)
         return f"Você ganhou uma carta extra da subcategoria {subcategoria}!"
 

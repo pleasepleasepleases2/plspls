@@ -2253,8 +2253,7 @@ def realizar_halloween_gostosura(user_id, chat_id):
         elif chance == 11:
             print(f"DEBUG: Adicionando super boost de cenouras para o usuário {user_id}")
             duracao_horas = random.randint(1, 3)
-            multiplicador = random.randint(2, 4)
-            url_imagem = "https://example.com/super_boost.jpg"  # Substitua pelo URL da imagem correta
+            multiplicador = random.randint(2, 4)# Substitua pelo URL da imagem correta
             bot.send_photo(
                 chat_id, 
                 url_imagem, 

@@ -14,3 +14,4 @@ newrelic
 mutagen
 numpy
 APScheduler
+telegram

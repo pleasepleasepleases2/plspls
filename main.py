@@ -257,7 +257,20 @@ def exibir_cartas_categoria(call):
         markup.add(telebot.types.InlineKeyboardButton(text=str(idx), callback_data=f"escolher_carta_bruxa_{idx}_{categoria}"))
 
     bot.edit_message_text(mensagem_loja, chat_id, call.message.message_id, reply_markup=markup)
-
+@bot.message_handler(func=lambda message: True)  # Handler para todas as mensagens
+def aplicar_travessura_grupal(message):
+    """Aplica a travessura grupal às mensagens enquanto a travessura está ativa."""
+    chat_id = message.chat.id
+    if travessura_ativa.get(chat_id):
+        print(f"DEBUG: Travessura Grupal ativa para mensagem {message.message_id} no chat {chat_id}")
+        escolha = random.choice(['eco', 'reacao', 'resposta'])
+        
+        if escolha == 'eco':
+            ecoar_mensagem(chat_id, message)
+        elif escolha == 'reacao':
+            reagir_com_emoji(chat_id, message)
+        elif escolha == 'resposta':
+            resposta_direta(chat_id, message)
 # Função para confirmar a compra de uma carta selecionada
 @bot.callback_query_handler(func=lambda call: call.data.startswith('escolher_carta_bruxa_'))
 def confirmar_compra_carta(call):
@@ -2599,12 +2612,14 @@ import threading
 import random
 from telebot.types import ReactionTypeEmoji
 
+# Dicionário que controla travessuras ativas
+travessura_ativa = {}
+
 def iniciar_travessura_grupal(chat_id, user_id, duracao_segundos=120):
-    """Inicia a travessura grupal, executando travessuras em mensagens no grupo por uma duração limitada."""
+    """Inicia a travessura grupal, aplicando travessuras em mensagens do grupo por um tempo limitado."""
     travessura_ativa[chat_id] = True
     bot.send_message(chat_id, "👻 A Travessura Grupal começou! Todos estão sob efeito da travessura.")
-    travessura_grupal(user_id,chat_id)
-    print(f"DEBUG: Travessura Grupal iniciada no chat {chat_id} por {duracao_segundos} segundos.")
+    print(f"DEBUG: Travessura Grupal iniciada no chat {chat_id} pelo usuário {user_id} por {duracao_segundos} segundos.")
 
     # Agenda o encerramento da travessura
     threading.Timer(duracao_segundos, finalizar_travessura_grupal, [chat_id]).start()
@@ -2643,8 +2658,8 @@ def reagir_com_emoji(chat_id, message):
         bot.set_message_reaction(
             chat_id=chat_id,
             message_id=message.message_id,
-            reaction=[reacao],  # Aqui usamos a lista de reações específicas
-            is_big=random.choice([True, False])  # Alterna entre animação grande e padrão
+            reaction=[reacao],
+            is_big=random.choice([True, False])
         )
         print(f"DEBUG: Reação {reacao} definida na mensagem {message.message_id} no chat {chat_id}")
     except Exception as e:
@@ -2666,26 +2681,12 @@ def resposta_direta(chat_id, message):
     bot.send_message(chat_id, resposta, reply_to_message_id=message.message_id)
     print(f"DEBUG: Respondeu diretamente no chat {chat_id} em resposta a {message.message_id}: {resposta}")
 
-def travessura_grupal(chat_id, message):
-    """Executa uma travessura grupal escolhendo entre eco, reação e resposta direta, enquanto ativa."""
-    if travessura_ativa.get(chat_id):
-        escolha = random.choice(['eco', 'reacao', 'resposta'])
-        print(f"DEBUG: Escolha da travessura grupal no chat {chat_id} para mensagem {message.message_id}: {escolha}")
-        
-        if escolha == 'eco':
-            ecoar_mensagem(chat_id, message)
-        elif escolha == 'reacao':
-            reagir_com_emoji(chat_id, message)
-        elif escolha == 'resposta':
-            resposta_direta(chat_id, message)
-
 def finalizar_travessura_grupal(chat_id):
     """Encerra a travessura grupal, removendo o estado ativo."""
     if travessura_ativa.get(chat_id):
         del travessura_ativa[chat_id]
         bot.send_message(chat_id, "🎃 A Travessura Grupal acabou! Vocês estão livres... por enquanto.")
         print(f"DEBUG: Travessura Grupal finalizada no chat {chat_id}")
-
 @bot.callback_query_handler(func=lambda call: call.data.startswith("pronomes_"))
 def pronomes(call):
     atualizar_pronomes(call)

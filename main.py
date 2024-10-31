@@ -2457,7 +2457,7 @@ def realizar_halloween_travessura(user_id, chat_id, nome,messsage):
         chance = 13
         #chance = random.randint(1, 19)  # 22 tipos de travessuras diferentes
         print(f"DEBUG: Chance sorteada: {chance}")
-
+        print(f"DEBUG: Valor de chance antes dos ifs: {chance}")
         if chance == 1:
             # Perder cenouras
             cenouras_perdidas = random.randint(20, 50)
@@ -2610,8 +2610,9 @@ def realizar_halloween_travessura(user_id, chat_id, nome,messsage):
             iniciar_labirinto(user_id,chat_id)
 
         elif chance == 13:
-            print(f"DEBUG: travessura acionada 13")
-            executar_travessura_grupal(chat_id, user_id)
+            print(f"DEBUG: Travessura acionada com chance 13 para o usuário {user_id}")
+            executar_travessura_grupal(chat_id, user_id)  # Certifique-se de que esta função está definida
+            print(f"DEBUG: Travessura grupal foi executada para o chat {chat_id}")
         elif chance == 14:
             # Troca de ordem nos comandos de troca
             troca_invertida(user_id,chat_id)

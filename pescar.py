@@ -315,14 +315,60 @@ def obter_carta_por_submenu(cursor, subcategoria, submenu):
 
 import traceback
 
+def adicionar_boost_peixes(user_id, multiplicador, duracao_horas, chat_id):
+    try:
+        conn, cursor = conectar_banco_dados()
+        fim_boost = datetime.now() + timedelta(hours=duracao_horas)
+
+        # Inserir ou atualizar o boost de peixes na tabela 'boosts'
+        cursor.execute("""
+            INSERT INTO boosts (id_usuario, tipo_boost, multiplicador, fim_boost)
+            VALUES (%s, 'peixes', %s, %s)
+            ON DUPLICATE KEY UPDATE multiplicador = %s, fim_boost = %s
+        """, (user_id, multiplicador, fim_boost, multiplicador, fim_boost))
+        
+        conn.commit()
+
+        bot.send_message(
+            chat_id, 
+            f"🎣✨ Você ativou o Boost de Peixes! Todos os peixes capturados serão multiplicados por {multiplicador} nas próximas {duracao_horas} horas.",
+            parse_mode="Markdown"
+        )
+    
+    except Exception as e:
+        print(f"Erro ao adicionar Boost de Peixes: {e}")
+    
+    finally:
+        fechar_conexao(cursor, conn)
+
+def verificar_boost_peixes(user_id):
+    """Verifica se o boost de peixes está ativo e retorna o multiplicador se ativo."""
+    conn, cursor = conectar_banco_dados()
+    try:
+        cursor.execute("SELECT multiplicador, fim_boost FROM boosts WHERE id_usuario = %s AND tipo_boost = 'peixes'", (user_id,))
+        resultado = cursor.fetchone()
+        if resultado:
+            multiplicador, fim_boost = resultado
+            if datetime.now() < fim_boost:
+                return multiplicador  # Boost ativo
+        return 1  # Sem boost
+    except Exception as e:
+        print(f"Erro ao verificar o boost de peixes: {e}")
+        return 1
+    finally:
+        fechar_conexao(cursor, conn)
+
 def send_card_message(message, *args, cursor=None, conn=None):
     try:
         id_usuario = message.chat.id
         id_user = message.from_user.id
         embaralhamento_ativo = verificar_travessura_ativa(id_user)
 
+        # Verificar se o boost de peixes está ativo
+        multiplicador_peixes = verificar_boost_peixes(id_user)
+
         # Debug: Exibindo os argumentos e estado de embaralhamento
-        print(f"[DEBUG] id_usuario: {id_usuario}, id_user: {id_user}, embaralhamento_ativo: {embaralhamento_ativo}, args: {args}")
+        print(f"[DEBUG] id_usuario: {id_usuario}, id_user: {id_user}, multiplicador_peixes: {multiplicador_peixes}, embaralhamento_ativo: {embaralhamento_ativo}, args: {args}")
 
         # Verifica se é um evento fixo (dicionário passado)
         if len(args) == 1 and isinstance(args[0], dict):
@@ -336,12 +382,12 @@ def send_card_message(message, *args, cursor=None, conn=None):
             print(f"[DEBUG] Evento fixo - id_personagem: {id_personagem}, nome: {nome}, subcategoria: {subcategoria}")
 
             add_to_inventory(id_usuario, id_personagem)
-            quantidade = verifica_inventario_troca(id_usuario, id_personagem)
+            quantidade = verifica_inventario_troca(id_usuario, id_personagem) * multiplicador_peixes
             quantidade_display = "☀" if quantidade == 1 else "☀ 𖡩"
 
             imagem = evento_aleatorio.get('imagem', "https://telegra.ph/file/8a50bf408515b52a36734.jpg")
 
-            texto = f"🎣 Parabéns! Sua isca era boa e você recebeu:\n\n☃️ {id_personagem} - {nome}\nde {subcategoria_display}\n\n{quantidade_display}"
+            texto = f"🎣 Parabéns! Sua isca era boa e você recebeu:\n\n☃️ {id_personagem} - {nome}\nde {subcategoria_display}\n\nQuantidade de cartas: {quantidade}"
             text = truncar_texto(texto) if embaralhamento_ativo else texto
 
             # Debug: Texto e imagem que serão enviados
@@ -368,7 +414,7 @@ def send_card_message(message, *args, cursor=None, conn=None):
             print(f"[DEBUG] Carta aleatória - emoji_categoria: {emoji_categoria}, id_personagem: {id_personagem}, nome: {nome}, subcategoria: {subcategoria}")
 
             add_to_inventory(id_usuario, id_personagem)
-            quantidade = verifica_inventario_troca(id_usuario, id_personagem)
+            quantidade = verifica_inventario_troca(id_usuario, id_personagem) * multiplicador_peixes
             
             imagem_url = imagem if imagem else "https://telegra.ph/file/8a50bf408515b52a36734.jpg"
             texto = f"🎣 Parabéns! Sua isca era boa e você recebeu:\n\n{emoji_categoria}<code> {id_personagem}</code> - {nome}\nde {subcategoria_display}\nQuantidade de cartas: {quantidade}"
@@ -398,7 +444,7 @@ def send_card_message(message, *args, cursor=None, conn=None):
                     bot.send_video(chat_id=message.chat.id, video=imagem_url, caption=text, parse_mode="HTML")
             
             register_card_history(message.from_user, id_usuario, id_personagem)
-            if quantidade == 30:
+            if quantidade >= 30:
                 bot.send_message(id_usuario, "🎉 Parabéns! Você alcançou 30 cartas do personagem, pode pedir um gif usando o comando /setgif!")
         
         else:

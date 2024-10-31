@@ -193,24 +193,30 @@ def adicionar_carta_faltante_halloween(user_id, chat_id):
         print(f"Erro ao adicionar carta de Halloween faltante: {e}")
     finally:
         fechar_conexao(cursor, conn)
-def bloquear_acao(user_id, acao, minutos):
+def bloquear_acao(user_id, acao, minutos, id_bloqueado=None):
     """
-    Bloqueia uma ação específica para um usuário.
+    Bloqueia uma ação para um usuário específico por um período determinado em minutos.
     """
     conn, cursor = conectar_banco_dados()
+    
+    # Define o id_bloqueado como user_id se não for especificado
+    id_bloqueado = id_bloqueado if id_bloqueado is not None else user_id
     fim_bloqueio = datetime.now() + timedelta(minutes=minutos)
 
-    # Define um valor padrão para id_bloqueado se não for fornecido
-    id_bloqueado = id_bloqueado if id_bloqueado is not None else user_id
-
     try:
-        cursor.execute("""
+        # Insere o bloqueio na tabela
+        cursor.execute(
+            """
             INSERT INTO bloqueios (id_usuario, id_bloqueado, acao, fim_bloqueio) 
-            VALUES (%s, %s, %s, %s)
-            ON DUPLICATE KEY UPDATE fim_bloqueio = VALUES(fim_bloqueio)
-        """, (user_id, id_bloqueado, acao, fim_bloqueio))
+            VALUES (%s, %s, %s, %s) 
+            ON DUPLICATE KEY UPDATE fim_bloqueio = %s
+            """,
+            (user_id, id_bloqueado, acao, fim_bloqueio, fim_bloqueio)
+        )
         conn.commit()
 
+        print(f"DEBUG: Ação '{acao}' bloqueada para o usuário {user_id} até {fim_bloqueio}")
+    
     except Exception as e:
         print(f"Erro ao inserir bloqueio: {e}")
     

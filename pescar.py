@@ -365,8 +365,8 @@ def send_card_message(message, *args, cursor=None, conn=None):
         embaralhamento_ativo = verificar_travessura_ativa(id_user)
 
         # Verificar se o boost de peixes e o bônus de sorte estão ativos
-        multiplicador_peixes = verificar_boost_peixes(id_user)
-        multiplicador_sorte = verificar_bonus_sorte(id_user)
+        multiplicador_peixes = verificar_boost_peixes(id_usuario)
+        multiplicador_sorte = verificar_bonus_sorte(id_usuario)
 
         # Debug: Exibindo os argumentos e estado de bônus e boosts
         print(f"[DEBUG] id_usuario: {id_usuario}, id_user: {id_user}, multiplicador_peixes: {multiplicador_peixes}, multiplicador_sorte: {multiplicador_sorte}, embaralhamento_ativo: {embaralhamento_ativo}, args: {args}")

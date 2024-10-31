@@ -1438,9 +1438,6 @@ def handle_passar_praga(message):
     except Exception as e:
         print(f"Erro ao passar praga: {e}")
 
-
-
-
 def ativar_dobro_cenouras(user_id):
     try:
         conn, cursor = conectar_banco_dados()
@@ -1459,21 +1456,29 @@ def ativar_dobro_cenouras(user_id):
     finally:
         fechar_conexao(cursor, conn)
 
-def ativar_peixes_em_dobro(user_id):
+def adicionar_boost_peixes(user_id, multiplicador=2, duracao_horas, chat_id):
     try:
         conn, cursor = conectar_banco_dados()
-        fim_bonus = datetime.now() + timedelta(hours=24)
+        fim_boost = datetime.now() + timedelta(hours=duracao_horas)
 
-        # Armazena o bônus de peixes em dobro no banco de dados
+        # Inserir ou atualizar o boost de peixes na tabela 'boosts'
         cursor.execute("""
-            INSERT INTO bonus_peixes (id_usuario, fim_bonus)
-            VALUES (%s, %s)
-            ON DUPLICATE KEY UPDATE fim_bonus = %s
-        """, (user_id, fim_bonus, fim_bonus))
+            INSERT INTO boosts (id_usuario, tipo_boost, multiplicador, fim_boost)
+            VALUES (%s, 'peixes', %s, %s)
+            ON DUPLICATE KEY UPDATE multiplicador = %s, fim_boost = %s
+        """, (user_id, multiplicador, fim_boost, multiplicador, fim_boost))
+        
         conn.commit()
 
+        bot.send_message(
+            chat_id, 
+            f"🎣✨ Você ativou o Boost de Peixes! Todos os peixes capturados serão multiplicados por {multiplicador} nas próximas {duracao_horas} horas.",
+            parse_mode="Markdown"
+        )
+    
     except Exception as e:
-        print(f"Erro ao ativar bônus de peixes em dobro: {e}")
+        print(f"Erro ao adicionar Boost de Peixes: {e}")
+    
     finally:
         fechar_conexao(cursor, conn)
 # Função para iniciar o compartilhamento de cenouras
@@ -1932,6 +1937,92 @@ def adicionar_super_boost_cenouras(user_id, multiplicador, duracao_horas,chat_id
     
     except Exception as e:
         print(f"Erro ao adicionar Super Boost de Cenouras: {e}")
+    
+    finally:
+        fechar_conexao(cursor, conn)
+def adicionar_boost(user_id, tipo_boost, multiplicador, duracao_horas, chat_id):
+    """Adiciona um boost de tipo específico ('cenouras' ou 'peixes') com multiplicador e duração."""
+    try:
+        conn, cursor = conectar_banco_dados()
+        fim_boost = datetime.now() + timedelta(hours=duracao_horas)
+
+        # Inserir ou atualizar o boost na tabela 'boosts'
+        cursor.execute("""
+            INSERT INTO boosts (id_usuario, tipo_boost, multiplicador, fim_boost)
+            VALUES (%s, %s, %s, %s)
+            ON DUPLICATE KEY UPDATE multiplicador = %s, fim_boost = %s
+        """, (user_id, tipo_boost, multiplicador, fim_boost, multiplicador, fim_boost))
+        
+        conn.commit()
+
+        boost_message = (
+            f"🎣✨ Você ativou o Boost de Peixes! Todos os peixes capturados serão multiplicados por {multiplicador} "
+            f"nas próximas {duracao_horas} horas." if tipo_boost == 'peixes' else
+            f"🎃✨ *Um feitiço raro foi lançado!* 🌿 Todas as cenouras que você colher serão multiplicadas por {multiplicador} "
+            f"nas próximas {duracao_horas} horas. Aproveite essa magia enquanto dura! 🍂🥕"
+        )
+
+        bot.send_message(chat_id, boost_message, parse_mode="Markdown")
+    
+    except Exception as e:
+        print(f"Erro ao adicionar boost de {tipo_boost}: {e}")
+    
+    finally:
+        fechar_conexao(cursor, conn)
+
+def verificar_boost(user_id, tipo_boost):
+    """Verifica se o boost específico está ativo e retorna o multiplicador; se inativo, retorna 1."""
+    try:
+        conn, cursor = conectar_banco_dados()
+        cursor.execute("""
+            SELECT multiplicador FROM boosts 
+            WHERE id_usuario = %s AND tipo_boost = %s AND fim_boost > NOW()
+        """, (user_id, tipo_boost))
+        
+        resultado = cursor.fetchone()
+        return resultado[0] if resultado else 1  # Retorna multiplicador ou 1 se não estiver ativo
+    
+    except Exception as e:
+        print(f"Erro ao verificar boost de {tipo_boost}: {e}")
+        return 1
+    
+    finally:
+        fechar_conexao(cursor, conn)
+
+def aplicar_boost_cenouras(user_id, cenouras_ganhas):
+    """Aplica o boost de cenouras se ativo, multiplicando o valor recebido."""
+    try:
+        multiplicador = verificar_boost(user_id, 'cenouras')
+        cenouras_com_boost = cenouras_ganhas * multiplicador
+        
+        conn, cursor = conectar_banco_dados()
+        cursor.execute("UPDATE usuarios SET cenouras = cenouras + %s WHERE id_usuario = %s", (cenouras_com_boost, user_id))
+        conn.commit()
+
+        # Enviar mensagem informando a quantidade com boost aplicado
+        bot.send_message(user_id, f"🌟 Você recebeu {cenouras_com_boost} cenouras{' (multiplicadas!)' if multiplicador > 1 else ''}.")
+    
+    except Exception as e:
+        print(f"Erro ao aplicar boost de cenouras: {e}")
+    
+    finally:
+        fechar_conexao(cursor, conn)
+
+def aplicar_boost_peixes(user_id, peixes_ganhos):
+    """Aplica o boost de peixes se ativo, multiplicando o valor recebido."""
+    try:
+        multiplicador = verificar_boost(user_id, 'peixes')
+        peixes_com_boost = peixes_ganhos * multiplicador
+        
+        conn, cursor = conectar_banco_dados()
+        cursor.execute("UPDATE usuarios SET peixes = peixes + %s WHERE id_usuario = %s", (peixes_com_boost, user_id))
+        conn.commit()
+
+        # Enviar mensagem informando a quantidade com boost aplicado
+        bot.send_message(user_id, f"🐟 Você recebeu {peixes_com_boost} peixes{' (multiplicados!)' if multiplicador > 1 else ''}.")
+    
+    except Exception as e:
+        print(f"Erro ao aplicar boost de peixes: {e}")
     
     finally:
         fechar_conexao(cursor, conn)

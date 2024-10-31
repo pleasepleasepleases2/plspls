@@ -1264,12 +1264,15 @@ def realizar_combo_gostosura(user_id, chat_id):
         efeito_escolhido = random.choice(efeitos_bonus)
 
         if efeito_escolhido == "dobro de cenouras ao cenourar":
-            ativar_dobro_cenouras(user_id)
+            # Configura o boost de cenouras dobradas
+            adicionar_boost(user_id, 'cenouras', multiplicador=2, duracao_horas=24, chat_id=chat_id)
             mensagem_combo += "🥕 Encanto ativado: Cenouras dobradas ao ajudar seus amigos no jardim!\n"
         
         elif efeito_escolhido == "peixes em dobro na pesca":
-            ativar_peixes_em_dobro(user_id)
+            # Configura o boost de peixes dobrados
+            adicionar_boost(user_id, 'peixes', multiplicador=2, duracao_horas=24, chat_id=chat_id)
             mensagem_combo += "🐟 Encanto ativado: Os peixes virão em dobro nas suas pescas no lago!\n"
+
 
         elif efeito_escolhido == "proteção contra travessuras":
             adicionar_protecao_temporaria(user_id, chat_id)
@@ -1456,7 +1459,7 @@ def ativar_dobro_cenouras(user_id):
     finally:
         fechar_conexao(cursor, conn)
 
-def adicionar_boost_peixes(user_id, multiplicador=2, duracao_horas, chat_id):
+def adicionar_boost_peixes(user_id, duracao_horas, chat_id, multiplicador=2):
     try:
         conn, cursor = conectar_banco_dados()
         fim_boost = datetime.now() + timedelta(hours=duracao_horas)
@@ -2219,8 +2222,15 @@ def realizar_halloween_gostosura(user_id, chat_id):
             print(f"DEBUG: Adicionando super boost de cenouras para o usuário {user_id}")
             duracao_horas = random.randint(1, 3)
             multiplicador = random.randint(2, 4)
-            bot.send_photo(chat_id, url_imagem, caption="🌟 Super Boost ativado! Todas as cenouras que você ganhar serão multiplicadas.")
-            adicionar_super_boost_cenouras(user_id, multiplicador, duracao_horas, chat_id)
+            url_imagem = "https://example.com/super_boost.jpg"  # Substitua pelo URL da imagem correta
+            bot.send_photo(
+                chat_id, 
+                url_imagem, 
+                caption=f"🌟 Super Boost ativado! Todas as cenouras que você ganhar serão multiplicadas por {multiplicador} nas próximas {duracao_horas} horas. 🍂"
+            )
+            # Chamando a nova função para configurar o boost
+            adicionar_boost(user_id, 'cenouras', multiplicador, duracao_horas, chat_id)
+
 
         elif chance == 12:
             print(f"DEBUG: Iniciando compartilhamento de gostosura para o usuário {user_id}")

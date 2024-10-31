@@ -429,28 +429,6 @@ def send_card_message(message, *args, cursor=None, conn=None):
         bot.send_message(grupodeerro, mensagem, parse_mode="HTML")
 
 
-def aplicar_recompensa_extra(user_id, subcategoria):
-    """
-    Função para conceder uma recompensa extra com base no bônus de sorte ativo.
-    """
-    conn, cursor = conectar_banco_dados()
-    # Escolha entre cenouras ou uma carta da mesma subcategoria com 50% de chance
-    if random.random() < 0.5:  # 50% de chance
-        # Recompensa de cenouras
-        cenouras_extras = random.randint(10, 30)
-        aumentar_cenouras(user_id, cenouras_extras)
-        return f"Você ganhou {cenouras_extras} cenouras extras!"
-    else:
-        # Recompensa de carta extra
-        cartas = obter_cartas_subcateg(subcategoria, conn)
-        if cartas:
-            carta_escolhida = random.choice(cartas)  # Seleciona uma carta aleatória
-            id_personagem, _, nome, _ = carta_escolhida  # Acessa o id_personagem e o nome
-            add_to_inventory(user_id, id_personagem)  # Adiciona ao inventário do usuário
-            return f"Você ganhou uma carta extra: {id_personagem} - {nome} de {subcategoria}!"
-        else:
-            return "Nenhuma carta extra foi encontrada para a subcategoria."
-
 def verificar_bonus_sorte(user_id):
     """
     Função para verificar se o bônus de sorte está ativo e retornar o multiplicador.

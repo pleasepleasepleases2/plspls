@@ -1728,6 +1728,48 @@ def callback_descartar_ou_recusar_caixa(call):
 
     finally:
         fechar_conexao(cursor, conn)
+@bot.callback_query_handler(func=lambda call: call.data.startswith("escolha_porta_"))
+def handle_escolha_porta(call):
+    user_id = call.from_user.id
+    chat_id = call.message.chat.id
+
+    # Extrair o número da porta selecionada
+    porta_escolhida = int(call.data.split("_")[2])
+
+    try:
+        # Recuperar os prêmios salvos para o usuário
+        premios = recuperar_premios_escolha(user_id)
+        
+        # Checar se já existe um prêmio ou se é inválido
+        if not premios or premios[porta_escolhida - 1] == "":
+            bot.answer_callback_query(call.id, "❌ Esta porta não contém um prêmio válido ou já foi escolhida.")
+            return
+
+        # Obter o prêmio correspondente
+        premio = premios[porta_escolhida - 1]
+
+        # Processar o prêmio para o usuário
+        processar_premio(user_id, premio)
+
+        # Notificar o usuário do prêmio
+        bot.send_message(chat_id, f"🎉 Parabéns! Você escolheu a porta {porta_escolhida} e ganhou: {premio}")
+
+        # Limpar o prêmio da lista para evitar duplicação
+        limpar_premios_escolha(user_id)
+
+    except Exception as e:
+        print(f"Erro ao processar escolha de porta: {e}")
+        bot.send_message(chat_id, "Houve um erro ao processar sua escolha. Tente novamente mais tarde.")
+def limpar_premios_escolha(user_id):
+    try:
+        conn, cursor = conectar_banco_dados()
+        cursor.execute("DELETE FROM escolhas WHERE id_usuario = %s", (user_id,))
+        conn.commit()
+    except Exception as e:
+        print(f"Erro ao limpar prêmios de escolha: {e}")
+    finally:
+        fechar_conexao(cursor, conn)
+        
 def revelar_caixas_misteriosas(user_id):
     try:
         conn, cursor = conectar_banco_dados()

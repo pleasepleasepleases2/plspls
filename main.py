@@ -718,7 +718,7 @@ def processar_jogada(call):
         cenouras_ganhas = random.randint(50, 200)
         aumentar_cenouras(user_id, cenouras_ganhas)
         bot.edit_message_text(chat_id=chat_id, message_id=call.message.message_id,
-                              text=f"🎉 Parabéns! Você venceu e ganhou {cenouras_ganhas} cenouras!" + mostrar_tabuleiro(tabuleiro), reply_markup=None)
+                              text=f"🎉 Parabéns! Você venceu e ganhou {cenouras_ganhas} cenouras!\n\n" + mostrar_tabuleiro(tabuleiro), reply_markup=None)
         jogos_em_andamento[user_id]['ativo'] = False
         return
 
@@ -726,7 +726,7 @@ def processar_jogada(call):
         cenouras_ganhas = random.randint(1, 10)
         aumentar_cenouras(user_id, cenouras_ganhas)
         bot.edit_message_text(chat_id=chat_id, message_id=call.message.message_id,
-                              text=f"😐 Empate! Você ganhou {cenouras_ganhas} cenouras como consolação." + mostrar_tabuleiro(tabuleiro), reply_markup=None)
+                              text=f"😐 Empate! Você ganhou {cenouras_ganhas} cenouras como consolação.\n\n" + mostrar_tabuleiro(tabuleiro), reply_markup=None)
         jogos_em_andamento[user_id]['ativo'] = False
         return
 
@@ -736,7 +736,7 @@ def processar_jogada(call):
         cenouras_perdidas = random.randint(30, 80)
         diminuir_cenouras(user_id, cenouras_perdidas)
         bot.edit_message_text(chat_id=chat_id, message_id=call.message.message_id,
-                              text=f"😢 Você perdeu e perdeu {cenouras_perdidas} cenouras."+ mostrar_tabuleiro(tabuleiro), reply_markup=None)
+                              text=f"😢 Você perdeu e perdeu {cenouras_perdidas} cenouras.\n\n"+ mostrar_tabuleiro(tabuleiro), reply_markup=None)
         jogos_em_andamento[user_id]['ativo'] = False
         return
 
@@ -744,7 +744,7 @@ def processar_jogada(call):
         cenouras_ganhas = random.randint(1, 10)
         aumentar_cenouras(user_id, cenouras_ganhas)
         bot.edit_message_text(chat_id=chat_id, message_id=call.message.message_id,
-                              text=f"😐 Empate! Você ganhou {cenouras_ganhas} cenouras como consolação." + mostrar_tabuleiro(tabuleiro), reply_markup=None)
+                              text=f"😐 Empate! Você ganhou {cenouras_ganhas} cenouras como consolação.\n\n" + mostrar_tabuleiro(tabuleiro), reply_markup=None)
         jogos_em_andamento[user_id]['ativo'] = False
         return
 

@@ -50,6 +50,7 @@ from spotipy.oauth2 import SpotifyClientCredentials
 import logging
 import newrelic.agent
 #Módulos Personalizados do Projeto
+from aboboras import *
 from halloween import *
 from doaçao import *
 from wish import *
@@ -136,9 +137,6 @@ import pytz
 # Defina o fuso horário local desejado (exemplo: 'America/Sao_Paulo')
 FUSO_HORARIO_LOCAL = pytz.timezone('America/Sao_Paulo')
 
-
-
-
 @app.route("/")
 def set_webhook():
 
@@ -199,13 +197,13 @@ def votar_usuario(call):
 url_imagem = "https://pub-6f23ef52e8614212a14d24b0cf55ae4a.r2.dev/BQACAgEAAxkBAAIcfGcVeT6gaLXd0DKA7aihUQJfV62hAAJMBQACSV6xRD2puYHoSyajNgQ.jpg"
 def mudar_bio_usuario(user_id, bio_nova,chat_id):
     alterar_usuario(user_id, "bio", bio_nova,chat_id)
-    bot.send_message(chat_id, f"😂 Travessura! Sua bio agora é: {bio_nova}.")
+    bot.send_photo(chat_id, url_imagem, caption=f"😂 Travessura! Sua bio agora é: {bio_nova}.")
 def mudar_musica_usuario(user_id, musica_nova,chat_id):
     alterar_usuario(user_id, "musica", musica_nova,chat_id)
-    bot.send_message(chat_id, f"🎶 Travessura! Sua música agora é: {musica_nova}.")
+    bot.send_photo(chat_id, url_imagem, caption=f"🎶 Travessura! Sua música agora é: {musica_nova}.")
 def mudar_nome_usuario(user_id, nome_novo,chat_id):
     alterar_usuario(user_id, "nome", nome_novo,chat_id)
-    bot.send_message(chat_id, f"😂 Travessura! Seu nome agora é {nome_novo}!")
+    bot.send_photo(chat_id, url_imagem, caption=f"😂 Travessura! Seu nome agora é {nome_novo}!")
 
 def verificar_travessura(id_usuario):
     conn, cursor = conectar_banco_dados()
@@ -322,14 +320,6 @@ def handle_inverter(message):
     finally:
         fechar_conexao(cursor, conn)
 
-# Função para buscar o nome técnico da travessura com base no estilizado
-def obter_nome_tecnico(nome_estilizado):
-    for nome_tecnico, nome_formatado in NOMES_TRAVESSURAS_ESTILIZADOS.items():
-        if nome_estilizado.lower() == nome_formatado.lower():
-            return nome_tecnico
-    return None
-
-# Comando para aplicar a inversão em uma travessura específica
 @bot.message_handler(commands=['inverter'])
 def handle_inverter_travessura(message):
     user_id = message.from_user.id
@@ -467,30 +457,6 @@ def obter_cartas_por_categoria(categoria):
     fechar_conexao(cursor, conn)
     return cartas
 
-def iniciar_demonio_roubo_carta(user_id, chat_id):
-    try:
-        conn, cursor = conectar_banco_dados()
-
-        # Selecionar uma carta aleatória do inventário do usuário
-        cursor.execute("SELECT id_personagem, nome FROM inventario WHERE id_usuario = %s ORDER BY RAND() LIMIT 1", (user_id,))
-        carta = cursor.fetchone()
-
-        if carta:
-            id_carta, nome_carta = carta
-            palavra_desafio = gerar_palavra_desafio()
-
-            # Enviar mensagem para o usuário com a palavra desafio
-            bot.send_message(chat_id, f"👹 Um demônio está tentando roubar sua carta '{nome_carta}'! Responda rapidamente com a palavra: <b>{palavra_desafio}</b>", parse_mode="HTML")
-
-            # Iniciar um temporizador de 10 segundos para o usuário responder
-            threading.Timer(10.0, verificar_resposta, args=(user_id, id_carta, palavra_desafio, chat_id)).start()
-        else:
-            bot.send_message(chat_id, "Parece que você não tem nenhuma carta para o demônio roubar.")
-    
-    except Exception as e:
-        print(f"Erro ao iniciar o roubo de carta pelo demônio: {e}")
-    finally:
-        fechar_conexao(cursor, conn)
 def embaralhar_mensagem(mensagem):
     palavras = mensagem.split()
     random.shuffle(palavras)  # Embaralha as palavras da mensagem
@@ -531,9 +497,10 @@ def ativar_protecao_travessura(user_id, horas_duracao):
 
 def verificar_protecao_travessura(user_id):
     try:
+        print(f"DEBUG: Iniciando verificação de proteção de travessura para o usuário {user_id}")
         conn, cursor = conectar_banco_dados()
         
-        # Verificar se o usuário tem proteção ativa
+        # Consultar proteção ativa para o usuário
         cursor.execute("""
             SELECT fim_protecao FROM protecoes_travessura
             WHERE id_usuario = %s
@@ -542,51 +509,25 @@ def verificar_protecao_travessura(user_id):
 
         if resultado:
             fim_protecao = resultado[0]
-            # Se a proteção ainda está ativa (o tempo atual é menor que o fim)
+            print(f"DEBUG: Proteção encontrada para o usuário {user_id}, fim em {fim_protecao}")
+            
+            # Verificar se a proteção ainda está ativa
             if datetime.now() < fim_protecao:
+                print(f"DEBUG: Proteção ainda ativa para o usuário {user_id}")
                 return True
+            else:
+                print(f"DEBUG: Proteção para o usuário {user_id} expirada em {fim_protecao}")
+        else:
+            print(f"DEBUG: Nenhuma proteção ativa encontrada para o usuário {user_id}")
         
         return False  # Sem proteção ativa ou proteção expirada
     
     except Exception as e:
-        print(f"Erro ao verificar a proteção contra travessuras: {e}")
+        print(f"Erro ao verificar a proteção contra travessuras para o usuário {user_id}: {e}")
         return False
     finally:
         fechar_conexao(cursor, conn)
-
-def adicionar_carta_faltante_halloween(user_id, chat_id):
-    try:
-        conn, cursor = conectar_banco_dados()
-
-        # Obter todas as cartas do evento Halloween que o usuário ainda não possui
-        query_faltantes_halloween = """
-            SELECT e.id_personagem, e.nome 
-            FROM evento e
-            LEFT JOIN inventario i ON e.id_personagem = i.id_personagem AND i.id_usuario = %s
-            WHERE e.evento = 'Festival das Abóboras' AND i.id_personagem IS NULL
-        """
-        cursor.execute(query_faltantes_halloween, (user_id,))
-        cartas_faltantes = cursor.fetchall()
-
-        if not cartas_faltantes:
-            bot.send_message(user_id, "Parabéns! Mas você já tem todas as cartas do evento de Halloween.")
-            return
-
-        # Selecionar uma carta de Halloween aleatória
-        carta_faltante = random.choice(cartas_faltantes)
-        id_carta_faltante, nome_carta_faltante = carta_faltante
-
-        # Adicionar a carta ao inventário
-        cursor.execute("INSERT INTO inventario (id_usuario, id_personagem, quantidade) VALUES (%s, %s, 1)", (user_id, id_carta_faltante))
-        conn.commit()
-
-        # Enviar a mensagem informando a carta recebida
-        bot.send_message(chat_id, f"🎃 Parabéns! Você encontrou uma carta do evento Halloween: {nome_carta_faltante} foi adicionada ao seu inventário.")
-
-    except Exception as e:
-        print(f"Erro ao adicionar carta de Halloween faltante: {e}")
-    finally:
-        fechar_conexao(cursor, conn)
+        print(f"DEBUG: Conexão fechada após verificação de proteção para o usuário {user_id}")
 
 def criar_tabuleiro():
     """Cria um tabuleiro vazio de jogo da velha."""
@@ -984,10 +925,6 @@ def aplicar_travessura(id_usuario, tipo_travessura):
         print(f"Erro ao aplicar a travessura: {e}")
 
 def verificar_travessuras(id_usuario):
-    """
-    Verifica todas as travessuras ativas para o usuário, incluindo a travessura de embaralhamento.
-    Retorna uma lista com os tipos de travessuras ativas e um indicador se a travessura de embaralhamento está ativa.
-    """
     conn, cursor = conectar_banco_dados()
     try:
         # Verificar todas as travessuras ativas
@@ -2091,7 +2028,7 @@ def mudar_favorito_usuario(user_id,chat_id):
             novo_favorito = resultado[0]
             # Atualizar o favorito na tabela `usuarios`
             alterar_usuario(user_id, "fav", novo_favorito,chat_id)
-            bot.send_message(chat_id, f"👻 Travessura! Seu favorito agora é a carta ID {novo_favorito}!")
+            bot.send_photo(chat_id, url_imagem, caption=f"👻 Travessura! Seu favorito agora é a carta ID {novo_favorito}!")
         else:
             bot.send_message(chat_id, "Parece que você não tem cartas no inventário para fazer essa travessura.")
 
@@ -2118,13 +2055,14 @@ def bloquear_comandos_usuario(user_id, duracao_minutos,chat_id):
         conn.commit()
 
         # Enviar mensagem informando sobre o bloqueio
-        bot.send_message(chat_id, f"👻 Travessura! Você está invisível por {duracao_minutos} minutos. Nenhum comando será processado!")
+        bot.send_photo(chat_id, url_imagem, caption=f"👻 Travessura! Você está invisível por {duracao_minutos} minutos. Nenhum comando será processado!")
 
     except Exception as e:
         print(f"Erro ao bloquear comandos para o usuário {user_id}: {e}")
         traceback.print_exc()
     finally:
         fechar_conexao(cursor, conn)
+        
 def verificar_bloqueio_comandos(user_id):
     try:
         conn, cursor = conectar_banco_dados()
@@ -2147,6 +2085,7 @@ def verificar_bloqueio_comandos(user_id):
         return False, 0
     finally:
         fechar_conexao(cursor, conn)
+        
 def apagar_carta_aleatoria(user_id, chat_id):
     try:
         conn, cursor = conectar_banco_dados()
@@ -2171,11 +2110,11 @@ def apagar_carta_aleatoria(user_id, chat_id):
         if quantidade_carta > 1:
             # Reduzir apenas uma unidade da carta
             cursor.execute("UPDATE inventario SET quantidade = quantidade - 1 WHERE id_usuario = %s AND id_personagem = %s", (user_id, id_carta))
-            bot.send_message(chat_id, f"👻 O demônio removeu uma unidade da carta ID {id_carta} - {nome_carta} de {subcategoria}. Você ainda tem {quantidade_carta - 1} restantes.")
+            bot.send_message(chat_id, f"👿 Um demônio removeu uma unidade da carta ID {id_carta} - {nome_carta} de {subcategoria}. Você ainda tem {quantidade_carta - 1} restantes.")
         else:
             # Apagar a carta completamente do inventário
             cursor.execute("DELETE FROM inventario WHERE id_usuario = %s AND id_personagem = %s", (user_id, id_carta))
-            bot.send_message(chat_id, f"👻 O demônio apagou a carta ID {id_carta} - {nome_carta} de {subcategoria} do seu inventário!")
+            bot.send_message(chat_id, f"👿 Um demônio apagou a carta ID {id_carta} - {nome_carta} de {subcategoria} do seu inventário!")
 
         conn.commit()
 
@@ -2184,53 +2123,6 @@ def apagar_carta_aleatoria(user_id, chat_id):
         bot.send_message(chat_id, "Ocorreu um erro ao tentar apagar sua carta.")
     finally:
         fechar_conexao(cursor, conn)
-
-        fechar_conexao(cursor, conn)
-
-def aplicar_travessura(user_id, chat_id):
-    try:
-        print(f"DEBUG: Aplicando travessura para o usuário {user_id}")
-        # Lista de travessuras exceto a praga
-        travessuras = [
-            "perder_cenouras",            # 1. Perde uma quantidade de cenouras
-            "mudar_nome_engracado",       # 2. Nome do jogador é alterado para algo engraçado
-            "mudar_musica_ze_felipe",     # 3. Música do perfil é alterada para uma das músicas do Zé Felipe
-            "mudar_bio_engracada",        # 4. Bio do jogador é alterada para algo engraçado
-            "mudar_fav_aleatorio",        # 5. O favorito do jogador é alterado para uma carta aleatória
-            "bloqueio_pesca",             # 6. Bloqueio de pescar por alguns minutos
-            "bloqueio_comandos",          # 7. Bloqueio de enviar comandos (invisível)
-            "mensagens_embaralhadas",     # 8. Mensagens do bot são embaralhadas
-            "apagar_carta_aleatoria"      # 22. Apaga uma carta aleatória do inventário
-        ]
-        
-        # Escolher uma travessura aleatória (exceto a praga)
-        travessura_escolhida = random.choice(travessuras)
-        print(f"DEBUG: Travessura escolhida: {travessura_escolhida}")
-
-        # Aplicar a travessura escolhida
-        if travessura_escolhida == "perder_cenouras":
-            perder_cenouras(user_id, chat_id)
-        elif travessura_escolhida == "mudar_nome_engracado":
-            mudar_nome_engracado(user_id, chat_id)
-        elif travessura_escolhida == "mudar_musica_ze_felipe":
-            mudar_musica_ze_felipe(user_id, chat_id)
-        elif travessura_escolhida == "mudar_bio_engracada":
-            mudar_bio_engracada(user_id, chat_id)
-        elif travessura_escolhida == "mudar_fav_aleatorio":
-            mudar_fav_aleatorio(user_id, chat_id)
-        elif travessura_escolhida == "bloqueio_pesca":
-            bloquear_pesca(user_id, chat_id)
-        elif travessura_escolhida == "bloqueio_comandos":
-            bloquear_comandos(user_id, chat_id)
-        elif travessura_escolhida == "mensagens_embaralhadas":
-            embaralhar_mensagens(user_id, chat_id)
-        elif travessura_escolhida == "apagar_carta_aleatoria":
-            apagar_carta_aleatoria(user_id, chat_id)
-        elif tipo_travessura == 'apagar_carta':
-            apagar_carta_aleatoria(user_id, chat_id)
-    except Exception as e:
-        print(f"Erro ao aplicar a travessura: {e}")
-        bot.send_message(chat_id, f"Ocorreu um erro ao aplicar a travessura.")
 
 def ativar_travessura_embaralhamento(chat_id, id_usuario):
     # Definir duração aleatória entre 30 minutos e 2 horas
@@ -2333,8 +2225,6 @@ def gerar_labirinto_com_caminho_e_validacao(tamanho=10):
                 break
 
     return labirinto
-
-
 
 # Função para mostrar o labirinto parcialmente, baseado na posição do jogador
 def mostrar_labirinto(labirinto, posicao):
@@ -2630,7 +2520,7 @@ def realizar_halloween_travessura(user_id, chat_id, nome):
 
         elif chance == 12:
             # Labirinto com um fantasma
-            bot.send_message(chat_id, "👻 Um fantasma te desafiou para escapar de um labirinto!")
+            bot.send_photo(chat_id, url_imagem, caption="👻 Um fantasma te desafiou para escapar de um labirinto!")
             iniciar_labirinto(user_id,chat_id)
 
         elif chance == 13:
@@ -2644,11 +2534,11 @@ def realizar_halloween_travessura(user_id, chat_id, nome):
         elif chance == 15:
             # Bloquear raspadinha por 1 dia
             bloquear_acao(user_id, "raspadinha", 1440)
-            bot.send_message(chat_id, "🎰 Travessura! Você está bloqueado de jogar raspadinha por 1 dia.")
+            bot.send_photo(chat_id, url_imagem, caption="🎰 Travessura! Você está bloqueado de jogar raspadinha e usar a fonte por 1 dia.")
 
         elif chance == 16:
             iniciar_sombra_roubo_cenouras(user_id)
-            bot.send_message(chat_id, "🕯️ Travessura! Uma sombra está roubando suas cenouras a cada 10 segundos. Use /exorcizar para parar!")
+            bot.send_photo(chat_id, url_imagem, caption="🕯️ Travessura! Uma sombra está roubando suas cenouras a cada 10 segundos. Use /exorcizar para parar!")
 
         elif chance == 17:
             # Alucinação: mensagens incompletas
@@ -2670,7 +2560,8 @@ def realizar_halloween_travessura(user_id, chat_id, nome):
                 """, (user_id, 'categoria_errada', fim_travessura))
                 conn.commit()
         
-                bot.send_message(chat_id, "🎃 Travessura! Suas cartas estão com as categorias erradas temporariamente.")
+                bot.send_photo(chat_id, url_imagem, caption="🎃 Travessura! Suas cartas estão com as categorias erradas temporariamente.")
+
         
             except Exception as e:
                 print(f"Erro ao registrar travessura de categoria errada: {e}")
@@ -2681,7 +2572,8 @@ def realizar_halloween_travessura(user_id, chat_id, nome):
         elif chance == 19:
             # Carta aleatória do inventário será apagada
             apagar_carta_aleatoria(user_id, chat_id)
-            bot.send_message(chat_id, "💀 Travessura! Uma carta aleatória foi apagada do seu inventário.")
+            bot.send_photo(chat_id, url_imagem, caption="💀 Travessura! Uma carta aleatória foi apagada do seu inventário.")
+
 
     except Exception as e:
         print(f"DEBUG: Erro ao realizar travessura para o usuário {user_id}: {e}")

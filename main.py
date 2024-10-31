@@ -442,41 +442,6 @@ def apreender_cartas_cenouras(user_id):
     conn.commit()
     fechar_conexao(cursor, conn)
 
-# Função para ativar um grupo no banco de dados
-def activate_group(group_id):
-    cursor.execute('INSERT OR IGNORE INTO active_groups (group_id) VALUES (?)', (group_id,))
-    conn.commit()
-
-# Função para desativar um grupo do banco de dados
-def deactivate_group(group_id):
-    cursor.execute('DELETE FROM active_groups WHERE group_id = ?', (group_id,))
-    conn.commit()
-
-# Função para checar se o grupo está ativo
-def is_group_active(group_id):
-    cursor.execute('SELECT * FROM active_groups WHERE group_id = ?', (group_id,))
-    return cursor.fetchone() is not None
-
-# Função que desativa o grupo após 5 minutos
-def start_timer(group_id):
-    time.sleep(300)  # 5 minutos
-    deactivate_group(group_id)
-
-# Comando para ativar a repetição no grupo
-@bot.message_handler(commands=['ativargrupo'])
-def activate_group_command(message):
-    group_id = message.chat.id
-    if not is_group_active(group_id):
-        activate_group(group_id)
-        bot.reply_to(message, "Este grupo foi ativado para repetição de mensagens por 5 minutos.")
-        threading.Thread(target=start_timer, args=(group_id,)).start()
-    else:
-        bot.reply_to(message, "Este grupo já está ativado para repetição.")
-
-# Repetir mensagens nos grupos ativados
-@bot.message_handler(func=lambda message: is_group_active(message.chat.id) and message.content_type == 'text')
-def echo_message(message):
-    bot.send_message(message.chat.id, message.text)
 def comprar_carta(user_id, carta_id):
     # Desconta as cenouras e adiciona a carta ao inventário do usuário
     conn, cursor = conectar_banco_dados()

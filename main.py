@@ -919,7 +919,7 @@ def handle_halloween(message):
             print(f"DEBUG: Proteção ativada e gasta para o usuário {user_id}")
         else:
             # Se não há proteção, aplicar travessura
-            realizar_halloween_travessura(user_id, chat_id, nome)
+            realizar_halloween_travessura(user_id, chat_id, nome,messsage)
 
 def aplicar_travessura(id_usuario, tipo_travessura):
     """
@@ -2388,7 +2388,7 @@ def encerrar_ou_continuar(call):
         markup = criar_botoes_navegacao()
         bot.edit_message_text(f"Movimentos restantes: {jogador['movimentos']}\n\n{mapa}", call.message.chat.id, call.message.message_id, reply_markup=markup)
 
-def realizar_halloween_travessura(user_id, chat_id, nome):
+def realizar_halloween_travessura(user_id, chat_id, nome,messsage):
     try:
         print(f"DEBUG: Iniciando travessura para o usuário {user_id}")
                 # Verificar se o usuário tem proteção ativa
@@ -2552,7 +2552,7 @@ def realizar_halloween_travessura(user_id, chat_id, nome):
 
         elif chance == 13:
             # Travessura acontece com todos os que mandaram mensagem no grupo nos últimos 10 minutos
-            travessura_grupal(user_id,chat_id)
+            travessura_grupal(messsage)
             iniciar_travessura_grupal(chat_id, user_id, duracao_segundos=120)
         elif chance == 14:
             # Troca de ordem nos comandos de troca

@@ -1544,9 +1544,6 @@ def compartilhar_cenouras(user_id, target_user_id, chat_id, user_name, target_us
         cursor.execute("SELECT quantidade_cenouras, ativo FROM compartilhamentos WHERE id_usuario = %s", (user_id,))
         resultado = cursor.fetchone()
 
-        # DEBUG: Exibir os valores de 'quantidade_cenouras' e 'ativo' retornados pelo banco de dados
-        print(f"DEBUG: Resultado da consulta de compartilhamento para {user_id}: {resultado}")
-
         if not resultado or not bool(resultado[1]):  # Verificar se não está ativo
             bot.send_message(chat_id, "👻 Você não tem nenhum compartilhamento ativo. Ative um compartilhamento primeiro com o comando +halloween.")
             return
@@ -1555,23 +1552,20 @@ def compartilhar_cenouras(user_id, target_user_id, chat_id, user_name, target_us
 
         # Transferir cenouras para o alvo do compartilhamento
         cursor.execute("UPDATE usuarios SET cenouras = cenouras + %s WHERE id_usuario = %s", (quantidade_cenouras, target_user_id))
-        cursor.execute("UPDATE usuarios SET cenouras = cenouras - %s WHERE id_usuario = %s", (quantidade_cenouras, user_id))
+        cursor.execute("UPDATE usuarios SET cenouras = cenouras + %s WHERE id_usuario = %s", (quantidade_cenouras, user_id))
         
         # Desativar o compartilhamento
         cursor.execute("UPDATE compartilhamentos SET ativo = FALSE WHERE id_usuario = %s", (user_id,))
         conn.commit()
 
-        # Informar ambos os usuários
-        bot.send_message(user_id, f"🎃 Você compartilhou {quantidade_cenouras} cenouras com {target_user_name}! Cenouras removidas.")
-        bot.send_message(target_user_id, f"🎃 {user_name} compartilhou {quantidade_cenouras} cenouras com você! Aproveite!")
-    
+        bot.send_message(user_id, f"🎃 Um feitiço de prosperidade foi lançado! Você e {target_user_name} ganharam {quantidade_cenouras} cenouras cada. Aproveitem essa colheita mágica! 🌾✨")
+        bot.send_message(target_user_id, f"🎃 Que sorte! {user_name} compartilhou um encanto de colheita com você! Ambos receberam {quantidade_cenouras} cenouras. Que a generosidade retorne multiplicada! 🌙🍂")
+
     except Exception as e:
         print(f"Erro ao compartilhar cenouras: {e}")
     
     finally:
         fechar_conexao(cursor, conn)
-
-
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("descartar_caixa") or call.data == "recusar_caixa")
 def callback_descartar_ou_recusar_caixa(call):

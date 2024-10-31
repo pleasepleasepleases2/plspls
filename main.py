@@ -510,67 +510,57 @@ def embaralhar_mensagem(mensagem):
     random.shuffle(palavras)  # Embaralha as palavras da mensagem
     return ' '.join(palavras)  # Retorna a mensagem embaralhada
 
-def ativar_protecao_travessura(user_id, horas_duracao):
+def ativar_protecao_travessura(user_id, chat_id):
     try:
         conn, cursor = conectar_banco_dados()
-        
-        # Define o fim da proteção com a duração especificada
-        fim_protecao = datetime.now() + timedelta(hours=horas_duracao)
-        
-        # Desativa qualquer proteção anterior do usuário
+        data_ativacao = datetime.now()
+
+        # Inserir ou atualizar proteção como ativa
         cursor.execute("""
-            UPDATE protecoes_travessura 
-            SET ativa = 0 
-            WHERE id_usuario = %s AND ativa = 1
-        """, (user_id,))
-        
-        # Inserir nova proteção com `ativa = 1`
-        cursor.execute("""
-            INSERT INTO protecoes_travessura (id_usuario, fim_protecao, ativa)
-            VALUES (%s, %s, 1)
-        """, (user_id, fim_protecao))
-        
+            INSERT INTO protecoes_travessura (id_usuario, data_ativacao, ativa, data_consumo)
+            VALUES (%s, %s, 1, NULL)
+            ON DUPLICATE KEY UPDATE data_ativacao = %s, ativa = 1, data_consumo = NULL
+        """, (user_id, data_ativacao, data_ativacao))
         conn.commit()
-        
-        bot.send_message(user_id, f"🛡️ Você está protegido contra travessuras por {horas_duracao} horas!")
+
+        bot.send_message(chat_id, "🛡️ Você está protegido contra uma travessura! Essa proteção será consumida ao ser usada.")
     
     except Exception as e:
-        print(f"Erro ao ativar proteção: {e}")
-        bot.send_message(user_id, "Ocorreu um erro ao tentar ativar sua proteção.")
+        print(f"Erro ao ativar proteção contra travessuras: {e}")
     finally:
         fechar_conexao(cursor, conn)
 
 def verificar_protecao_travessura(user_id):
     try:
-        print(f"DEBUG: Iniciando verificação de proteção de travessura para o usuário {user_id}")
+        print(f"DEBUG: Verificando proteção de travessura para o usuário {user_id}")
         conn, cursor = conectar_banco_dados()
         
-        # Consultar proteção ativa para o usuário
+        # Consultar proteção ativa
         cursor.execute("""
-            SELECT fim_protecao FROM protecoes_travessura
+            SELECT ativa FROM protecoes_travessura
             WHERE id_usuario = %s AND ativa = 1
         """, (user_id,))
         resultado = cursor.fetchone()
 
-        if resultado:
-            fim_protecao = resultado[0]
-            print(f"DEBUG: Proteção encontrada para o usuário {user_id}, fim em {fim_protecao}")
-            
-            # Verifica se a proteção ainda está ativa
-            if datetime.now() < fim_protecao:
-                print(f"DEBUG: Proteção ainda ativa para o usuário {user_id}")
-                return True
-            else:
-                print(f"DEBUG: Proteção para o usuário {user_id} expirada em {fim_protecao}")
+        if resultado and resultado[0] == 1:
+            # Consumir a proteção, definindo `ativa` como 0 e adicionando data_consumo
+            cursor.execute("""
+                UPDATE protecoes_travessura SET ativa = 0, data_consumo = %s
+                WHERE id_usuario = %s
+            """, (datetime.now(), user_id))
+            conn.commit()
+            print(f"DEBUG: Proteção consumida para o usuário {user_id}")
+            return True  # Proteção ativa e consumida
         
-        print(f"DEBUG: Nenhuma proteção ativa encontrada para o usuário {user_id}")
-        return False  # Sem proteção ativa ou expirada
+        print(f"DEBUG: Nenhuma proteção ativa para o usuário {user_id}")
+        return False  # Sem proteção ativa
     
     except Exception as e:
-        print(f"Erro ao verificar a proteção contra travessuras para o usuário {user_id}: {e}")
+        print(f"Erro ao verificar e consumir proteção de travessuras para o usuário {user_id}: {e}")
         return False
     finally:
         fechar_conexao(cursor, conn)
+
 
 def criar_tabuleiro():
     """Cria um tabuleiro vazio de jogo da velha."""

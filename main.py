@@ -2358,15 +2358,26 @@ def mover_labirinto(call):
         
         # Verifica vitória, derrota ou continuidade
         if conteudo == '🚪':
-            bot.edit_message_text(f"🏆 Parabéns! Você encontrou a saída!\n\n{revelar_labirinto(labirinto)}", call.message.chat.id, call.message.message_id)
+            recompensa = random.randint(50, 100)
+            aplicar_recompensa_cenouras(id_usuario, recompensa)  # Função de recompensa
+            bot.edit_message_text(
+                f"🏆 Parabéns! Você encontrou a saída e ganhou {recompensa} cenouras extras!\n\n{revelar_labirinto(labirinto)}", 
+                call.message.chat.id, call.message.message_id
+            )
             del jogadores_labirinto[id_usuario]  # Remove jogador
         elif movimentos_restantes == 0:
-            bot.edit_message_text(f"😢 Seus movimentos acabaram. Fim de jogo!\n\n{revelar_labirinto(labirinto)}", call.message.chat.id, call.message.message_id)
+            penalidade = random.randint(50, 100)
+            aplicar_penalidade_cenouras(id_usuario, -penalidade)  # Função de penalidade
+            bot.edit_message_text(
+                f"😢 Seus movimentos acabaram. Fim de jogo! Você perdeu {penalidade} cenouras.\n\n{revelar_labirinto(labirinto)}", 
+                call.message.chat.id, call.message.message_id
+            )
             del jogadores_labirinto[id_usuario]
         else:
             atualizar_labirinto(call, labirinto, nova_posicao, movimentos_restantes, conteudo)
     else:
         bot.answer_callback_query(call.id, "👻 Direção bloqueada por uma parede!")
+
 
 # Função para aplicar penalidade de cenouras ao encontrar um monstro
 def aplicar_penalidade_cenouras(user_id, quantidade):

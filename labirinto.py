@@ -423,3 +423,22 @@ labirintos_predefinidos = [
     ['🪨', '⬜', '⬜', '⬜', '⬜', '⬜', '⬜', '⬜', '🚪', '🪨'],
     ['🪨', '🪨', '🪨', '🪨', '🪨', '🪨', '🪨', '🪨', '🪨', '🪨']
 ],
+
+def escolher_labirinto():
+    # Escolher um labirinto pré-definido e criar uma cópia para não modificar o original
+    labirinto = [row[:] for row in random.choice(labirintos_predefinidos)]
+    
+    # Adicionar abóboras e fantasmas em posições aleatórias no labirinto
+    adicionar_elementos_aleatorios(labirinto, '🎃', 3)  # Adicionar 3 abóboras
+    adicionar_elementos_aleatorios(labirinto, '👻', 5)  # Adicionar 5 fantasmas
+
+    return labirinto
+
+def adicionar_elementos_aleatorios(labirinto, elemento, quantidade):
+    tamanho = len(labirinto)
+    for _ in range(quantidade):
+        while True:
+            x, y = random.randint(1, tamanho - 2), random.randint(1, tamanho - 2)
+            if labirinto[x][y] == '⬜':  # Somente em espaços abertos
+                labirinto[x][y] = elemento
+                break

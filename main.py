@@ -1145,7 +1145,7 @@ def adicionar_vip_temporario(user_id, grupo_sugestao,chat_id):
             conn.commit()
 
             # Enviar mensagem para o grupo de sugestões
-            bot.send_message(grupo_sugestao, f"🎉 O usuário {user_id} ganhou VIP por {dias_vip} dias!")
+            bot.send_message(GRUPO_SUGESTAO, f"🎉 O usuário {user_id} ganhou VIP por {dias_vip} dias!")
 
             # Informar o usuário que ganhou VIP
             bot.send_message(chat_id, f"🌟 Parabéns, alma iluminada! Você foi agraciado com o privilégio VIP por {dias_vip} dias. Aproveite os encantos dessa jornada mágica!")
@@ -1267,6 +1267,8 @@ def realizar_combo_gostosura(user_id, chat_id):
             """, (user_id, user_id, data_ativacao, data_ativacao.strftime('%Y-%m'), data_ativacao.day, data_ativacao))
             conn.commit()
             mensagem_combo += "⚡ Encanto ativado: Você recebeu um passe VIP de 1 dia para explorar a magia oculta!\n"
+            # Enviar mensagem para o grupo de sugestões
+            bot.send_message(GRUPO_SUGESTAO, f"🎉 O usuário {user_id} ganhou VIP por {dias_vip} dias!")
 
         # Enviar a mensagem final com todas as informações
         bot.send_message(chat_id, mensagem_combo)

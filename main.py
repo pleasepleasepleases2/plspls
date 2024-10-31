@@ -314,6 +314,9 @@ def confirmar_compra_carta(call):
     
     bot.edit_message_text(mensagem_confirmacao, chat_id, call.message.message_id, reply_markup=markup)
 
+from datetime import datetime
+import pytz
+
 @bot.message_handler(commands=['travessuras'])
 def handle_inverter(message):
     user_id = message.from_user.id
@@ -322,6 +325,13 @@ def handle_inverter(message):
     try:
         conn, cursor = conectar_banco_dados()
         
+        # Deletar travessuras expiradas
+        cursor.execute("""
+            DELETE FROM travessuras
+            WHERE id_usuario = %s AND fim_travessura < NOW()
+        """, (user_id,))
+        conn.commit()
+
         # Obter quantidade de inversões
         cursor.execute("SELECT quantidade FROM inversoes WHERE id_usuario = %s", (user_id,))
         inversoes = cursor.fetchone()
@@ -356,6 +366,7 @@ def handle_inverter(message):
         print(f"Erro ao listar travessuras e inversões: {e}")
     finally:
         fechar_conexao(cursor, conn)
+
 
 @bot.message_handler(commands=['inverter'])
 def handle_inverter_travessura(message):

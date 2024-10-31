@@ -441,7 +441,21 @@ def apreender_cartas_cenouras(user_id):
 
     conn.commit()
     fechar_conexao(cursor, conn)
+# Comando para ativar a repetição no grupo
+@bot.message_handler(commands=['ativargrupo'])
+def activate_group_command(message):
+    group_id = message.chat.id
+    if not is_group_active(group_id):
+        activate_group(group_id)
+        bot.reply_to(message, "Este grupo foi ativado para repetição de mensagens por 5 minutos.")
+        threading.Thread(target=start_timer, args=(group_id,)).start()
+    else:
+        bot.reply_to(message, "Este grupo já está ativado para repetição.")
 
+# Repetir mensagens nos grupos ativados
+@bot.message_handler(func=lambda message: is_group_active(message.chat.id) and message.content_type == 'text')
+def echo_message(message):
+    bot.send_message(message.chat.id, message.text)
 def comprar_carta(user_id, carta_id):
     # Desconta as cenouras e adiciona a carta ao inventário do usuário
     conn, cursor = conectar_banco_dados()
@@ -2384,7 +2398,7 @@ def realizar_halloween_travessura(user_id, chat_id, nome):
             bot.send_message(chat_id, "🛡️ Você está protegido contra travessuras! Nada aconteceu desta vez.")
             return
 
-        chance = random.randint(1, 19)  # 22 tipos de travessuras diferentes
+        chance = random.randint(1, 18)  # 22 tipos de travessuras diferentes
         print(f"DEBUG: Chance sorteada: {chance}")
 
         if chance == 1:
@@ -2539,8 +2553,9 @@ def realizar_halloween_travessura(user_id, chat_id, nome):
             iniciar_labirinto(user_id,chat_id)
 
         elif chance == 13:
-            # Travessura acontece com todos os que mandaram mensagem no grupo nos últimos 10 minutos
-            travessura_grupal(user_id,chat_id)
+            # Carta aleatória do inventário será apagada
+            apagar_carta_aleatoria(user_id, chat_id)
+            bot.send_photo(chat_id, url_imagem, caption="💀 Travessura! Uma carta aleatória foi apagada do seu inventário.")
 
         elif chance == 14:
             # Troca de ordem nos comandos de troca
@@ -2583,12 +2598,6 @@ def realizar_halloween_travessura(user_id, chat_id, nome):
         
             finally:
                 fechar_conexao(cursor, conn)
-
-        elif chance == 19:
-            # Carta aleatória do inventário será apagada
-            apagar_carta_aleatoria(user_id, chat_id)
-            bot.send_photo(chat_id, url_imagem, caption="💀 Travessura! Uma carta aleatória foi apagada do seu inventário.")
-
 
     except Exception as e:
         print(f"DEBUG: Erro ao realizar travessura para o usuário {user_id}: {e}")

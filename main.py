@@ -760,7 +760,7 @@ def checar_empate(tabuleiro):
 
 def bot_jogada(tabuleiro):
     """Decide entre uma jogada inteligente (Minimax) e uma aleatória com 80% e 20% de chance, respectivamente."""
-    if random.random() < 0.8:
+    if random.random() < 0.95:
         print("DEBUG: Bot fazendo jogada inteligente usando Minimax.")
         
         best_score = -np.inf

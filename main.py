@@ -701,7 +701,7 @@ def processar_jogada(call):
     tabuleiro[linha, coluna] = jogador
     if checar_vitoria(tabuleiro, jogador):
         cenouras_ganhas = random.randint(50, 200)
-        aumentar_cenouras(user_id, cenouras_ganhas)
+        conceder_cenouras(user_id, cenouras_ganhas)
         bot.edit_message_text(chat_id=chat_id, message_id=call.message.message_id,
                               text=f"🎉 Parabéns! Você venceu e ganhou {cenouras_ganhas} cenouras!" + mostrar_tabuleiro(tabuleiro), reply_markup=None)
         jogos_em_andamento[user_id]['ativo'] = False
@@ -709,7 +709,7 @@ def processar_jogada(call):
 
     if checar_empate(tabuleiro):
         cenouras_ganhas = random.randint(1, 10)
-        aumentar_cenouras(user_id, cenouras_ganhas)
+        conceder_cenouras(user_id, cenouras_ganhas)
         bot.edit_message_text(chat_id=chat_id, message_id=call.message.message_id,
                               text=f"😐 Empate! Você ganhou {cenouras_ganhas} cenouras como consolação." + mostrar_tabuleiro(tabuleiro), reply_markup=None)
         jogos_em_andamento[user_id]['ativo'] = False
@@ -727,7 +727,7 @@ def processar_jogada(call):
 
     if checar_empate(tabuleiro):
         cenouras_ganhas = random.randint(1, 10)
-        aumentar_cenouras(user_id, cenouras_ganhas)
+        conceder_cenouras(user_id, cenouras_ganhas)
         bot.edit_message_text(chat_id=chat_id, message_id=call.message.message_id,
                               text=f"😐 Empate! Você ganhou {cenouras_ganhas} cenouras como consolação." + mostrar_tabuleiro(tabuleiro), reply_markup=None)
         jogos_em_andamento[user_id]['ativo'] = False
@@ -1233,7 +1233,7 @@ def realizar_combo_gostosura(user_id, chat_id):
 
         # Parte 1: Ganhar até 100 cenouras
         cenouras_ganhas = random.randint(50, 100)
-        aumentar_cenouras(user_id, cenouras_ganhas)
+        conceder_cenouras(user_id, cenouras_ganhas)
         mensagem_combo += f"🍬 Acolheu {cenouras_ganhas} cenouras encantadas para sua coleção!\n\n"
 
         cartas_ganhas = adicionar_carta_faltante_halloween(user_id, chat_id)
@@ -1660,7 +1660,7 @@ def encontrar_abobora(user_id, chat_id):
         # Se todas as abóboras já foram encontradas, conceder recompensa final
         if not aboboras_disponiveis:
             bot.send_message(chat_id, "🎃 Você já encontrou todas as abóboras disponíveis! Como recompensa, você recebe 100 cenouras adicionais.")
-            aumentar_cenouras(user_id, 100)
+            conceder_cenouras(user_id, 100)
             return
 
         # Escolher uma abóbora aleatória entre as disponíveis
@@ -1933,47 +1933,7 @@ emojis_travessura = [
     "🎃", "👻", "🕸️", "🕷️", "🧟‍♀️", "🐈‍⬛", "🦇", "⚰️", "💀", 
     "🕯️", "☠️", "🌕", "👿", "😈"
 ]
-@bot.message_handler(func=lambda message: message.text and message.text.startswith('+100vip'))
-def handle_100vip(message):
-    try:
-        user_id = message.from_user.id
-        conn, cursor = conectar_banco_dados()
 
-        # Verificar se o usuário é VIP
-        query_verificar_vip = "SELECT COUNT(*) FROM vips WHERE id_usuario = %s"
-        cursor.execute(query_verificar_vip, (user_id,))
-        is_vip = cursor.fetchone()[0] > 0
-
-        if is_vip:
-            # Verificar se o usuário já usou o comando +100vip
-            query_verificar_uso = "SELECT COUNT(*) FROM usuarios_100vip WHERE id_usuario = %s"
-            cursor.execute(query_verificar_uso, (user_id,))
-            ja_usou = cursor.fetchone()[0] > 0
-
-            if ja_usou:
-                bot.send_message(message.chat.id, "Você já usou o código +100vip e não pode utilizá-lo novamente.")
-            else:
-                # Adicionar 100 pétalas ao usuário
-                query_adicionar_petalas = "UPDATE usuarios SET petalas = petalas + 100 WHERE id_usuario = %s"
-                cursor.execute(query_adicionar_petalas, (user_id,))
-
-                # Registrar que o usuário usou o comando +100vip
-                query_registrar_uso = "INSERT INTO usuarios_100vip (id_usuario) VALUES (%s)"
-                cursor.execute(query_registrar_uso, (user_id,))
-                
-                conn.commit()
-
-                bot.send_message(message.chat.id, "🎉 Parabéns! Você recebeu 100 pétalas por ser VIP! 🌸")
-
-        else:
-            bot.send_message(message.chat.id, "Você não é VIP e não pode receber esse bônus.")
-
-    except Exception as e:
-        print(f"Erro ao processar o comando +100vip: {e}")
-        bot.send_message(message.chat.id, "Ocorreu um erro ao processar sua solicitação.")
-
-    finally:
-        fechar_conexao(cursor, conn)
 # Função para iniciar a Fonte Extra
 def ativar_fonte_extra(user_id,chat_id):
     # Envia a mensagem pedindo os IDs dos peixes
@@ -2029,7 +1989,7 @@ def realizar_halloween_gostosura(user_id, chat_id):
 
         if chance == 1:
             cenouras_ganhas = random.randint(50, 100)
-            aumentar_cenouras(user_id, cenouras_ganhas)
+            conceder_cenouras(user_id, cenouras_ganhas)
             emoji = random.choice(emojis_gostosura)
             bot.send_photo(chat_id, url_imagem, caption=f"{emoji} 🍬 Você tropeçou em um saco de doces! Dentro dele, estavam {cenouras_ganhas} cenouras. Aproveite a sorte!")
             print(f"DEBUG: {cenouras_ganhas} cenouras enviadas ao usuário {user_id}")

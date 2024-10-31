@@ -24,7 +24,7 @@ from mutagen.mp3 import MP3
 from mutagen.id3 import ID3
 from io import BytesIO
 import tempfile
-from telegram import ReactionType  # A biblioteca suporta Reactions?
+from telebot.types import ReactionTypeEmoji
 
 # Estado da travessura grupal
 travessura_ativa = {}
@@ -2618,26 +2618,30 @@ def ecoar_mensagem(chat_id, message):
     eco_mensagem = random.choice(respostas_eco)
     bot.send_message(chat_id, eco_mensagem, parse_mode="HTML", reply_to_message_id=message.message_id)
 
+# Ativar uma lista de emojis específicos para reações
+reacoes_emoji = [
+    ReactionTypeEmoji('👍'),
+    ReactionTypeEmoji('😂'),
+    ReactionTypeEmoji('😴'),
+    ReactionTypeEmoji('😳'),
+    ReactionTypeEmoji('😡'),
+    ReactionTypeEmoji('😭'),
+    ReactionTypeEmoji('🤯'),
+]
+
 def reagir_com_emoji(chat_id, message):
     """Define uma reação de emoji engraçada na mensagem."""
-    reacoes_emoji = [
-        ReactionType.THUMBS_DOWN,
-        ReactionType.CLAP,
-        ReactionType.ROFL,
-        ReactionType.EYE_ROLL,
-        ReactionType.ZZZ,
-        ReactionType.WTF,
-        ReactionType.BRAIN_EXPLODE,
-    ]
-
     reacao = random.choice(reacoes_emoji)
-    bot.setMessageReaction(
-        chat_id=chat_id,
-        message_id=message.message_id,
-        reaction=[reacao],
-        is_big=True
-    )
-
+    try:
+        bot.set_message_reaction(
+            chat_id=chat_id,
+            message_id=message.message_id,
+            reaction=[reacao],  # Aqui usamos a lista de reações específicas
+            is_big=random.choice([True, False])  # Alterna entre animação grande e padrão
+        )
+        print(f"DEBUG: Reação {reacao} definida na mensagem {message.message_id} no chat {chat_id}")
+    except Exception as e:
+        print(f"Erro ao definir reação: {e}")
 def resposta_direta(chat_id, message):
     """Responde diretamente com uma frase engraçada."""
     respostas_diretas = [

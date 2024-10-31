@@ -1257,16 +1257,27 @@ def realizar_combo_gostosura(user_id, chat_id):
 
         # Parte 1: Ganhar até 100 cenouras
         cenouras_ganhas = random.randint(50, 100)
-        aumentar_cenouras(user_id, cenouras_ganhas)
+        cursor.execute("UPDATE usuarios SET cenouras = cenouras + %s WHERE id_usuario = %s", (cenouras_ganhas, user_id))
+        conn.commit()
         mensagem_combo += f"🍬 Acolheu {cenouras_ganhas} cenouras encantadas para sua coleção!\n\n"
 
-        cartas_ganhas = adicionar_carta_faltante_halloween(user_id, chat_id)
-        if cartas_ganhas:
+        # Parte 2: Ganhar uma carta de Halloween (se faltante)
+        cursor.execute("""
+            SELECT e.id_personagem FROM evento e
+            LEFT JOIN inventario i ON e.id_personagem = i.id_personagem AND i.id_usuario = %s
+            WHERE e.evento = 'Festival das Abóboras' AND i.id_personagem IS NULL
+        """, (user_id,))
+        cartas_faltantes = cursor.fetchall()
+
+        if cartas_faltantes:
+            carta_faltante = random.choice(cartas_faltantes)[0]
+            cursor.execute("INSERT INTO inventario (id_usuario, id_personagem, quantidade) VALUES (%s, %s, 1)", (user_id, carta_faltante))
+            conn.commit()
             mensagem_combo += "🎃 Um segredo de Halloween lhe trouxe uma carta única do evento!\n\n"
         else:
             mensagem_combo += "🎃 A magia do Halloween diz que você já possui todas as cartas do evento!\n\n"
 
-        # Parte 3: Escolher um efeito bônus
+        # Parte 3: Escolher e aplicar um efeito bônus
         efeitos_bonus = [
             "dobro de cenouras ao cenourar",
             "peixes em dobro na pesca",
@@ -1276,22 +1287,43 @@ def realizar_combo_gostosura(user_id, chat_id):
         efeito_escolhido = random.choice(efeitos_bonus)
 
         if efeito_escolhido == "dobro de cenouras ao cenourar":
-            # Configura o boost de cenouras dobradas
-            adicionar_boost(user_id, 'cenouras', multiplicador=2, duracao_horas=24, chat_id=chat_id)
+            fim_boost = datetime.now() + timedelta(hours=24)
+            cursor.execute("""
+                INSERT INTO boosts (id_usuario, tipo_boost, multiplicador, fim_boost)
+                VALUES (%s, 'cenouras', 2, %s)
+                ON DUPLICATE KEY UPDATE multiplicador = 2, fim_boost = %s
+            """, (user_id, fim_boost, fim_boost))
+            conn.commit()
             mensagem_combo += "🥕 Encanto ativado: Cenouras dobradas ao ajudar seus amigos no jardim!\n"
         
         elif efeito_escolhido == "peixes em dobro na pesca":
-            # Configura o boost de peixes dobrados
-            adicionar_boost(user_id, 'peixes', multiplicador=2, duracao_horas=24, chat_id=chat_id)
+            fim_boost = datetime.now() + timedelta(hours=24)
+            cursor.execute("""
+                INSERT INTO boosts (id_usuario, tipo_boost, multiplicador, fim_boost)
+                VALUES (%s, 'peixes', 2, %s)
+                ON DUPLICATE KEY UPDATE multiplicador = 2, fim_boost = %s
+            """, (user_id, fim_boost, fim_boost))
+            conn.commit()
             mensagem_combo += "🐟 Encanto ativado: Os peixes virão em dobro nas suas pescas no lago!\n"
 
-
         elif efeito_escolhido == "proteção contra travessuras":
-            adicionar_protecao_temporaria(user_id, chat_id)
+            fim_protecao = datetime.now() + timedelta(hours=24)
+            cursor.execute("""
+                INSERT INTO protecoes_travessura (id_usuario, fim_protecao, ativa)
+                VALUES (%s, %s, 1)
+                ON DUPLICATE KEY UPDATE fim_protecao = %s, ativa = 1
+            """, (user_id, fim_protecao, fim_protecao))
+            conn.commit()
             mensagem_combo += "🛡️ Encanto ativado: Uma luz protetora te envolverá contra travessuras sombrias!\n"
 
         elif efeito_escolhido == "VIP de 1 dia":
-            adicionar_vip_temporario(user_id, chat_id, GRUPO_SUGESTAO, dias=1)
+            data_ativacao = datetime.now()
+            cursor.execute("""
+                INSERT INTO vips (id_usuario, nome, data_pagamento, renovou, pedidos_restantes, mes_atual, Dia_renovar)
+                VALUES (%s, (SELECT nome FROM usuarios WHERE id_usuario = %s), %s, 0, 1, %s, %s)
+                ON DUPLICATE KEY UPDATE data_pagamento = %s, renovou = 0, pedidos_restantes = 1
+            """, (user_id, user_id, data_ativacao, data_ativacao.strftime('%Y-%m'), data_ativacao.day, data_ativacao))
+            conn.commit()
             mensagem_combo += "⚡ Encanto ativado: Você recebeu um passe VIP de 1 dia para explorar a magia oculta!\n"
 
         # Enviar a mensagem final com todas as informações
@@ -1301,6 +1333,7 @@ def realizar_combo_gostosura(user_id, chat_id):
         print(f"Erro ao realizar combo de gostosuras: {e}")
     finally:
         fechar_conexao(cursor, conn)
+
 
 
 @bot.message_handler(commands=['setgif'])
@@ -2294,7 +2327,14 @@ def realizar_halloween_gostosura(user_id, chat_id):
                 url_imagem,
                 caption=f"🍀 Você recebeu um Bônus de Sorte! Suas chances de receber recompensas melhores foram aumentadas em {int((multiplicador_sorte - 1) * 100)}% nas próximas {duracao_horas} horas!"
             )
-
+        elif chance == 13:
+            print(f"DEBUG: Ativando desconto de 24 horas para o usuário {user_id}")
+            ativar_desconto_loja(user_id, chat_id)
+            bot.send_photo(
+                chat_id,
+                url_imagem,
+                caption="🎉 Gostosura! Você ganhou 24 horas de desconto em todas as compras da loja. Aproveite!"
+            )
     except Exception as e:
         print(f"DEBUG: Erro ao realizar gostosura para o usuário {user_id}: {e}")
         traceback.print_exc()
@@ -2728,6 +2768,75 @@ def encerrar_ou_continuar(call):
         mapa = mostrar_labirinto(jogador["labirinto"], jogador["posicao"])
         markup = criar_botoes_navegacao()
         bot.edit_message_text(f"Movimentos restantes: {jogador['movimentos']}\n\n{mapa}", call.message.chat.id, call.message.message_id, reply_markup=markup)
+def verificar_desconto_loja(user_id):
+    """
+    Verifica se o usuário tem um desconto ativo na loja.
+    """
+    conn, cursor = conectar_banco_dados()
+    try:
+        cursor.execute("""
+            SELECT fim_desconto FROM descontos_loja 
+            WHERE id_usuario = %s AND fim_desconto > NOW()
+        """, (user_id,))
+        resultado = cursor.fetchone()
+        return resultado is not None
+    except Exception as e:
+        print(f"Erro ao verificar desconto na loja: {e}")
+        return False
+    finally:
+        fechar_conexao(cursor, conn)
+
+def handle_callback_compra(call):
+    try:
+        chat_id = call.message.chat.id
+        parts = call.data.split('_')
+        categoria = parts[1]
+        id_usuario = parts[2]
+        original_message_id = parts[3]
+        conn, cursor = conectar_banco_dados()
+        
+        # Verifica se o usuário possui desconto ativo
+        desconto_ativo = verificar_desconto_loja(id_usuario)
+        preco = 3 if desconto_ativo else 5  # Aplica desconto se ativo
+
+        cursor.execute("SELECT cenouras FROM usuarios WHERE id_usuario = %s", (id_usuario,))
+        result = cursor.fetchone()
+        qnt_cenouras = int(result[0]) if result else 0
+
+        if qnt_cenouras >= preco:
+            # Seleciona uma carta aleatória da categoria do dia
+            cursor.execute(
+                "SELECT loja.id_personagem, personagens.nome, personagens.subcategoria, personagens.emoji "
+                "FROM loja "
+                "JOIN personagens ON loja.id_personagem = personagens.id_personagem "
+                "WHERE loja.categoria = %s AND loja.data = %s ORDER BY RAND() LIMIT 1",
+                (categoria, datetime.today().strftime("%Y-%m-%d"))
+            )
+            carta_comprada = cursor.fetchone()
+
+            if carta_comprada:
+                id_personagem, nome, subcategoria, emoji = carta_comprada
+                mensagem = f"Você tem {qnt_cenouras} cenouras.\nDeseja usar {preco} para comprar o peixe:\n\n{emoji} {id_personagem} - {nome} de {subcategoria}?"
+                keyboard = telebot.types.InlineKeyboardMarkup()
+                keyboard.row(
+                    telebot.types.InlineKeyboardButton(text="Sim", callback_data=f'confirmar_compra_{categoria}_{id_usuario}'),
+                    telebot.types.InlineKeyboardButton(text="Não", callback_data='cancelar_compra')
+                )
+                imagem_url = "https://telegra.ph/file/d4d5d0af60ec66f35e29c.jpg"
+                bot.edit_message_media(
+                    chat_id=chat_id,
+                    message_id=original_message_id,
+                    reply_markup=keyboard,
+                    media=telebot.types.InputMediaPhoto(media=imagem_url, caption=mensagem)
+                )
+            else:
+                print(f"Nenhuma carta disponível para compra na categoria {categoria} hoje.")
+        else:
+            bot.send_message(chat_id, "Desculpe, você não tem cenouras suficientes para realizar esta compra.")
+    except Exception as e:
+        print(f"Erro ao processar a compra: {e}")
+    finally:
+        fechar_conexao(cursor, conn)
 
 def realizar_halloween_travessura(user_id, chat_id, nome):
     try:
@@ -2737,7 +2846,7 @@ def realizar_halloween_travessura(user_id, chat_id, nome):
             bot.send_message(chat_id, "🛡️ Você está protegido contra travessuras! Nada aconteceu desta vez.")
             return
 
-        chance = random.randint(1, 18)  # 22 tipos de travessuras diferentes
+        chance = random.randint(1, 17)  # 22 tipos de travessuras diferentes
         print(f"DEBUG: Chance sorteada: {chance}")
 
         if chance == 1:
@@ -2860,18 +2969,29 @@ def realizar_halloween_travessura(user_id, chat_id, nome):
             bloquear_comandos_usuario(user_id, duracao_bloqueio_comandos,chat_id)
             
         elif chance == 8:
-            minutes = random.randint(2, 30)
-            fim_travessura = datetime.now() + timedelta(minutes)
-            conn, cursor = conectar_banco_dados()
+            # Registrar a travessura na tabela
+            try:
+                conn, cursor = conectar_banco_dados()
+        
+                # Definir o tempo de duração da travessura (por exemplo, 1 hora)
+                fim_travessura = datetime.now() + timedelta(hours=1)
+        
                 # Inserir ou atualizar a travessura no banco de dados
-            cursor.execute("""
+                cursor.execute("""
                     INSERT INTO travessuras (id_usuario, tipo_travessura, fim_travessura)
                     VALUES (%s, %s, %s)
                     ON DUPLICATE KEY UPDATE tipo_travessura = VALUES(tipo_travessura), fim_travessura = VALUES(fim_travessura)
-                """, (user_id, 'embaralhar_mensagem', fim_travessura))
-            conn.commit()
-            bot.send_photo(chat_id, url_imagem, caption="📜 Travessura! Suas mensagens estarão embaralhadas temporariamente.")
+                """, (user_id, 'categoria_errada', fim_travessura))
+                conn.commit()
+        
+                bot.send_photo(chat_id, url_imagem, caption="🎃 Travessura! Suas cartas estão com as categorias erradas temporariamente.")
 
+        
+            except Exception as e:
+                print(f"Erro ao registrar travessura de categoria errada: {e}")
+        
+            finally:
+                fechar_conexao(cursor, conn)
         elif chance == 9:
             # Pega-pega (passar uma praga para outros usuários)
             bot.send_photo(chat_id, url_imagem, caption=f"👹 Travessura! Você foi amaldiçoado, use /praga para passar a praga para outra pessoa.")
@@ -2913,30 +3033,6 @@ def realizar_halloween_travessura(user_id, chat_id, nome):
             # Alucinação: mensagens incompletas
             ativar_travessura_embaralhamento(chat_id, user_id)
             
-        elif chance == 18:
-            # Registrar a travessura na tabela
-            try:
-                conn, cursor = conectar_banco_dados()
-        
-                # Definir o tempo de duração da travessura (por exemplo, 1 hora)
-                fim_travessura = datetime.now() + timedelta(hours=1)
-        
-                # Inserir ou atualizar a travessura no banco de dados
-                cursor.execute("""
-                    INSERT INTO travessuras (id_usuario, tipo_travessura, fim_travessura)
-                    VALUES (%s, %s, %s)
-                    ON DUPLICATE KEY UPDATE tipo_travessura = VALUES(tipo_travessura), fim_travessura = VALUES(fim_travessura)
-                """, (user_id, 'categoria_errada', fim_travessura))
-                conn.commit()
-        
-                bot.send_photo(chat_id, url_imagem, caption="🎃 Travessura! Suas cartas estão com as categorias erradas temporariamente.")
-
-        
-            except Exception as e:
-                print(f"Erro ao registrar travessura de categoria errada: {e}")
-        
-            finally:
-                fechar_conexao(cursor, conn)
 
     except Exception as e:
         print(f"DEBUG: Erro ao realizar travessura para o usuário {user_id}: {e}")

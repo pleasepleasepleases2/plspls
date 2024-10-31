@@ -3690,63 +3690,6 @@ def handle_edit_note_callback(call):
 @bot.callback_query_handler(func=lambda call: call.data == 'cancel_edit')
 def handle_cancel_edit_callback(call):
     cancelar_edicao(call, bot)
-def roubar_carta(user_id, chat_id):
-    try:
-        conn, cursor = conectar_banco_dados()
-
-        # Verificar se o jogador tem cartas no inventário
-        cursor.execute("SELECT id_personagem, nome FROM inventario WHERE id_usuario = %s", (user_id,))
-        cartas = cursor.fetchall()
-
-        if not cartas:
-            bot.send_message(chat_id, "👻 Você não tem cartas no inventário para serem roubadas.")
-            return
-
-        # Selecionar uma carta aleatória para roubar
-        carta_roubada = random.choice(cartas)
-        id_carta, nome_carta = carta_roubada
-
-        # Gerar a palavra que o jogador deve digitar
-        palavra_gerada = gerar_palavra_aleatoria()
-
-        # Avisar o jogador e dar a chance de impedir o roubo
-        bot.send_message(chat_id, f"⚠️ Um demônio está tentando roubar a carta '{nome_carta}'! Escreva a palavra '{palavra_gerada}' em 10 segundos para impedir o roubo!")
-
-        # Configurar o temporizador de 10 segundos
-        bot.register_next_step_handler_by_chat_id(chat_id, processar_resposta_palavra, user_id, id_carta, palavra_gerada, nome_carta)
-        bot.send_message(chat_id, "Você tem 10 segundos para responder...")
-
-    except Exception as e:
-        print(f"Erro ao tentar roubar carta: {e}")
-    finally:
-        fechar_conexao(cursor, conn)
-import time
-import random
-import string
-
-def gerar_palavra_aleatoria(tamanho=8):
-    letras = string.ascii_lowercase  # Gera uma palavra usando letras minúsculas
-    return ''.join(random.choice(letras) for i in range(tamanho))
-
-def processar_resposta_palavra(message, user_id, id_carta, palavra_gerada, nome_carta):
-    resposta = message.text.lower().strip()
-    chat_id = message.chat.id
-
-    # Verificar se a palavra digitada é a correta
-    if resposta == palavra_gerada:
-        bot.send_message(chat_id, f"🎉 Parabéns! Você impediu o demônio de roubar a carta '{nome_carta}'!")
-    else:
-        # Caso a resposta esteja errada ou o tempo limite seja excedido, remover a carta
-        try:
-            conn, cursor = conectar_banco_dados()
-            cursor.execute("DELETE FROM inventario WHERE id_usuario = %s AND id_personagem = %s", (user_id, id_carta))
-            conn.commit()
-            bot.send_message(chat_id, f"👻 O demônio roubou a carta '{nome_carta}' do seu inventário!")
-        except Exception as e:
-            print(f"Erro ao remover a carta roubada: {e}")
-        finally:
-            fechar_conexao(cursor, conn)
-
 
 # Função para truncar aleatoriamente nomes de subcategorias
 def truncar_texto(texto, truncar_percent=0.5):

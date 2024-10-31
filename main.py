@@ -2209,7 +2209,7 @@ url_imagem = "https://pub-6f23ef52e8614212a14d24b0cf55ae4a.r2.dev/BQACAgEAAxkBAA
 def realizar_halloween_gostosura(user_id, chat_id):
     try:
         print(f"DEBUG: Iniciando gostosura para o usuário {user_id}")
-        chance = random.randint(1, 12)  # 12 tipos de gostosuras diferentes
+        chance = random.randint(1, 11)  # 12 tipos de gostosuras diferentes
         print(f"DEBUG: Chance sorteada: {chance}")
         url_imagem = "https://pub-6f23ef52e8614212a14d24b0cf55ae4a.r2.dev/BQACAgEAAxkBAAIcfGcVeT6gaLXd0DKA7aihUQJfV62hAAJMBQACSV6xRD2puYHoSyajNgQ.jpg"
 
@@ -2241,9 +2241,9 @@ def realizar_halloween_gostosura(user_id, chat_id):
             realizar_combo_gostosura(user_id, chat_id)
 
         elif chance == 6:
-            print(f"DEBUG: Encontrando abóbora para o usuário {user_id}")
-            bot.send_photo(chat_id, url_imagem, caption="🎃 Você encontrou uma abóbora mística cheia de surpresas!")
-            encontrar_abobora(user_id, chat_id)
+            print(f"DEBUG: Iniciando compartilhamento de gostosura para o usuário {user_id}")
+            bot.send_photo(chat_id, url_imagem, caption="🎁 Você ganhou um presente mágico! Escolha alguém para compartilhar.")
+            iniciar_compartilhamento(user_id, chat_id)
 
         elif chance == 7:
             print(f"DEBUG: Ganhando caixa misteriosa para o usuário {user_id}")
@@ -2278,17 +2278,42 @@ def realizar_halloween_gostosura(user_id, chat_id):
             # Chamando a nova função para configurar o boost
             adicionar_boost(user_id, 'cenouras', multiplicador, duracao_horas, chat_id)
 
-
         elif chance == 12:
-            print(f"DEBUG: Iniciando compartilhamento de gostosura para o usuário {user_id}")
-            bot.send_photo(chat_id, url_imagem, caption="🎁 Você ganhou um presente mágico! Escolha alguém para compartilhar.")
-            iniciar_compartilhamento(user_id, chat_id)
+            print(f"DEBUG: Adicionando bônus de sorte para o usuário {user_id}")
+            duracao_horas = random.randint(1, 3)
+            multiplicador_sorte = 1.5  # Aumenta a chance em 50%
+            adicionar_bonus_sorte(user_id, multiplicador_sorte, duracao_horas, chat_id)
+            bot.send_photo(
+                chat_id,
+                url_imagem,
+                caption=f"🍀 Você recebeu um Bônus de Sorte! Suas chances de receber recompensas melhores foram aumentadas em {int((multiplicador_sorte - 1) * 100)}% nas próximas {duracao_horas} horas!"
+            )
 
     except Exception as e:
         print(f"DEBUG: Erro ao realizar gostosura para o usuário {user_id}: {e}")
         traceback.print_exc()
         bot.send_message(user_id, "⚠️ Ocorreu um erro ao realizar a gostosura.")
 
+def adicionar_bonus_sorte(user_id, multiplicador_sorte, duracao_horas, chat_id):
+    try:
+        conn, cursor = conectar_banco_dados()
+        fim_bonus = datetime.now() + timedelta(hours=duracao_horas)
+
+        # Inserir ou atualizar o bônus de sorte na tabela 'boosts'
+        cursor.execute("""
+            INSERT INTO boosts (id_usuario, tipo_boost, multiplicador, fim_boost)
+            VALUES (%s, 'sorte', %s, %s)
+            ON DUPLICATE KEY UPDATE multiplicador = %s, fim_boost = %s
+        """, (user_id, multiplicador_sorte, fim_bonus, multiplicador_sorte, fim_bonus))
+        
+        conn.commit()
+        print(f"DEBUG: Bônus de sorte de {multiplicador_sorte}x adicionado para o usuário {user_id} por {duracao_horas} horas.")
+
+    except Exception as e:
+        print(f"Erro ao adicionar Bônus de Sorte: {e}")
+
+    finally:
+        fechar_conexao(cursor, conn)
 
 def mudar_favorito_usuario(user_id,chat_id):
     try:

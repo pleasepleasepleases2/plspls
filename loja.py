@@ -9,6 +9,7 @@ from telebot import types
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 from cachetools import cached, TTLCache
 
+
 # Cache com validade de 24 horas (86400 segundos)
 loja_cache = TTLCache(maxsize=100, ttl=43200)
 
@@ -541,6 +542,24 @@ def handle_callback_loja_loja(call):
         newrelic.agent.record_exception()    
         print(f"Erro ao processar loja_loja_callback: {e}")
 
+def verificar_desconto_loja(user_id):
+    """
+    Verifica se o usuário tem um desconto ativo na loja.
+    """
+    conn, cursor = conectar_banco_dados()
+    try:
+        cursor.execute("""
+            SELECT fim_desconto FROM descontos_loja 
+            WHERE id_usuario = %s AND fim_desconto > NOW()
+        """, (user_id,))
+        resultado = cursor.fetchone()
+        return resultado is not None
+    except Exception as e:
+        print(f"Erro ao verificar desconto na loja: {e}")
+        return False
+    finally:
+        fechar_conexao(cursor, conn)
+
 def handle_callback_compra(call):
     try:
         chat_id = call.message.chat.id
@@ -549,15 +568,17 @@ def handle_callback_compra(call):
         id_usuario = parts[2]
         original_message_id = parts[3]
         conn, cursor = conectar_banco_dados()
+        
+        # Verifica se o usuário possui desconto ativo
+        desconto_ativo = verificar_desconto_loja(id_usuario)
+        preco = 3 if desconto_ativo else 5  # Aplica desconto se ativo
+
         cursor.execute("SELECT cenouras FROM usuarios WHERE id_usuario = %s", (id_usuario,))
         result = cursor.fetchone()
+        qnt_cenouras = int(result[0]) if result else 0
 
-        if result:
-            qnt_cenouras = int(result[0])
-        else:
-            qnt_cenouras = 0
-
-        if qnt_cenouras >= 5:
+        if qnt_cenouras >= preco:
+            # Seleciona uma carta aleatória da categoria do dia
             cursor.execute(
                 "SELECT loja.id_personagem, personagens.nome, personagens.subcategoria, personagens.emoji "
                 "FROM loja "
@@ -569,7 +590,7 @@ def handle_callback_compra(call):
 
             if carta_comprada:
                 id_personagem, nome, subcategoria, emoji = carta_comprada
-                mensagem = f"Você tem {qnt_cenouras} cenouras. \nDeseja usar 5 para comprar o seguinte peixe: \n\n{emoji} {id_personagem} - {nome} \nde {subcategoria}?"
+                mensagem = f"Você tem {qnt_cenouras} cenouras.\nDeseja usar {preco} para comprar o peixe:\n\n{emoji} {id_personagem} - {nome} de {subcategoria}?"
                 keyboard = telebot.types.InlineKeyboardMarkup()
                 keyboard.row(
                     telebot.types.InlineKeyboardButton(text="Sim", callback_data=f'confirmar_compra_{categoria}_{id_usuario}'),
@@ -585,10 +606,9 @@ def handle_callback_compra(call):
             else:
                 print(f"Nenhuma carta disponível para compra na categoria {categoria} hoje.")
         else:
-            print("Usuário não tem cenouras suficientes para comprar.")
+            bot.send_message(chat_id, "Desculpe, você não tem cenouras suficientes para realizar esta compra.")
     except Exception as e:
         print(f"Erro ao processar a compra: {e}")
-        newrelic.agent.record_exception()    
     finally:
         fechar_conexao(cursor, conn)
 

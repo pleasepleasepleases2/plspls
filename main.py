@@ -2595,10 +2595,15 @@ def realizar_halloween_travessura(user_id, chat_id, nome):
         traceback.print_exc()
         bot.send_message(user_id, "Ocorreu um erro ao realizar a travessura.")
 
+import threading
+import random
+from telebot.types import ReactionTypeEmoji
+
 def iniciar_travessura_grupal(chat_id, duracao_segundos=120):
     """Inicia a travessura grupal, executando travessuras em mensagens no grupo por uma duração limitada."""
     travessura_ativa[chat_id] = True
     bot.send_message(chat_id, "👻 A Travessura Grupal começou! Todos estão sob efeito da travessura.")
+    print(f"DEBUG: Travessura Grupal iniciada no chat {chat_id} por {duracao_segundos} segundos.")
 
     # Agenda o encerramento da travessura
     threading.Timer(duracao_segundos, finalizar_travessura_grupal, [chat_id]).start()
@@ -2617,6 +2622,7 @@ def ecoar_mensagem(chat_id, message):
     
     eco_mensagem = random.choice(respostas_eco)
     bot.send_message(chat_id, eco_mensagem, parse_mode="HTML", reply_to_message_id=message.message_id)
+    print(f"DEBUG: Ecoou mensagem no chat {chat_id} em resposta a {message.message_id}: {eco_mensagem}")
 
 # Ativar uma lista de emojis específicos para reações
 reacoes_emoji = [
@@ -2642,6 +2648,7 @@ def reagir_com_emoji(chat_id, message):
         print(f"DEBUG: Reação {reacao} definida na mensagem {message.message_id} no chat {chat_id}")
     except Exception as e:
         print(f"Erro ao definir reação: {e}")
+
 def resposta_direta(chat_id, message):
     """Responde diretamente com uma frase engraçada."""
     respostas_diretas = [
@@ -2656,11 +2663,13 @@ def resposta_direta(chat_id, message):
 
     resposta = random.choice(respostas_diretas)
     bot.send_message(chat_id, resposta, reply_to_message_id=message.message_id)
+    print(f"DEBUG: Respondeu diretamente no chat {chat_id} em resposta a {message.message_id}: {resposta}")
 
 def travessura_grupal(chat_id, message):
     """Executa uma travessura grupal escolhendo entre eco, reação e resposta direta, enquanto ativa."""
     if travessura_ativa.get(chat_id):
         escolha = random.choice(['eco', 'reacao', 'resposta'])
+        print(f"DEBUG: Escolha da travessura grupal no chat {chat_id} para mensagem {message.message_id}: {escolha}")
         
         if escolha == 'eco':
             ecoar_mensagem(chat_id, message)
@@ -2674,6 +2683,7 @@ def finalizar_travessura_grupal(chat_id):
     if travessura_ativa.get(chat_id):
         del travessura_ativa[chat_id]
         bot.send_message(chat_id, "🎃 A Travessura Grupal acabou! Vocês estão livres... por enquanto.")
+        print(f"DEBUG: Travessura Grupal finalizada no chat {chat_id}")
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("pronomes_"))
 def pronomes(call):

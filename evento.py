@@ -179,23 +179,29 @@ def handle_evento_command(message):
         user = message.from_user
         usuario = user.first_name
         
-        comando_parts = message.text.split('/evento ', 1)[1].strip().lower().split(' ')
-        if len(comando_parts) >= 2:
-            evento = comando_parts[1]
-            subcategoria = ' '.join(comando_parts[1:])
-        else:
+        comando_parts = message.text.split(maxsplit=2)
+        
+        # Verificação para garantir que o comando tenha pelo menos dois argumentos
+        if len(comando_parts) < 3:
             resposta = "Comando inválido. Use /evento <evento> <subcategoria>."
             bot.send_message(message.chat.id, resposta)
             return
+        
+        # Extrair evento e subcategoria corretamente
+        evento = comando_parts[1].strip().lower()
+        subcategoria = comando_parts[2].strip().lower()
 
-        sql_evento_existente = f"SELECT DISTINCT evento FROM evento WHERE evento = '{evento}'"
-        cursor.execute(sql_evento_existente)
+        # Usar SQL com parâmetros para garantir segurança e precisão na consulta
+        sql_evento_existente = "SELECT DISTINCT evento FROM evento WHERE evento = %s"
+        cursor.execute(sql_evento_existente, (evento,))
         evento_existente = cursor.fetchone()
+        
         if not evento_existente:
             resposta = f"Evento '{evento}' não encontrado na tabela de eventos."
             bot.send_message(message.chat.id, resposta)
             return
 
+        # Verificar se é um comando de subcategoria "s" ou "f"
         if message.text.startswith('/evento s'):
             resposta_completa = comando_evento_s(id_usuario, evento, subcategoria, cursor, usuario)
         elif message.text.startswith('/evento f'):
@@ -205,6 +211,7 @@ def handle_evento_command(message):
             bot.send_message(message.chat.id, resposta)
             return
 
+        # Exibir resposta e botões de navegação, se houver mais páginas
         if isinstance(resposta_completa, tuple):
             subcategoria_pesquisada, lista, total_pages = resposta_completa
             resposta = f"{lista}\n\nPágina 1 de {total_pages}"
@@ -216,6 +223,7 @@ def handle_evento_command(message):
             bot.send_message(message.chat.id, resposta, reply_markup=markup)
         else:
             bot.send_message(message.chat.id, resposta_completa)
+
     except Exception as e:
         traceback.print_exc()
     finally:

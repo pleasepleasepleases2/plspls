@@ -24,6 +24,10 @@ from mutagen.mp3 import MP3
 from mutagen.id3 import ID3
 from io import BytesIO
 import tempfile
+from telegram import ReactionType  # A biblioteca suporta Reactions?
+
+# Estado da travessura grupal
+travessura_ativa = {}
 #Análise e Manipulação de Strings e Web
 import re
 import Levenshtein
@@ -2590,6 +2594,82 @@ def realizar_halloween_travessura(user_id, chat_id, nome):
         print(f"DEBUG: Erro ao realizar travessura para o usuário {user_id}: {e}")
         traceback.print_exc()
         bot.send_message(user_id, "Ocorreu um erro ao realizar a travessura.")
+
+def iniciar_travessura_grupal(chat_id, duracao_segundos=120):
+    """Inicia a travessura grupal, executando travessuras em mensagens no grupo por uma duração limitada."""
+    travessura_ativa[chat_id] = True
+    bot.send_message(chat_id, "👻 A Travessura Grupal começou! Todos estão sob efeito da travessura.")
+
+    # Agenda o encerramento da travessura
+    threading.Timer(duracao_segundos, finalizar_travessura_grupal, [chat_id]).start()
+
+def ecoar_mensagem(chat_id, message):
+    """Escolhe uma resposta engraçada e ecoa como reply."""
+    respostas_eco = [
+        f"💬 mimimi: <i>{message.text}</i>",
+        f"💬 disse a bobona: <i>{message.text}</i>",
+        f"💬 nossa, que emocionante... 😴 <i>{message.text}</i>",
+        f"💬 traduzindo: 'blá blá blá' <i>{message.text}</i>",
+        f"💬 mais um monólogo... <i>{message.text}</i>",
+        f"💬 alguém achando que está arrasando: <i>{message.text}</i>",
+        f"💬 resumo: zzz... <i>{message.text}</i>",
+    ]
+    
+    eco_mensagem = random.choice(respostas_eco)
+    bot.send_message(chat_id, eco_mensagem, parse_mode="HTML", reply_to_message_id=message.message_id)
+
+def reagir_com_emoji(chat_id, message):
+    """Define uma reação de emoji engraçada na mensagem."""
+    reacoes_emoji = [
+        ReactionType.THUMBS_DOWN,
+        ReactionType.CLAP,
+        ReactionType.ROFL,
+        ReactionType.EYE_ROLL,
+        ReactionType.ZZZ,
+        ReactionType.WTF,
+        ReactionType.BRAIN_EXPLODE,
+    ]
+
+    reacao = random.choice(reacoes_emoji)
+    bot.setMessageReaction(
+        chat_id=chat_id,
+        message_id=message.message_id,
+        reaction=[reacao],
+        is_big=True
+    )
+
+def resposta_direta(chat_id, message):
+    """Responde diretamente com uma frase engraçada."""
+    respostas_diretas = [
+        "🤔 Interessante... se fosse verdade.",
+        "✨ Nossa, fala mais, tô quase dormindo.",
+        "🧐 Sério mesmo? Conta pra alguém que se importa!",
+        "😴 Obrigado por essa informação... zzz...",
+        "💀 Como é mesmo? Ah, esquece, nem interessa.",
+        "😂 Hahaha, boa piada... era piada, né?",
+        "😳 Uau, chocante! Só que não.",
+    ]
+
+    resposta = random.choice(respostas_diretas)
+    bot.send_message(chat_id, resposta, reply_to_message_id=message.message_id)
+
+def travessura_grupal(chat_id, message):
+    """Executa uma travessura grupal escolhendo entre eco, reação e resposta direta, enquanto ativa."""
+    if travessura_ativa.get(chat_id):
+        escolha = random.choice(['eco', 'reacao', 'resposta'])
+        
+        if escolha == 'eco':
+            ecoar_mensagem(chat_id, message)
+        elif escolha == 'reacao':
+            reagir_com_emoji(chat_id, message)
+        elif escolha == 'resposta':
+            resposta_direta(chat_id, message)
+
+def finalizar_travessura_grupal(chat_id):
+    """Encerra a travessura grupal, removendo o estado ativo."""
+    if travessura_ativa.get(chat_id):
+        del travessura_ativa[chat_id]
+        bot.send_message(chat_id, "🎃 A Travessura Grupal acabou! Vocês estão livres... por enquanto.")
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("pronomes_"))
 def pronomes(call):

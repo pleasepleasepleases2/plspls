@@ -90,18 +90,66 @@ def processar_verificar_e_cenourar(message, bot):
         if conn:
             conn.close()
 
-# Aqui removemos o split, pois estamos passando diretamente uma lista de ids_personagens
+from datetime import datetime, timedelta
+
+def adicionar_super_boost_cenouras(user_id, multiplicador, duracao_horas, chat_id):
+    try:
+        conn, cursor = conectar_banco_dados()
+        fim_boost = datetime.now() + timedelta(hours=duracao_horas)
+
+        # Inserir ou atualizar o boost de cenouras na tabela 'boosts'
+        cursor.execute("""
+            INSERT INTO boosts (id_usuario, tipo_boost, multiplicador, fim_boost)
+            VALUES (%s, 'cenouras', %s, %s)
+            ON DUPLICATE KEY UPDATE multiplicador = %s, fim_boost = %s
+        """, (user_id, multiplicador, fim_boost, multiplicador, fim_boost))
+        
+        conn.commit()
+
+        bot.send_message(
+            chat_id, 
+            f"🎃✨ *Um feitiço raro foi lançado!* 🌿 Todas as cenouras que você colher serão multiplicadas por {multiplicador} nas próximas {duracao_horas} horas. Aproveite essa magia enquanto dura! 🍂🥕",
+            parse_mode="Markdown"
+        )
+    
+    except Exception as e:
+        print(f"Erro ao adicionar Super Boost de Cenouras: {e}")
+    
+    finally:
+        fechar_conexao(cursor, conn)
+
+def verificar_boost_cenouras(user_id):
+    """Verifica se o boost de cenouras está ativo e retorna o multiplicador e tempo restante."""
+    conn, cursor = conectar_banco_dados()
+    try:
+        cursor.execute("SELECT multiplicador, fim_boost FROM boosts WHERE id_usuario = %s AND tipo_boost = 'cenouras'", (user_id,))
+        resultado = cursor.fetchone()
+        if resultado:
+            multiplicador, fim_boost = resultado
+            if datetime.now() < fim_boost:
+                # Boost ainda está ativo
+                return multiplicador, (fim_boost - datetime.now()).total_seconds()
+        return 1, 0  # Sem boost
+    except Exception as e:
+        print(f"Erro ao verificar o boost de cenouras: {e}")
+        return 1, 0
+    finally:
+        fechar_conexao(cursor, conn)
+
 def cenourar_carta(call, id_usuario, ids_personagens_str):
     try:
         conn, cursor = conectar_banco_dados()
         chat_id = call.message.chat.id
         message_id = call.message.message_id
 
-        # Como ids_personagens já é uma lista, não precisamos de split.
+        # Recupera os IDs das cartas
         ids_personagens = ids_personagens_str if isinstance(ids_personagens_str, list) else ids_personagens_str.split(',')
         embaralhamento_ativo = verificar_travessura_ativa(id_usuario)
         cartas_cenouradas = []
         cartas_nao_encontradas = []
+
+        # Verifica boost ativo e aplica o multiplicador
+        multiplicador, _ = verificar_boost_cenouras(id_usuario)
 
         for id_personagem in ids_personagens:
             cursor.execute("SELECT quantidade FROM inventario WHERE id_usuario = %s AND id_personagem = %s", (id_usuario, id_personagem))
@@ -113,11 +161,10 @@ def cenourar_carta(call, id_usuario, ids_personagens_str):
                                (nova_quantidade, id_usuario, id_personagem))
                 conn.commit()
 
-                cursor.execute("SELECT cenouras FROM usuarios WHERE id_usuario = %s", (id_usuario,))
-                cenouras = cursor.fetchone()[0]  # Pegando a quantidade de cenouras
+                # Multiplica as cenouras caso o boost esteja ativo
+                cenouras_ganhas = 1 * multiplicador
 
-                novas_cenouras = cenouras + 1
-                cursor.execute("UPDATE usuarios SET cenouras = %s WHERE id_usuario = %s", (novas_cenouras, id_usuario))
+                cursor.execute("UPDATE usuarios SET cenouras = cenouras + %s WHERE id_usuario = %s", (cenouras_ganhas, id_usuario))
                 conn.commit()
 
                 cartas_cenouradas.append(id_personagem)
@@ -126,7 +173,7 @@ def cenourar_carta(call, id_usuario, ids_personagens_str):
 
         # Mensagens de confirmação
         if cartas_cenouradas:
-            mensagem_final = f"🥕<b> Agora você está mais rico em cenouras!</b>\nCartas cenouradas com sucesso:\n\n{', '.join(cartas_cenouradas)}"
+            mensagem_final = f"🥕<b> Cenouras colhidas com sucesso!</b> Multiplicador aplicado: x{multiplicador}\nCartas cenouradas: {', '.join(cartas_cenouradas)}"
             mensagem_final = truncar_texto(mensagem_final) if embaralhamento_ativo else mensagem_final
             bot.edit_message_text(chat_id=chat_id, message_id=message_id, text=mensagem_final, parse_mode="HTML")
 

@@ -2610,6 +2610,7 @@ def realizar_halloween_travessura(user_id, chat_id, nome,messsage):
             iniciar_labirinto(user_id,chat_id)
 
         elif chance == 13:
+            print(f"DEBUG: travessura acionada 13")
             executar_travessura_grupal(chat_id, user_id)
         elif chance == 14:
             # Troca de ordem nos comandos de troca

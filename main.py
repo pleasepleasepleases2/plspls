@@ -2486,117 +2486,35 @@ def realizar_halloween_travessura(user_id, chat_id, nome):
             # Perder cenouras
             cenouras_perdidas = random.randint(20, 50)
             diminuir_cenouras(user_id, cenouras_perdidas)
-            bot.send_message(chat_id, f"👻 Travessura! Você perdeu {cenouras_perdidas} cenouras!")
+            bot.send_photo(chat_id, url_imagem, caption=f"👻 Travessura! Você perdeu {cenouras_perdidas} cenouras!")
 
         elif chance == 2:
             # Mudar o nome para algo engraçado
-            nome_novo = random.choice([
-                "Zé Bobo", 
-                "Palhaço Triste", 
-                "Mestre das Travessuras", 
-                "Tio da Pamonha", 
-                "Príncipe da Zona Leste", 
-                "Ninja da Calçada", 
-                "Sábio do Pastel", 
-                "Lord do Desespero", 
-                "Chiclete Grudento", 
-                "Salsicha Triste", 
-                "Bobo da Corte", 
-                "Rei do Nada", 
-                "Menino de Ouro", 
-                "Fantasma do Zap", 
-                "Sheik da Quebrada",  
-                "Ícone dos Perdidos", 
-                "Mestre dos Memes", 
-                "Guru das Piadas Ruins", 
-                "Pé de Pano", 
-                "Zé das Couves", 
-                "Vendedor de Ilusões",
-                "Tá Tranquilo, Tá Favorável", 
-                "Cara do Tá Louco Bicho", 
-                "Famoso Quem?", 
-                "Cadê o My Precious?", 
-                "Bicho Solto do Zap", 
-                "Boneco de Olinda", 
-                "Neymar Caído", 
-                "Menino Neymar", 
-                "Mr. Catra", 
-                "Senhor Barriga", 
-                "Mainha da Internet", 
-                "Dono da Kombi", 
-                "A Tia do Pavê", 
-                "Agostinho Carrara", 
-                "Seu Madruga", 
-                "Judite do Telefone", 
-                "Lineu Silva", 
-                "Kiko", 
-                "Bebel Carrara", 
-                "Seu Peru", 
-                "Rolando Lero",  
-                "Cabeção", 
-                "Paulão da Regulagem", 
-                "Eterno Beiçola", 
-                "Didi Mocó", 
-                "Richarlissom José Tite Junior Paquetá piuzinho Lucas burrao da Silva 🇧🇷🇧🇷🇧🇷", 
-                "Jaiminho Carteiro", 
-                "Dona Florinda", 
-                "Boça",
-                "Lindah💍", 
-                "Gattinha😋", 
-                "Maravilhosa🌸", 
-                "TãÖö_LïNdÄa 😍😍👏❤️💘💍💑👑💞🍃 ", 
-                "RöStÏnHöÖ_Dë_PrÏnCëSäÄ🙆👑✊😍😍😘💍💞", 
-                "seloko fidelidade e pra cachorro🔥nois e patife", 
-                "sai fora pvt", 
-                "Boça",
-                "Rei dos Áudios de 7 Minutos"
-            ])
+            nome_novo = random.choice(["Zé Bobo",  "Palhaço Triste", "Mestre das Travessuras", "Tio da Pamonha", "Príncipe da Zona Leste", "Ninja da Calçada", "Sábio do Pastel", 
+"Lord do Desespero", "Chiclete Grudento", "Salsicha Triste", "Bobo da Corte","Rei do Nada","Menino de Ouro", "Fantasma do Zap", "Sheik da Quebrada",  
+"Ícone dos Perdidos", "Mestre dos Memes", "Guru das Piadas Ruins",  "Pé de Pano", "Zé das Couves", "Vendedor de Ilusões","Tá Tranquilo, Tá Favorável", 
+"Cara do Tá Louco Bicho", "Famoso Quem?", "Cadê o My Precious?", "Bicho Solto do Zap", "Boneco de Olinda", "Neymar Caído", "Menino Neymar", "Mr. Catra", 
+"Senhor Barriga", "Mainha da Internet", "Dono da Kombi", "A Tia do Pavê", "Agostinho Carrara",  "Seu Madruga", "Judite do Telefone",  "Lineu Silva", 
+"Kiko","Bebel Carrara", "Seu Peru","Rolando Lero", "Paula Tejando", "Cabeção", "Paulão da Regulagem", "Eterno Beiçola", "Didi Mocó", 
+"Richarlissom José Tite Junior Paquetá piuzinho Lucas burrao da Silva 🇧🇷🇧🇷🇧🇷", "Jaiminho Carteiro", "Dona Florinda","Boça","Lindah💍", "Gattinha😋", "Maravilhosa🌸", "TãÖö_LïNdÄa 😍😍👏❤️💘💍💑👑💞🍃 ", "RöStÏnHöÖ_Dë_PrÏnCëSäÄ🙆👑✊😍😍😘💍💞", "seloko fidelidade e pra cachorro🔥nois e patife", "sai fora pvt", "Boça", "Rei dos Áudios de 7 Minutos"])
             mudar_nome_usuario(user_id, nome_novo, chat_id)
 
         elif chance == 3:
             # Mudar a música para Zé Felipe
-            nova_musica = random.choice([
-                "Dança do Créu - MC Créu",
-                "Rap do Zé Felipe", 
-                "Bandido - Zé Felipe", 
-                "Malvada - Zé Felipe",
-                "Cachorrinho - Kelly Key", 
-                "Eguinha Pocotó - MC Serginho e Lacraia",
-                "Morango do Nordeste - Karametade",
-                "Adoleta - Kelly Key",
-                "Vou Passar Cerol na Mão - Bonde do Tigrão",
-                "Dança do Quadrado",
-                "Piririm Pom Pom - As Chiquititas",
-                "Vem Ni Mim Que Eu Tô Carente - DJ Sandrinho",
-                "Ragatanga - Rouge",
-                "Na Boquinha da Garrafa - Cia. do Pagode",
-                "Tô Nem Aí - Larissa Manoela",
-                "Só Love - Claudinho & Buchecha",
-                "Éguinha Mijona - Deize Tigrona",
-                "Eu Quero Tchu, Eu Quero Tcha - João Lucas & Marcelo",
-                "A Barata da Vizinha - MC Batata",
-                "É o Tchan no Havaí - É o Tchan",
-                "Festa no Apê - Latino",
-                "Me Leva - Latino",
-                "Amigo Fura Olho - Latino",
-                "Renata Ingrata - Latino",
-                "Cátia Catchaça - Latino",
-                "Caneta Azul - Manoel Gomes",
-                "Malandramente - Dennis e MCs Nandinho & Nego Bam",
-                "Ai Se Eu Te Pego - Michel Teló",
-                "Saudade de Ex - Gaab e MC Davi",
-                "Tô Comendo Água - Barões da Pisadinha",
-                "Chupa Que é de Uva - MC Jair da Rocha",
-                "Despedida de Solteiro - Latino",
-                "Dança do Vampiro - Asa de Águia"
+            nova_musica = random.choice(["Dança do Créu - MC Créu","Rap do Zé Felipe", "Bandido - Zé Felipe", "Malvada - Zé Felipe","Cachorrinho - Kelly Key", 
+"Eguinha Pocotó - MC Serginho e Lacraia","Morango do Nordeste - Karametade","Adoleta - Kelly Key","Vou Passar Cerol na Mão - Bonde do Tigrão","Dança do Quadrado",
+"Piririm Pom Pom - As Chiquititas","Vem Ni Mim Que Eu Tô Carente - DJ Sandrinho","Ragatanga - Rouge","Na Boquinha da Garrafa - Cia. do Pagode","Tô Nem Aí - Larissa Manoela",
+"Só Love - Claudinho & Buchecha","Éguinha Mijona - Deize Tigrona","Eu Quero Tchu, Eu Quero Tcha - João Lucas & Marcelo","A Barata da Vizinha - MC Batata",
+"É o Tchan no Havaí - É o Tchan","Festa no Apê - Latino","Me Leva - Latino","Amigo Fura Olho - Latino","Renata Ingrata - Latino","Cátia Catchaça - Latino","Caneta Azul - Manoel Gomes",
+"Malandramente - Dennis e MCs Nandinho & Nego Bam","Ai Se Eu Te Pego - Bang Chan","Saudade de Ex - Gaab e MC Davi","Tô Comendo Água - Barões da Pisadinha",
+"Chupa Que é de Uva - MC Jair da Rocha","Despedida de Solteiro - Latino","Dança do Vampiro - Asa de Águia"
             ])
             mudar_musica_usuario(user_id, nova_musica,chat_id)
 
         elif chance == 4:
             # Mudar a bio para uma bio engraçada baseada em memes
             bio_nova = random.choice([
-                "RECEITA DO LÓLÓ ORIGINAL:\nO intuito desse texto é viralizar e, por sorte, melhorar a qualidade do lóló encontrado no carnaval do Brasil. Com os anos, os lolozeiros têm depreciado a veracidade do no nosso amado lóló e nos fornecido um produto de qualidade inferior.\nEntão vamos lá:",
-                "Oi gente sou tenente da PMDF e achei o celular desse patriota no Congresso, infelizmente ele veio a óbito lutando pelo nosso país. Sejam sinceros (mulheres apenas) o que vocês achavam dele? Tinham crush nele? Gostavam dele? deem uma nota de 1 a 10.o",
+                "RECEITA DO LÓLÓ ORIGINAL:\nO intuito desse texto é viralizar e, por sorte, melhorar a qualidade do lóló encontrado no carnaval do Brasil. Com os anos, os lolozeiros têm depreciado a veracidade do no nosso amado lóló e nos fornecido um produto de qualidade inferior.\nEntão vamos lá:","Oi gente sou tenente da PMDF e achei o celular desse patriota no Congresso, infelizmente ele veio a óbito lutando pelo nosso país. Sejam sinceros (mulheres apenas) o que vocês achavam dele? Tinham crush nele? Gostavam dele? deem uma nota de 1 a 10.o",
                 "👧🏽: *bora toma uma*\n👩🏿: *bora* ...\n👧🏽: *bora pra festa* .?\n👩🏿: *bora*...\n👧🏽: *Bora pra igreja*?\n👩🏿: *Se der eu vou*\n👧🏽: *Blz quando Deus* *volta se der ele ti leva*.\n*Ti juro só repasse se você não tiver vergonha de Deus*\n*Mais é só se vc tever coragem!!😉*",
                 'Defesa Pessoal 😅\nSe alguém 👤👤 te disser: 🗨️\n"és um narigudo!"👃\ntu respondes: 🗣️\nJá olhaste 👀👀 bem pra ti?!\nCom esse focinho de Javali? 🐗\no mais raro 💎 que eu já vi. 👁️\nTentaste uma ofensa 🤬🤬 menino 🧒\nmas eu nem senti. 😁😁\nhe hee 😉😉\ntoma lá 😎',
                 "relíquia da ZN 🚩🇸🇲 dinda do gael👩‍👦filha da dona ivone👵 mãe do juninho 👩‍🍼 namorada do do marcinho do BRX 👩‍❤️‍👨",
@@ -2694,20 +2612,20 @@ def realizar_halloween_travessura(user_id, chat_id, nome):
                     ON DUPLICATE KEY UPDATE tipo_travessura = VALUES(tipo_travessura), fim_travessura = VALUES(fim_travessura)
                 """, (user_id, 'embaralhar_mensagem', fim_travessura))
             conn.commit()
-            bot.send_message(chat_id, f"🎃 Travessura! Suas mensagens estarão embaralhadas temporariamente. ΛƧ MΣПƧΛGΣПƧ PӨDΣM ΣƧƬΛЯ ЦM PӨЦᄃӨ... ΣƧƬЯΛПΗΛƧ.")
+            bot.send_photo(chat_id, url_imagem, caption="📜 Travessura! Suas mensagens estarão embaralhadas temporariamente.")
 
         elif chance == 9:
             # Pega-pega (passar uma praga para outros usuários)
-            bot.send_message(chat_id, f"👹 Travessura! Você foi amaldiçoado, use /praga para passar a praga para outra pessoa.")
+            bot.send_photo(chat_id, url_imagem, caption=f"👹 Travessura! Você foi amaldiçoado, use /praga para passar a praga para outra pessoa.")
             iniciar_pega_pega(chat_id,user_id,nome)
 
         elif chance == 10:
             # Nada acontece
-            bot.send_message(chat_id, "🎁 Gostosura! Ah, não, era uma travessura! Não há recompensa para você dessa vez.")
+            bot.send_photo(chat_id, url_imagem, caption="🎁 Gostosura! Ah, não, era uma travessura! Não há recompensa para você dessa vez.")
 
         elif chance == 11:
             # Jogo da velha com um fantasma
-            bot.send_message(chat_id, "👻 Um fantasma te desafiou para um jogo da velha! Se você ganhar, a travessura será evitada.")
+            bot.send_photo(chat_id, url_imagem, caption="👻 Um fantasma te desafiou para um jogo da velha! Se você ganhar, a travessura será evitada.")
             iniciar_jogo_da_velha(chat_id,user_id)
 
         elif chance == 12:
@@ -2770,10 +2688,6 @@ def realizar_halloween_travessura(user_id, chat_id, nome):
         traceback.print_exc()
         bot.send_message(user_id, "Ocorreu um erro ao realizar a travessura.")
 
-
-
-
-
 @bot.callback_query_handler(func=lambda call: call.data.startswith("pronomes_"))
 def pronomes(call):
     atualizar_pronomes(call)
@@ -2804,9 +2718,6 @@ def callback_escolha_porta(call):
     # Processar o prêmio (cenouras, VIP, cartas etc.)
     processar_premio(user_id, premio)
 
-@bot.message_handler(commands=['jogodavelha'])
-def handle_jogo_da_velha(message):
-    iniciar_jogo(bot, message)
 
 @bot.callback_query_handler(func=lambda call: call.data.isdigit())
 def handle_jogada(call):

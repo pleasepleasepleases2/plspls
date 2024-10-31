@@ -1857,7 +1857,7 @@ def recuperar_premios_escolha(user_id):
     fechar_conexao(cursor, conn)
     return premios if premios else ["", "", ""]
 
-def conceder_vip(user_id, dias, nome):
+def conceder_vip(user_id, dias):
     conn, cursor = conectar_banco_dados()
     grupo_vip = -4546359573  # ID do grupo para enviar mensagem
     alternativa = f"{random.randint(50, 100)} cenouras"  # Recompensa alternativa se já for VIP
@@ -1894,12 +1894,9 @@ def conceder_vip(user_id, dias, nome):
         # Enviar mensagem ao grupo sobre o novo VIP
         bot.send_message(
             grupo_vip, 
-            f"🎉 Novo VIP concedido!\nUsuário: {nome}\nPeríodo: {dias} dias\nData de Início: {data_pagamento.strftime('%d/%m/%Y')}"
+            f"🎉 Novo VIP concedido!\nUsuário: {user_id}\nPeríodo: {dias} dias\nData de Início: {data_pagamento.strftime('%d/%m/%Y')}"
         )
 
-        # Notificar o usuário sobre o novo status VIP
-        bot.send_message(user_id, f"🌟 Parabéns, {nome}! Você agora é VIP por {dias} dias. Aproveite seus benefícios!")
-        
     except Exception as e:
         print(f"Erro ao conceder VIP: {e}")
     finally:

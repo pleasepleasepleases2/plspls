@@ -15,6 +15,7 @@ from mysql.connector import Error
 import time
 import datetime
 from datetime import datetime, timedelta, date
+from labirinto import *
 import datetime as dt_module
 from apscheduler.schedulers.background import BackgroundScheduler
 from pytz import utc
@@ -2302,7 +2303,7 @@ def mover_posicao(posicao_atual, direcao, labirinto):
         return (x, y - 1)
     return posicao_atual  # Movimento inválido, retorna posição atual
 
-from labirintos import escolher_labirinto
+
 
 # Exemplo de como iniciar o labirinto com labirinto importado
 def iniciar_labirinto(user_id, chat_id):

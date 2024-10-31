@@ -150,7 +150,7 @@ def handle_fazer_pedido(call):
     
     conn, cursor = conectar_banco_dados()
     try:
-        # Verificar se o usuário está bloqueado para a ação "raspadinha"
+        # Verificar bloqueio para a ação "raspadinha"
         cursor.execute("""
             SELECT fim_bloqueio FROM bloqueios 
             WHERE id_usuario = %s AND acao = 'raspadinha' AND fim_bloqueio > NOW()
@@ -160,12 +160,12 @@ def handle_fazer_pedido(call):
         if bloqueio:
             fim_bloqueio = bloqueio[0]
             tempo_restante = fim_bloqueio - datetime.now()
-            hours, remainder = divmod(tempo_restante.total_seconds(), 3600)
-            minutes, _ = divmod(remainder, 60)
-            image_url = "https://telegra.ph/file/94c9c66af4ca4d6f0a3e5.jpg"
-            caption = (f"<b>Travessura ativa!</b> Você está bloqueado de fazer pedidos. "
-                       f"Tente novamente em {int(hours)} horas e {int(minutes)} minutos.")
-            bot.send_photo(chat_id=call.message.chat.id, photo=image_url, caption=caption, parse_mode="HTML")
+            horas, remainder = divmod(tempo_restante.total_seconds(), 3600)
+            minutos, _ = divmod(remainder, 60)
+            bot.send_message(
+                message.chat.id, 
+                f"🎰 Travessura! Você está bloqueado de usar a fonte por mais {int(horas)} horas e {int(minutos)} minutos."
+            )
             return
         
         # Verificar tempo do último pedido de sorte

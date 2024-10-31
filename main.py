@@ -257,78 +257,7 @@ def exibir_cartas_categoria(call):
         markup.add(telebot.types.InlineKeyboardButton(text=str(idx), callback_data=f"escolher_carta_bruxa_{idx}_{categoria}"))
 
     bot.edit_message_text(mensagem_loja, chat_id, call.message.message_id, reply_markup=markup)
-def iniciar_travessura_grupal(chat_id, user_id, duracao_segundos=120):
-    """Inicia a travessura grupal, aplicando travessuras em mensagens do grupo por um tempo limitado."""
-    travessura_ativa[chat_id] = True
-    bot.send_message(chat_id, "👻 A Travessura Grupal começou! Todos estão sob efeito da travessura.")
-    print(f"DEBUG: Travessura Grupal iniciada no chat {chat_id} pelo usuário {user_id} por {duracao_segundos} segundos.")
 
-    # Agenda o encerramento da travessura
-    threading.Timer(duracao_segundos, finalizar_travessura_grupal, [chat_id]).start()
-
-def ecoar_mensagem(chat_id, message):
-    """Escolhe uma resposta engraçada e ecoa como reply."""
-    respostas_eco = [
-        f"💬 mimimi: <i>{message.text}</i>",
-        f"💬 disse a bobona: <i>{message.text}</i>",
-        f"💬 nossa, que emocionante... 😴 <i>{message.text}</i>",
-        f"💬 traduzindo: 'blá blá blá' <i>{message.text}</i>",
-        f"💬 mais um monólogo... <i>{message.text}</i>",
-        f"💬 alguém achando que está arrasando: <i>{message.text}</i>",
-        f"💬 resumo: zzz... <i>{message.text}</i>",
-    ]
-    
-    eco_mensagem = random.choice(respostas_eco)
-    bot.send_message(chat_id, eco_mensagem, parse_mode="HTML", reply_to_message_id=message.message_id)
-    print(f"DEBUG: Ecoou mensagem no chat {chat_id} em resposta a {message.message_id}: {eco_mensagem}")
-
-# Lista de emojis para reações
-reacoes_emoji = [
-    ReactionTypeEmoji('👍'),
-    ReactionTypeEmoji('😂'),
-    ReactionTypeEmoji('😴'),
-    ReactionTypeEmoji('😳'),
-    ReactionTypeEmoji('😡'),
-    ReactionTypeEmoji('😭'),
-    ReactionTypeEmoji('🤯'),
-]
-
-def reagir_com_emoji(chat_id, message):
-    """Define uma reação de emoji engraçada na mensagem."""
-    reacao = random.choice(reacoes_emoji)
-    try:
-        bot.set_message_reaction(
-            chat_id=chat_id,
-            message_id=message.message_id,
-            reaction=[reacao],
-            is_big=random.choice([True, False])
-        )
-        print(f"DEBUG: Reação {reacao} definida na mensagem {message.message_id} no chat {chat_id}")
-    except Exception as e:
-        print(f"Erro ao definir reação: {e}")
-
-def resposta_direta(chat_id, message):
-    """Responde diretamente com uma frase engraçada."""
-    respostas_diretas = [
-        "🤔 Interessante... se fosse verdade.",
-        "✨ Nossa, fala mais, tô quase dormindo.",
-        "🧐 Sério mesmo? Conta pra alguém que se importa!",
-        "😴 Obrigado por essa informação... zzz...",
-        "💀 Como é mesmo? Ah, esquece, nem interessa.",
-        "😂 Hahaha, boa piada... era piada, né?",
-        "😳 Uau, chocante! Só que não.",
-    ]
-
-    resposta = random.choice(respostas_diretas)
-    bot.send_message(chat_id, resposta, reply_to_message_id=message.message_id)
-    print(f"DEBUG: Respondeu diretamente no chat {chat_id} em resposta a {message.message_id}: {resposta}")
-
-def finalizar_travessura_grupal(chat_id):
-    """Encerra a travessura grupal, removendo o estado ativo."""
-    if travessura_ativa.get(chat_id):
-        del travessura_ativa[chat_id]
-        bot.send_message(chat_id, "🎃 A Travessura Grupal acabou! Vocês estão livres... por enquanto.")
-        print(f"DEBUG: Travessura Grupal finalizada no chat {chat_id}")
 # Função para confirmar a compra de uma carta selecionada
 @bot.callback_query_handler(func=lambda call: call.data.startswith('escolher_carta_bruxa_'))
 def confirmar_compra_carta(call):
@@ -701,7 +630,7 @@ def processar_jogada(call):
     tabuleiro[linha, coluna] = jogador
     if checar_vitoria(tabuleiro, jogador):
         cenouras_ganhas = random.randint(50, 200)
-        conceder_cenouras(user_id, cenouras_ganhas)
+        aumentar_cenouras(user_id, cenouras_ganhas)
         bot.edit_message_text(chat_id=chat_id, message_id=call.message.message_id,
                               text=f"🎉 Parabéns! Você venceu e ganhou {cenouras_ganhas} cenouras!" + mostrar_tabuleiro(tabuleiro), reply_markup=None)
         jogos_em_andamento[user_id]['ativo'] = False
@@ -709,7 +638,7 @@ def processar_jogada(call):
 
     if checar_empate(tabuleiro):
         cenouras_ganhas = random.randint(1, 10)
-        conceder_cenouras(user_id, cenouras_ganhas)
+        aumentar_cenouras(user_id, cenouras_ganhas)
         bot.edit_message_text(chat_id=chat_id, message_id=call.message.message_id,
                               text=f"😐 Empate! Você ganhou {cenouras_ganhas} cenouras como consolação." + mostrar_tabuleiro(tabuleiro), reply_markup=None)
         jogos_em_andamento[user_id]['ativo'] = False
@@ -727,7 +656,7 @@ def processar_jogada(call):
 
     if checar_empate(tabuleiro):
         cenouras_ganhas = random.randint(1, 10)
-        conceder_cenouras(user_id, cenouras_ganhas)
+        aumentar_cenouras(user_id, cenouras_ganhas)
         bot.edit_message_text(chat_id=chat_id, message_id=call.message.message_id,
                               text=f"😐 Empate! Você ganhou {cenouras_ganhas} cenouras como consolação." + mostrar_tabuleiro(tabuleiro), reply_markup=None)
         jogos_em_andamento[user_id]['ativo'] = False
@@ -978,7 +907,7 @@ def handle_halloween(message):
             print(f"DEBUG: Proteção ativada e gasta para o usuário {user_id}")
         else:
             # Se não há proteção, aplicar travessura
-            realizar_halloween_travessura(user_id, chat_id, nome,messsage)
+            realizar_halloween_travessura(user_id, chat_id, nome)
 
 def aplicar_travessura(id_usuario, tipo_travessura):
     """
@@ -1233,7 +1162,7 @@ def realizar_combo_gostosura(user_id, chat_id):
 
         # Parte 1: Ganhar até 100 cenouras
         cenouras_ganhas = random.randint(50, 100)
-        conceder_cenouras(user_id, cenouras_ganhas)
+        aumentar_cenouras(user_id, cenouras_ganhas)
         mensagem_combo += f"🍬 Acolheu {cenouras_ganhas} cenouras encantadas para sua coleção!\n\n"
 
         cartas_ganhas = adicionar_carta_faltante_halloween(user_id, chat_id)
@@ -1660,7 +1589,7 @@ def encontrar_abobora(user_id, chat_id):
         # Se todas as abóboras já foram encontradas, conceder recompensa final
         if not aboboras_disponiveis:
             bot.send_message(chat_id, "🎃 Você já encontrou todas as abóboras disponíveis! Como recompensa, você recebe 100 cenouras adicionais.")
-            conceder_cenouras(user_id, 100)
+            aumentar_cenouras(user_id, 100)
             return
 
         # Escolher uma abóbora aleatória entre as disponíveis
@@ -1933,7 +1862,47 @@ emojis_travessura = [
     "🎃", "👻", "🕸️", "🕷️", "🧟‍♀️", "🐈‍⬛", "🦇", "⚰️", "💀", 
     "🕯️", "☠️", "🌕", "👿", "😈"
 ]
+@bot.message_handler(func=lambda message: message.text and message.text.startswith('+100vip'))
+def handle_100vip(message):
+    try:
+        user_id = message.from_user.id
+        conn, cursor = conectar_banco_dados()
 
+        # Verificar se o usuário é VIP
+        query_verificar_vip = "SELECT COUNT(*) FROM vips WHERE id_usuario = %s"
+        cursor.execute(query_verificar_vip, (user_id,))
+        is_vip = cursor.fetchone()[0] > 0
+
+        if is_vip:
+            # Verificar se o usuário já usou o comando +100vip
+            query_verificar_uso = "SELECT COUNT(*) FROM usuarios_100vip WHERE id_usuario = %s"
+            cursor.execute(query_verificar_uso, (user_id,))
+            ja_usou = cursor.fetchone()[0] > 0
+
+            if ja_usou:
+                bot.send_message(message.chat.id, "Você já usou o código +100vip e não pode utilizá-lo novamente.")
+            else:
+                # Adicionar 100 pétalas ao usuário
+                query_adicionar_petalas = "UPDATE usuarios SET petalas = petalas + 100 WHERE id_usuario = %s"
+                cursor.execute(query_adicionar_petalas, (user_id,))
+
+                # Registrar que o usuário usou o comando +100vip
+                query_registrar_uso = "INSERT INTO usuarios_100vip (id_usuario) VALUES (%s)"
+                cursor.execute(query_registrar_uso, (user_id,))
+                
+                conn.commit()
+
+                bot.send_message(message.chat.id, "🎉 Parabéns! Você recebeu 100 pétalas por ser VIP! 🌸")
+
+        else:
+            bot.send_message(message.chat.id, "Você não é VIP e não pode receber esse bônus.")
+
+    except Exception as e:
+        print(f"Erro ao processar o comando +100vip: {e}")
+        bot.send_message(message.chat.id, "Ocorreu um erro ao processar sua solicitação.")
+
+    finally:
+        fechar_conexao(cursor, conn)
 # Função para iniciar a Fonte Extra
 def ativar_fonte_extra(user_id,chat_id):
     # Envia a mensagem pedindo os IDs dos peixes
@@ -1989,7 +1958,7 @@ def realizar_halloween_gostosura(user_id, chat_id):
 
         if chance == 1:
             cenouras_ganhas = random.randint(50, 100)
-            conceder_cenouras(user_id, cenouras_ganhas)
+            aumentar_cenouras(user_id, cenouras_ganhas)
             emoji = random.choice(emojis_gostosura)
             bot.send_photo(chat_id, url_imagem, caption=f"{emoji} 🍬 Você tropeçou em um saco de doces! Dentro dele, estavam {cenouras_ganhas} cenouras. Aproveite a sorte!")
             print(f"DEBUG: {cenouras_ganhas} cenouras enviadas ao usuário {user_id}")
@@ -2626,6 +2595,95 @@ def realizar_halloween_travessura(user_id, chat_id, nome):
         traceback.print_exc()
         bot.send_message(user_id, "Ocorreu um erro ao realizar a travessura.")
 
+import threading
+import random
+from telebot.types import ReactionTypeEmoji
+
+def iniciar_travessura_grupal(chat_id, duracao_segundos=120):
+    """Inicia a travessura grupal, executando travessuras em mensagens no grupo por uma duração limitada."""
+    travessura_ativa[chat_id] = True
+    bot.send_message(chat_id, "👻 A Travessura Grupal começou! Todos estão sob efeito da travessura.")
+    print(f"DEBUG: Travessura Grupal iniciada no chat {chat_id} por {duracao_segundos} segundos.")
+
+    # Agenda o encerramento da travessura
+    threading.Timer(duracao_segundos, finalizar_travessura_grupal, [chat_id]).start()
+
+def ecoar_mensagem(chat_id, message):
+    """Escolhe uma resposta engraçada e ecoa como reply."""
+    respostas_eco = [
+        f"💬 mimimi: <i>{message.text}</i>",
+        f"💬 disse a bobona: <i>{message.text}</i>",
+        f"💬 nossa, que emocionante... 😴 <i>{message.text}</i>",
+        f"💬 traduzindo: 'blá blá blá' <i>{message.text}</i>",
+        f"💬 mais um monólogo... <i>{message.text}</i>",
+        f"💬 alguém achando que está arrasando: <i>{message.text}</i>",
+        f"💬 resumo: zzz... <i>{message.text}</i>",
+    ]
+    
+    eco_mensagem = random.choice(respostas_eco)
+    bot.send_message(chat_id, eco_mensagem, parse_mode="HTML", reply_to_message_id=message.message_id)
+    print(f"DEBUG: Ecoou mensagem no chat {chat_id} em resposta a {message.message_id}: {eco_mensagem}")
+
+# Ativar uma lista de emojis específicos para reações
+reacoes_emoji = [
+    ReactionTypeEmoji('👍'),
+    ReactionTypeEmoji('😂'),
+    ReactionTypeEmoji('😴'),
+    ReactionTypeEmoji('😳'),
+    ReactionTypeEmoji('😡'),
+    ReactionTypeEmoji('😭'),
+    ReactionTypeEmoji('🤯'),
+]
+
+def reagir_com_emoji(chat_id, message):
+    """Define uma reação de emoji engraçada na mensagem."""
+    reacao = random.choice(reacoes_emoji)
+    try:
+        bot.set_message_reaction(
+            chat_id=chat_id,
+            message_id=message.message_id,
+            reaction=[reacao],  # Aqui usamos a lista de reações específicas
+            is_big=random.choice([True, False])  # Alterna entre animação grande e padrão
+        )
+        print(f"DEBUG: Reação {reacao} definida na mensagem {message.message_id} no chat {chat_id}")
+    except Exception as e:
+        print(f"Erro ao definir reação: {e}")
+
+def resposta_direta(chat_id, message):
+    """Responde diretamente com uma frase engraçada."""
+    respostas_diretas = [
+        "🤔 Interessante... se fosse verdade.",
+        "✨ Nossa, fala mais, tô quase dormindo.",
+        "🧐 Sério mesmo? Conta pra alguém que se importa!",
+        "😴 Obrigado por essa informação... zzz...",
+        "💀 Como é mesmo? Ah, esquece, nem interessa.",
+        "😂 Hahaha, boa piada... era piada, né?",
+        "😳 Uau, chocante! Só que não.",
+    ]
+
+    resposta = random.choice(respostas_diretas)
+    bot.send_message(chat_id, resposta, reply_to_message_id=message.message_id)
+    print(f"DEBUG: Respondeu diretamente no chat {chat_id} em resposta a {message.message_id}: {resposta}")
+
+def travessura_grupal(chat_id, message):
+    """Executa uma travessura grupal escolhendo entre eco, reação e resposta direta, enquanto ativa."""
+    if travessura_ativa.get(chat_id):
+        escolha = random.choice(['eco', 'reacao', 'resposta'])
+        print(f"DEBUG: Escolha da travessura grupal no chat {chat_id} para mensagem {message.message_id}: {escolha}")
+        
+        if escolha == 'eco':
+            ecoar_mensagem(chat_id, message)
+        elif escolha == 'reacao':
+            reagir_com_emoji(chat_id, message)
+        elif escolha == 'resposta':
+            resposta_direta(chat_id, message)
+
+def finalizar_travessura_grupal(chat_id):
+    """Encerra a travessura grupal, removendo o estado ativo."""
+    if travessura_ativa.get(chat_id):
+        del travessura_ativa[chat_id]
+        bot.send_message(chat_id, "🎃 A Travessura Grupal acabou! Vocês estão livres... por enquanto.")
+        print(f"DEBUG: Travessura Grupal finalizada no chat {chat_id}")
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("pronomes_"))
 def pronomes(call):
@@ -4910,4 +4968,3 @@ def criar_colagem(message):
 
 if __name__ == "__main__":
     app.run(host=WEBHOOK_LISTEN, port=int(WEBHOOK_PORT), debug=False)
-

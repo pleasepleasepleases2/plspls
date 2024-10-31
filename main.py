@@ -2232,9 +2232,13 @@ def realizar_halloween_gostosura(user_id, chat_id):
             ganhar_caixa_misteriosa(user_id, chat_id)
 
         elif chance == 8:
-            print(f"DEBUG: Mostrando portas de escolha para o usuário {user_id}")
-            bot.send_photo(chat_id, url_imagem, caption="🚪 Três portas mágicas surgem à sua frente. Escolha sabiamente!")
-            mostrar_portas_escolha(user_id)
+            print(f"DEBUG: Ativando desconto de 24 horas para o usuário {user_id}")
+            ativar_desconto_loja(user_id, chat_id)
+            bot.send_photo(
+                chat_id,
+                url_imagem,
+                caption="🎉 Gostosura! Você ganhou 24 horas de desconto em todas as compras da loja. Aproveite!"
+            )
 
         elif chance == 9:
             print(f"DEBUG: Ativando fonte extra para o usuário {user_id}")
@@ -2269,14 +2273,7 @@ def realizar_halloween_gostosura(user_id, chat_id):
                 url_imagem,
                 caption=f"🍀 Você recebeu um Bônus de Sorte! Suas chances de receber recompensas melhores foram aumentadas em {int((multiplicador_sorte - 1) * 100)}% nas próximas {duracao_horas} horas!"
             )
-        elif chance == 13:
-            print(f"DEBUG: Ativando desconto de 24 horas para o usuário {user_id}")
-            ativar_desconto_loja(user_id, chat_id)
-            bot.send_photo(
-                chat_id,
-                url_imagem,
-                caption="🎉 Gostosura! Você ganhou 24 horas de desconto em todas as compras da loja. Aproveite!"
-            )
+        
     except Exception as e:
         print(f"DEBUG: Erro ao realizar gostosura para o usuário {user_id}: {e}")
         traceback.print_exc()

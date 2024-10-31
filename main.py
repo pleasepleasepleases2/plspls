@@ -253,7 +253,7 @@ def aumentarcenouras(id_usuario, quantidade=1):
             print(f"DEBUG: Usuário {id_usuario} não encontrado no banco de dados.")
         
     except:
-        print(f"Erro ao aumentar cenouras para o usuário {id_usuario}: {e}")
+        print(f"Erro ao aumentar cenouras para o usuário {id_usuario}")
     
     finally:
         cursor.close()

@@ -158,20 +158,26 @@ def index():
     return 'Server is running.'
 
 def bloquear_acao(user_id, acao, minutos):
-    # Bloquear a ação por x minutos
+    """
+    Bloqueia uma ação específica para um usuário.
+    """
     conn, cursor = conectar_banco_dados()
-    
-    # Garante que fim_bloqueio está no formato de string esperado pelo MySQL
-    fim_bloqueio = (datetime.now() + timedelta(minutes=minutos)).strftime("%Y-%m-%d %H:%M:%S")
-    
+    fim_bloqueio = datetime.now() + timedelta(minutes=minutos)
+
+    # Define um valor padrão para id_bloqueado se não for fornecido
+    id_bloqueado = id_bloqueado if id_bloqueado is not None else user_id
+
     try:
-        cursor.execute(
-            "INSERT INTO bloqueios (id_usuario, acao, fim_bloqueio) VALUES (%s, %s, %s)",
-            (user_id, acao, fim_bloqueio)
-        )
+        cursor.execute("""
+            INSERT INTO bloqueios (id_usuario, id_bloqueado, acao, fim_bloqueio) 
+            VALUES (%s, %s, %s, %s)
+            ON DUPLICATE KEY UPDATE fim_bloqueio = VALUES(fim_bloqueio)
+        """, (user_id, id_bloqueado, acao, fim_bloqueio))
         conn.commit()
+
     except Exception as e:
         print(f"Erro ao inserir bloqueio: {e}")
+    
     finally:
         fechar_conexao(cursor, conn)
 

@@ -257,25 +257,19 @@ def exibir_cartas_categoria(call):
         markup.add(telebot.types.InlineKeyboardButton(text=str(idx), callback_data=f"escolher_carta_bruxa_{idx}_{categoria}"))
 
     bot.edit_message_text(mensagem_loja, chat_id, call.message.message_id, reply_markup=markup)
-@bot.message_handler(func=lambda message: True)  # Handler para todas as mensagens
-def aplicar_travessura_grupal(message):
-    """Aplica a travessura grupal às mensagens enquanto a travessura está ativa, e segue normal se não ativa."""
+@bot.message_handler(func=lambda message: travessura_ativa.get(message.chat.id, False))
+def travessura_grupal(message):
+    """Executa uma travessura grupal escolhendo entre eco, reação e resposta direta, enquanto ativa."""
     chat_id = message.chat.id
-    # Verifica se a travessura grupal está ativa para o chat
-    if travessura_ativa.get(chat_id):
-        print(f"DEBUG: Travessura Grupal ativa para mensagem {message.message_id} no chat {chat_id}")
-        escolha = random.choice(['eco', 'reacao', 'resposta'])
-        
-        if escolha == 'eco':
-            ecoar_mensagem(chat_id, message)
-        elif escolha == 'reacao':
-            reagir_com_emoji(chat_id, message)
-        elif escolha == 'resposta':
-            resposta_direta(chat_id, message)
-    else:
-        print(f"DEBUG: Travessura Grupal inativa para mensagem {message.message_id} no chat {chat_id}")
-        # Aqui o fluxo continua normalmente, pois não há travessura ativa
-
+    escolha = random.choice(['eco', 'reacao', 'resposta'])
+    print(f"DEBUG: Escolha da travessura grupal no chat {chat_id} para mensagem {message.message_id}: {escolha}")
+    
+    if escolha == 'eco':
+        ecoar_mensagem(chat_id, message)
+    elif escolha == 'reacao':
+        reagir_com_emoji(chat_id, message)
+    elif escolha == 'resposta':
+        resposta_direta(chat_id, message)
 # Função para confirmar a compra de uma carta selecionada
 @bot.callback_query_handler(func=lambda call: call.data.startswith('escolher_carta_bruxa_'))
 def confirmar_compra_carta(call):

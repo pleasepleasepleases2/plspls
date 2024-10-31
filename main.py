@@ -225,6 +225,39 @@ def verificar_travessura(id_usuario):
         return []
     finally:
         fechar_conexao(cursor, conn)
+def aumentarcenouras(id_usuario, quantidade=1):
+    """
+    Aumenta a quantidade de cenouras do usuário no banco de dados.
+    
+    Parâmetros:
+        - id_usuario: ID do usuário no banco de dados.
+        - quantidade: Quantidade de cenouras a adicionar (padrão é 1).
+    """
+    try:
+        conn = sqlite3.connect('bot_database.db')
+        cursor = conn.cursor()
+        
+        # Busca a quantidade atual de cenouras do usuário
+        cursor.execute("SELECT cenouras FROM usuarios WHERE id_usuario = ?", (id_usuario,))
+        resultado = cursor.fetchone()
+        
+        if resultado:
+            cenouras_atual = resultado[0]
+            novas_cenouras = cenouras_atual + quantidade
+            
+            # Atualiza a quantidade de cenouras
+            cursor.execute("UPDATE usuarios SET cenouras = ? WHERE id_usuario = ?", (novas_cenouras, id_usuario))
+            conn.commit()
+            print(f"DEBUG: Cenouras do usuário {id_usuario} atualizadas para {novas_cenouras}")
+        else:
+            print(f"DEBUG: Usuário {id_usuario} não encontrado no banco de dados.")
+        
+    except sqlite3.Error as e:
+        print(f"Erro ao aumentar cenouras para o usuário {id_usuario}: {e}")
+    
+    finally:
+        cursor.close()
+        conn.close()
         
 # Função para exibir a loja da bruxa com opções de categoria
 @bot.message_handler(commands=['bruxa'])
@@ -2335,6 +2368,44 @@ def mover_labirinto(call):
     else:
         bot.answer_callback_query(call.id, "👻 Direção bloqueada por uma parede!")
 
+# Função para aplicar penalidade de cenouras ao encontrar um monstro
+def aplicar_penalidade_cenouras(user_id, quantidade):
+    conn, cursor = conectar_banco_dados()
+    try:
+        # Reduz cenouras do usuário
+        cursor.execute("UPDATE usuarios SET cenouras = GREATEST(0, cenouras + %s) WHERE id_usuario = %s", (quantidade, user_id))
+        conn.commit()
+        
+        # Obter saldo atualizado de cenouras
+        cursor.execute("SELECT cenouras FROM usuarios WHERE id_usuario = %s", (user_id,))
+        saldo_atual = cursor.fetchone()[0]
+
+        return saldo_atual  # Retorna o saldo para mostrar na mensagem
+    except Exception as e:
+        print(f"Erro ao aplicar penalidade de cenouras: {e}")
+        return None
+    finally:
+        fechar_conexao(cursor, conn)
+
+# Função para aplicar recompensa de cenouras ao encontrar uma abóbora
+def aplicar_recompensa_cenouras(user_id, quantidade):
+    conn, cursor = conectar_banco_dados()
+    try:
+        # Aumenta cenouras do usuário
+        cursor.execute("UPDATE usuarios SET cenouras = cenouras + %s WHERE id_usuario = %s", (quantidade, user_id))
+        conn.commit()
+        
+        # Obter saldo atualizado de cenouras
+        cursor.execute("SELECT cenouras FROM usuarios WHERE id_usuario = %s", (user_id,))
+        saldo_atual = cursor.fetchone()[0]
+
+        return saldo_atual  # Retorna o saldo para mostrar na mensagem
+    except Exception as e:
+        print(f"Erro ao aplicar recompensa de cenouras: {e}")
+        return None
+    finally:
+        fechar_conexao(cursor, conn)
+
 # Função para atualizar o labirinto e aplicar consequências (monstro ou recompensa)
 def atualizar_labirinto(call, labirinto, posicao, movimentos_restantes, conteudo):
     mapa = mostrar_labirinto(labirinto, posicao)
@@ -2342,17 +2413,25 @@ def atualizar_labirinto(call, labirinto, posicao, movimentos_restantes, conteudo
 
     if conteudo == '👻':
         labirinto[posicao[0]][posicao[1]] = '⬜'
-        bot.edit_message_text(f"👻 Você encontrou um monstro! Perdeu 20 cenouras. Quer encerrar ou continuar?\n\n{mapa}", 
-                              call.message.chat.id, call.message.message_id, reply_markup=criar_botoes_opcoes())
-        aplicar_penalidade_cenouras(call.from_user.id, -20)
+        saldo_atual = aplicar_penalidade_cenouras(call.from_user.id, -20)
+        if saldo_atual is not None:
+            bot.edit_message_text(
+                f"👻 Você encontrou um monstro! Perdeu 20 cenouras. Saldo atual: {saldo_atual} cenouras.\n\n{mapa}",
+                call.message.chat.id, call.message.message_id, reply_markup=criar_botoes_opcoes()
+            )
     elif conteudo == '🎃':
         labirinto[posicao[0]][posicao[1]] = '⬜'
-        bot.edit_message_text(f"🎃 Você encontrou uma abóbora! Ganhou 50 cenouras. Quer encerrar ou continuar?\n\n{mapa}", 
-                              call.message.chat.id, call.message.message_id, reply_markup=criar_botoes_opcoes())
-        aplicar_recompensa_cenouras(call.from_user.id, 50)
+        saldo_atual = aplicar_recompensa_cenouras(call.from_user.id, 50)
+        if saldo_atual is not None:
+            bot.edit_message_text(
+                f"🎃 Você encontrou uma abóbora! Ganhou 50 cenouras. Saldo atual: {saldo_atual} cenouras.\n\n{mapa}",
+                call.message.chat.id, call.message.message_id, reply_markup=criar_botoes_opcoes()
+            )
     else:
-        bot.edit_message_text(f"Movimentos restantes: {movimentos_restantes}\n\n{mapa}", 
-                              call.message.chat.id, call.message.message_id, reply_markup=markup)
+        bot.edit_message_text(
+            f"Movimentos restantes: {movimentos_restantes}\n\n{mapa}", 
+            call.message.chat.id, call.message.message_id, reply_markup=markup
+        )
 
 # Função para criar botões de opções (encerrar ou continuar)
 def criar_botoes_opcoes():

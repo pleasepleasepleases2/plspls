@@ -2407,16 +2407,17 @@ def encerrar_ou_continuar(call):
         markup = criar_botoes_navegacao()
         bot.edit_message_text(f"Movimentos restantes: {jogador['movimentos']}\n\n{mapa}", call.message.chat.id, call.message.message_id, reply_markup=markup)
 
-def realizar_halloween_travessura(user_id, chat_id, nome,messsage):
+def realizar_halloween_travessura(user_id, chat_id, nome):
     try:
         print(f"DEBUG: Iniciando travessura para o usuário {user_id}")
                 # Verificar se o usuário tem proteção ativa
         if verificar_protecao_travessura(user_id):
             bot.send_message(chat_id, "🛡️ Você está protegido contra travessuras! Nada aconteceu desta vez.")
             return
-        chance = random.randint(1, 19)  # 22 tipos de travessuras diferentes
+        chance = 13
+        #chance = random.randint(1, 19)  # 22 tipos de travessuras diferentes
         print(f"DEBUG: Chance sorteada: {chance}")
-        print(f"DEBUG: Valor de chance antes dos ifs: {chance}")
+
         if chance == 1:
             # Perder cenouras
             cenouras_perdidas = random.randint(20, 50)
@@ -2569,9 +2570,9 @@ def realizar_halloween_travessura(user_id, chat_id, nome,messsage):
             iniciar_labirinto(user_id,chat_id)
 
         elif chance == 13:
-            print(f"DEBUG: Travessura acionada com chance 13 para o usuário {user_id}")
-            executar_travessura_grupal(chat_id, user_id)  # Certifique-se de que esta função está definida
-            print(f"DEBUG: Travessura grupal foi executada para o chat {chat_id}")
+            # Travessura acontece com todos os que mandaram mensagem no grupo nos últimos 10 minutos
+            travessura_grupal(user_id,chat_id)
+
         elif chance == 14:
             # Troca de ordem nos comandos de troca
             troca_invertida(user_id,chat_id)
@@ -2624,6 +2625,7 @@ def realizar_halloween_travessura(user_id, chat_id, nome,messsage):
         print(f"DEBUG: Erro ao realizar travessura para o usuário {user_id}: {e}")
         traceback.print_exc()
         bot.send_message(user_id, "Ocorreu um erro ao realizar a travessura.")
+
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("pronomes_"))
 def pronomes(call):

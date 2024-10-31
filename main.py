@@ -2454,8 +2454,7 @@ def realizar_halloween_travessura(user_id, chat_id, nome,messsage):
         if verificar_protecao_travessura(user_id):
             bot.send_message(chat_id, "🛡️ Você está protegido contra travessuras! Nada aconteceu desta vez.")
             return
-        chance = 13
-        #chance = random.randint(1, 19)  # 22 tipos de travessuras diferentes
+        chance = random.randint(1, 19)  # 22 tipos de travessuras diferentes
         print(f"DEBUG: Chance sorteada: {chance}")
         print(f"DEBUG: Valor de chance antes dos ifs: {chance}")
         if chance == 1:

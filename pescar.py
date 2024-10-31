@@ -710,7 +710,7 @@ def pescar(message):
                 keyboard.row(telebot.types.InlineKeyboardButton(text="🫧  Geral", callback_data='pescar_geral'))
 
                 # Enviar a imagem e o teclado de categorias
-                photo = "https://telegra.ph/file/b3e6d2a41b68c2ceec8e5.jpg"
+                photo = "https://pub-6f23ef52e8614212a14d24b0cf55ae4a.r2.dev/BQACAgEAAxkBAAIeq2ckA3TkUqJpUN8HGwSScRjS3dY6AAIZBQACy-MhRXObx3AerywHNgQ.jpg"
                 texto = f'<i>Olá! {nome}, \nVocê tem disponível: {qtd_iscas} iscas. \nBoa pesca!\n\nSelecione uma categoria:</i>'
                 # Verificar se a travessura está ativa e embaralhar, se necessário
                 if verificar_travessura_embaralhamento(message.from_user.id):

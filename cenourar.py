@@ -18,13 +18,43 @@ def verificar_travessura_ativa(id_usuario, tipo_travessura="embaralhamento"):
         return False
     finally:
         fechar_conexao(cursor, conn)
+
+def verificar_bloqueio_comandos(user_id):
+    try:
+        conn, cursor = conectar_banco_dados()
+
+        # Verificar se o usuário está bloqueado
+        query = "SELECT fim_bloqueio FROM bloqueios_comandos WHERE id_usuario = %s"
+        cursor.execute(query, (user_id,))
+        resultado = cursor.fetchone()
+
+        if resultado:
+            fim_bloqueio = resultado[0]
+            if datetime.now() < fim_bloqueio:
+                # Se ainda estiver dentro do período de bloqueio, retorna True
+                return True, (fim_bloqueio - datetime.now()).seconds // 60
+        return False, 0
+
+    except Exception as e:
+        print(f"Erro ao verificar bloqueio de comandos para o usuário {user_id}: {e}")
+        traceback.print_exc()
+        return False, 0
+    finally:
+        fechar_conexao(cursor, conn)
+        
 def enviar_pergunta_cenoura(message, id_usuario, ids_personagens, bot):
     try:
+        
         conn, cursor = conectar_banco_dados()
         # Verificar se a travessura de embaralhamento está ativa
         embaralhamento_ativo = verificar_travessura_ativa(id_usuario)
         # Recupera os nomes das cartas e formata a pergunta
         cartas_formatadas = []
+
+        bloqueado, minutos_restantes = verificar_bloqueio_comandos(user_id)
+        if bloqueado:
+            bot.send_message(message.chat.id, f"👻 Você está invisível e seus comandos serão ignorados por mais {minutos_restantes} minutos.")
+            return
         for id_personagem in ids_personagens:
             cursor.execute("SELECT nome FROM personagens WHERE id_personagem = %s", (id_personagem,))
             nome_carta = cursor.fetchone()

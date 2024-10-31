@@ -265,64 +265,6 @@ def aumentarcenouras(id_usuario, quantidade=1):
         cursor.close()
         conn.close()
         
-# Função para exibir a loja da bruxa com opções de categoria
-@bot.message_handler(commands=['bruxa'])
-def exibir_categorias_bruxa(message):
-    chat_id = message.chat.id
-    categorias = ['Música', 'Séries', 'Filmes', 'Miscelânea', 'Jogos', 'Animangá']
-    
-    # Criação de botões de categorias
-    markup = telebot.types.InlineKeyboardMarkup(row_width=2)
-    for categoria in categorias:
-        markup.add(telebot.types.InlineKeyboardButton(text=categoria, callback_data=f"bruxa_{categoria}"))
-
-    bot.send_message(chat_id, "🧙‍♀️ Escolha uma categoria para ver as cartas da bruxa:", reply_markup=markup)
-
-# Função para exibir as cartas de uma categoria específica
-@bot.callback_query_handler(func=lambda call: call.data.startswith('bruxa_'))
-def exibir_cartas_categoria(call):
-    chat_id = call.message.chat.id
-    categoria = call.data.split('_')[1]
-    cartas_categoria = obter_cartas_aleatorias_por_categoria(categoria, 6)  # Obter 6 cartas da categoria
-
-    # Formatação da lista de cartas
-    mensagem_loja = f"📜 Cartas da categoria {categoria}:\n"
-    for idx, carta in enumerate(cartas_categoria, start=1):
-        mensagem_loja += f"{idx} - {carta['nome']}, de {carta['subcategoria']}\n"
-
-    # Botões de seleção 1 a 6 para cartas
-    markup = telebot.types.InlineKeyboardMarkup(row_width=3)
-    for idx in range(1, 7):
-        markup.add(telebot.types.InlineKeyboardButton(text=str(idx), callback_data=f"escolher_carta_bruxa_{idx}_{categoria}"))
-
-    bot.edit_message_text(mensagem_loja, chat_id, call.message.message_id, reply_markup=markup)
-
-# Função para confirmar a compra de uma carta selecionada
-@bot.callback_query_handler(func=lambda call: call.data.startswith('escolher_carta_bruxa_'))
-def confirmar_compra_carta(call):
-    chat_id = call.message.chat.id
-    data = call.data.split('_')
-    idx_carta = int(data[2]) - 1
-    categoria = data[3]
-    
-    cartas_categoria = obter_cartas_aleatorias_por_categoria(categoria, 6)
-    carta_selecionada = cartas_categoria[idx_carta]
-
-    # Mensagem de confirmação de compra com nome e subcategoria da carta
-    mensagem_confirmacao = f"💳 Deseja comprar a carta:\n{carta_selecionada['nome']} ({carta_selecionada['subcategoria']}) por 10 cenouras?"
-
-    # Botões para confirmar ou cancelar a compra
-    markup = telebot.types.InlineKeyboardMarkup(row_width=2)
-    markup.add(
-        telebot.types.InlineKeyboardButton(text="Sim", callback_data=f"compra_confirmada_{carta_selecionada['id']}_{call.from_user.id}"),
-        telebot.types.InlineKeyboardButton(text="Não", callback_data="cancelar_compra")
-    )
-    
-    bot.edit_message_text(mensagem_confirmacao, chat_id, call.message.message_id, reply_markup=markup)
-
-from datetime import datetime
-import pytz
-
 @bot.message_handler(commands=['travessuras'])
 def handle_inverter(message):
     user_id = message.from_user.id
@@ -2497,10 +2439,7 @@ def ativar_travessura_embaralhamento(chat_id, id_usuario):
         print(f"Erro ao registrar travessura: {e}")
     finally:
         fechar_conexao(cursor, conn)
-import random
-from datetime import datetime, timedelta
-from telebot import types
-
+        
 # Armazenamento de jogadores no labirinto
 jogadores_labirinto = {}
 

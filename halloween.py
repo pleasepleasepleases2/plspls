@@ -10,7 +10,8 @@ import traceback
 from telebot import types
 import globals
 from collections import defaultdict
-
+import random
+from datetime import timedelta, datetime
 url_imagem = "https://pub-6f23ef52e8614212a14d24b0cf55ae4a.r2.dev/BQACAgEAAxkBAAIcfGcVeT6gaLXd0DKA7aihUQJfV62hAAJMBQACSV6xRD2puYHoSyajNgQ.jpg"
 
 aboboras = {
@@ -456,42 +457,6 @@ def realizar_halloween_gostosura(user_id):
     else:
         # Adicionar carta faltante do evento como gostosura
         adicionar_carta_faltante_evento(user_id)
-
-def adicionar_carta_faltante_halloween(user_id):
-    try:
-        conn, cursor = conectar_banco_dados()
-
-        # Obter todas as cartas do evento Halloween que o usuário ainda não possui
-        query_faltantes_halloween = """
-            SELECT e.id_personagem, e.nome 
-            FROM evento e
-            LEFT JOIN inventario i ON e.id_personagem = i.id_personagem AND i.id_usuario = %s
-            WHERE e.evento = 'Halloween' AND i.id_personagem IS NULL
-        """
-        cursor.execute(query_faltantes_halloween, (user_id,))
-        cartas_faltantes = cursor.fetchall()
-
-        if not cartas_faltantes:
-            bot.send_message(user_id, "Parabéns! Mas você já tem todas as cartas do evento de Halloween.")
-            return
-
-        # Selecionar uma carta de Halloween aleatória
-        carta_faltante = random.choice(cartas_faltantes)
-        id_carta_faltante, nome_carta_faltante = carta_faltante
-
-        # Adicionar a carta ao inventário
-        cursor.execute("INSERT INTO inventario (id_usuario, id_personagem, quantidade) VALUES (%s, %s, 1)", (user_id, id_carta_faltante))
-        conn.commit()
-
-        # Enviar a mensagem informando a carta recebida
-        bot.send_message(user_id, f"🎃 Parabéns! Você encontrou uma carta do evento Halloween: {nome_carta_faltante} foi adicionada ao seu inventário.")
-
-    except Exception as e:
-        print(f"Erro ao adicionar carta de Halloween faltante: {e}")
-    finally:
-        fechar_conexao(cursor, conn)
-import random
-from datetime import timedelta, datetime
 
 def adicionar_vip_temporario(user_id, grupo_sugestao):
     try:

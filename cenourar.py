@@ -32,7 +32,6 @@ def enviar_pergunta_cenoura(message, id_usuario, ids_personagens, bot):
                 cartas_formatadas.append(f"{id_personagem} - {nome_carta[0]}")
 
         respostatexto = f"Você deseja mesmo cenourar as cartas:\n\n" + "\n".join(cartas_formatadas)
-        respostatexto = truncar_texto(respostatexto) if embaralhamento_ativo else respostatexto
         # Passando os IDs como uma string separada por vírgula
         keyboard = telebot.types.InlineKeyboardMarkup()
         sim_button = telebot.types.InlineKeyboardButton(text="Sim", callback_data=f"cenourar_sim_{id_usuario}_{','.join(ids_personagens)}")
@@ -174,7 +173,6 @@ def cenourar_carta(call, id_usuario, ids_personagens_str):
         # Mensagens de confirmação
         if cartas_cenouradas:
             mensagem_final = f"🥕<b> Cenouras colhidas com sucesso!</b> Multiplicador aplicado: x{multiplicador}\nCartas cenouradas: {', '.join(cartas_cenouradas)}"
-            mensagem_final = truncar_texto(mensagem_final) if embaralhamento_ativo else mensagem_final
             bot.edit_message_text(chat_id=chat_id, message_id=message_id, text=mensagem_final, parse_mode="HTML")
 
         if cartas_nao_encontradas:

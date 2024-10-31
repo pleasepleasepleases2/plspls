@@ -1987,7 +1987,7 @@ def realizar_halloween_gostosura(user_id, chat_id):
 
         if chance == 1:
             cenouras_ganhas = random.randint(50, 100)
-            aumentar_cenouras(user_id, cenouras_ganhas)
+            aumentarcenouras(user_id, cenouras_ganhas)
             emoji = random.choice(emojis_gostosura)
             bot.send_photo(chat_id, url_imagem, caption=f"{emoji} 🍬 Você tropeçou em um saco de doces! Dentro dele, estavam {cenouras_ganhas} cenouras. Aproveite a sorte!")
             print(f"DEBUG: {cenouras_ganhas} cenouras enviadas ao usuário {user_id}")

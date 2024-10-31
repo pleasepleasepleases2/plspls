@@ -504,27 +504,24 @@ def ativar_protecao_travessura(user_id, horas_duracao):
     try:
         conn, cursor = conectar_banco_dados()
         
-        # Definir o fim da proteção como o tempo atual mais a duração
+        # Define o fim da proteção com a duração especificada
         fim_protecao = datetime.now() + timedelta(hours=horas_duracao)
         
-        # Verificar se já existe uma proteção para esse usuário
+        # Desativa qualquer proteção anterior do usuário
         cursor.execute("""
-            SELECT id_usuario FROM protecoes_travessura WHERE id_usuario = %s
+            UPDATE protecoes_travessura 
+            SET ativa = 0 
+            WHERE id_usuario = %s AND ativa = 1
         """, (user_id,))
-        resultado = cursor.fetchone()
-
-        if resultado:
-            # Atualizar o tempo de fim da proteção
-            cursor.execute("""
-                UPDATE protecoes_travessura SET fim_protecao = %s WHERE id_usuario = %s
-            """, (fim_protecao, user_id))
-        else:
-            # Inserir uma nova proteção
-            cursor.execute("""
-                INSERT INTO protecoes_travessura (id_usuario, fim_protecao) VALUES (%s, %s)
-            """, (user_id, fim_protecao))
+        
+        # Inserir nova proteção com `ativa = 1`
+        cursor.execute("""
+            INSERT INTO protecoes_travessura (id_usuario, fim_protecao, ativa)
+            VALUES (%s, %s, 1)
+        """, (user_id, fim_protecao))
         
         conn.commit()
+        
         bot.send_message(user_id, f"🛡️ Você está protegido contra travessuras por {horas_duracao} horas!")
     
     except Exception as e:
@@ -541,7 +538,7 @@ def verificar_protecao_travessura(user_id):
         # Consultar proteção ativa para o usuário
         cursor.execute("""
             SELECT fim_protecao FROM protecoes_travessura
-            WHERE id_usuario = %s
+            WHERE id_usuario = %s AND ativa = 1
         """, (user_id,))
         resultado = cursor.fetchone()
 
@@ -549,23 +546,21 @@ def verificar_protecao_travessura(user_id):
             fim_protecao = resultado[0]
             print(f"DEBUG: Proteção encontrada para o usuário {user_id}, fim em {fim_protecao}")
             
-            # Verificar se a proteção ainda está ativa
+            # Verifica se a proteção ainda está ativa
             if datetime.now() < fim_protecao:
                 print(f"DEBUG: Proteção ainda ativa para o usuário {user_id}")
                 return True
             else:
                 print(f"DEBUG: Proteção para o usuário {user_id} expirada em {fim_protecao}")
-        else:
-            print(f"DEBUG: Nenhuma proteção ativa encontrada para o usuário {user_id}")
         
-        return False  # Sem proteção ativa ou proteção expirada
+        print(f"DEBUG: Nenhuma proteção ativa encontrada para o usuário {user_id}")
+        return False  # Sem proteção ativa ou expirada
     
     except Exception as e:
         print(f"Erro ao verificar a proteção contra travessuras para o usuário {user_id}: {e}")
         return False
     finally:
         fechar_conexao(cursor, conn)
-        print(f"DEBUG: Conexão fechada após verificação de proteção para o usuário {user_id}")
 
 def criar_tabuleiro():
     """Cria um tabuleiro vazio de jogo da velha."""

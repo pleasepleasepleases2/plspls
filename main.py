@@ -441,6 +441,27 @@ def apreender_cartas_cenouras(user_id):
 
     conn.commit()
     fechar_conexao(cursor, conn)
+
+# Função para ativar um grupo no banco de dados
+def activate_group(group_id):
+    cursor.execute('INSERT OR IGNORE INTO active_groups (group_id) VALUES (?)', (group_id,))
+    conn.commit()
+
+# Função para desativar um grupo do banco de dados
+def deactivate_group(group_id):
+    cursor.execute('DELETE FROM active_groups WHERE group_id = ?', (group_id,))
+    conn.commit()
+
+# Função para checar se o grupo está ativo
+def is_group_active(group_id):
+    cursor.execute('SELECT * FROM active_groups WHERE group_id = ?', (group_id,))
+    return cursor.fetchone() is not None
+
+# Função que desativa o grupo após 5 minutos
+def start_timer(group_id):
+    time.sleep(300)  # 5 minutos
+    deactivate_group(group_id)
+
 # Comando para ativar a repetição no grupo
 @bot.message_handler(commands=['ativargrupo'])
 def activate_group_command(message):

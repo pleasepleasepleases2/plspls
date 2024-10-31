@@ -156,7 +156,43 @@ def set_webhook():
 @app.route('/', methods=['GET', 'HEAD'])
 def index():
     return 'Server is running.'
+def adicionar_carta_faltante_halloween(user_id, chat_id):
+    try:
+        conn, cursor = conectar_banco_dados()
 
+        # Obter todas as cartas do evento Halloween que o usuário ainda não possui
+        query_faltantes_halloween = """
+            SELECT e.id_personagem, e.nome 
+            FROM evento e
+            LEFT JOIN inventario i ON e.id_personagem = i.id_personagem AND i.id_usuario = %s
+            WHERE e.evento = 'Festival das Abóboras' AND i.id_personagem IS NULL
+        """
+        cursor.execute(query_faltantes_halloween, (user_id,))
+        cartas_faltantes = cursor.fetchall()
+        total_faltantes = len(cartas_faltantes)
+
+        if not cartas_faltantes:
+            bot.send_message(user_id, "Parabéns! Mas você já tem todas as cartas do evento de Halloween.")
+            return
+
+        # Selecionar uma carta de Halloween aleatória
+        carta_faltante = random.choice(cartas_faltantes)
+        id_carta_faltante, nome_carta_faltante = carta_faltante
+
+        # Adicionar a carta ao inventário
+        cursor.execute("INSERT INTO inventario (id_usuario, id_personagem, quantidade) VALUES (%s, %s, 1)", (user_id, id_carta_faltante))
+        conn.commit()
+
+        # Enviar a mensagem informando a carta recebida e o total de cartas que ainda faltam
+        bot.send_message(chat_id, 
+                         f"🎃 Parabéns! Você encontrou uma carta do evento Halloween: "
+                         f"{nome_carta_faltante} (ID: {id_carta_faltante}) foi adicionada ao seu inventário. "
+                         f"Ainda faltam {total_faltantes - 1} cartas para completar o evento!")
+
+    except Exception as e:
+        print(f"Erro ao adicionar carta de Halloween faltante: {e}")
+    finally:
+        fechar_conexao(cursor, conn)
 def bloquear_acao(user_id, acao, minutos):
     """
     Bloqueia uma ação específica para um usuário.

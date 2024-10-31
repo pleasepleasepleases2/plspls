@@ -728,8 +728,15 @@ def checar_empate(tabuleiro):
     # Checa se todas as posições estão preenchidas (empate)
     return all(tabuleiro[i, j] != ' ' for i in range(3) for j in range(3))
 
+import random
+import numpy as np
+
+# Define as variáveis para o bot e o jogador
+bot_jogador = 'O'
+jogador = 'X'
+
 def bot_jogada(tabuleiro):
-    """Decide entre uma jogada inteligente (Minimax) e uma aleatória com 80% e 20% de chance, respectivamente."""
+    """Decide entre uma jogada inteligente (Minimax) e uma aleatória com 95% e 5% de chance, respectivamente."""
     if random.random() < 0.95:
         print("DEBUG: Bot fazendo jogada inteligente usando Minimax.")
         
@@ -762,9 +769,9 @@ def bot_jogada(tabuleiro):
 def minimax(tabuleiro, depth, is_maximizing):
     # Verifica as condições de vitória, derrota ou empate
     if checar_vitoria(tabuleiro, bot_jogador):
-        return 1
+        return 10 - depth
     elif checar_vitoria(tabuleiro, jogador):
-        return -1
+        return depth - 10
     elif checar_empate(tabuleiro):
         return 0
 

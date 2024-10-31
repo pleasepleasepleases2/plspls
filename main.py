@@ -1312,12 +1312,12 @@ def realizar_combo_gostosura(user_id, chat_id):
             mensagem_combo += "🐟 Encanto ativado: Os peixes virão em dobro nas suas pescas no lago!\n"
 
         elif efeito_escolhido == "proteção contra travessuras":
-            fim_protecao = datetime.now() + timedelta(hours=24)
+            data_ativacao = datetime.now()
             cursor.execute("""
-                INSERT INTO protecoes_travessura (id_usuario, fim_protecao, ativa)
+                INSERT INTO protecoes_travessura (id_usuario, data_ativacao, ativa)
                 VALUES (%s, %s, 1)
-                ON DUPLICATE KEY UPDATE fim_protecao = %s, ativa = 1
-            """, (user_id, fim_protecao, fim_protecao))
+                ON DUPLICATE KEY UPDATE data_ativacao = %s, ativa = 1
+            """, (user_id, data_ativacao, data_ativacao))
             conn.commit()
             mensagem_combo += "🛡️ Encanto ativado: Uma luz protetora te envolverá contra travessuras sombrias!\n"
 
@@ -1331,7 +1331,7 @@ def realizar_combo_gostosura(user_id, chat_id):
             conn.commit()
             mensagem_combo += "⚡ Encanto ativado: Você recebeu um passe VIP de 1 dia para explorar a magia oculta!\n"
             # Enviar mensagem para o grupo de sugestões
-            bot.send_message(GRUPO_SUGESTAO, f"🎉 O usuário {user_id} ganhou VIP por {dias_vip} dias!")
+            bot.send_message(GRUPO_SUGESTAO, f"🎉 O usuário {user_id} ganhou VIP de 1 dia!")
 
         # Enviar a mensagem final com todas as informações
         bot.send_message(chat_id, mensagem_combo)

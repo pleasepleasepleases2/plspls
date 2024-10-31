@@ -51,7 +51,7 @@ def enviar_pergunta_cenoura(message, id_usuario, ids_personagens, bot):
         # Recupera os nomes das cartas e formata a pergunta
         cartas_formatadas = []
 
-        bloqueado, minutos_restantes = verificar_bloqueio_comandos(user_id)
+        bloqueado, minutos_restantes = verificar_bloqueio_comandos(id_usuario)
         if bloqueado:
             bot.send_message(message.chat.id, f"👻 Você está invisível e seus comandos serão ignorados por mais {minutos_restantes} minutos.")
             return

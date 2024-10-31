@@ -1921,8 +1921,6 @@ def processar_premio(user_id, premio):
     if "cenouras" in premio:
         quantidade_cenouras = int(premio.split()[0])
         aumentar_cenouras(user_id, quantidade_cenouras)
-        bot.send_message(user_id, f"🥕 Você ganhou {quantidade_cenouras} cenouras extras!")
-
     elif "VIP" in premio:
         conceder_vip(user_id, 1)
         bot.send_message(user_id, "🌟 Você ganhou um dia de VIP! Aproveite seus benefícios.")

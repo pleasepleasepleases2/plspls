@@ -176,24 +176,23 @@ def handle_evento_command(message):
         conn, cursor = conectar_banco_dados()
         qnt_carta(message.from_user.id)
         id_usuario = message.from_user.id
-        user = message.from_user
-        usuario = user.first_name
+        usuario = message.from_user.first_name
         
+        # Dividir o comando em partes para capturar o tipo e o nome do evento
         comando_parts = message.text.split(maxsplit=2)
         
-        # Verificação para garantir que o comando tenha pelo menos dois argumentos
+        # Verificar se o comando possui o formato correto
         if len(comando_parts) < 3:
-            resposta = "Comando inválido. Use /evento <evento> <subcategoria>."
+            resposta = "Comando inválido. Use /evento <s|f> <evento>."
             bot.send_message(message.chat.id, resposta)
             return
         
-        # Extrair evento e subcategoria corretamente
-        evento = comando_parts[1].strip().lower()
-        subcategoria = comando_parts[2].strip().lower()
+        # Identificar o tipo ('s' para cartas que o usuário possui, 'f' para cartas faltantes)
+        tipo = comando_parts[1].strip().lower()
+        evento = comando_parts[2].strip().lower()
 
-        # Usar SQL com parâmetros para garantir segurança e precisão na consulta
-        sql_evento_existente = "SELECT DISTINCT evento FROM evento WHERE evento = %s"
-        cursor.execute(sql_evento_existente, (evento,))
+        # Verificar se o evento existe no banco de dados
+        cursor.execute("SELECT DISTINCT evento FROM evento WHERE evento = %s", (evento,))
         evento_existente = cursor.fetchone()
         
         if not evento_existente:
@@ -201,24 +200,24 @@ def handle_evento_command(message):
             bot.send_message(message.chat.id, resposta)
             return
 
-        # Verificar se é um comando de subcategoria "s" ou "f"
-        if message.text.startswith('/evento s'):
-            resposta_completa = comando_evento_s(id_usuario, evento, subcategoria, cursor, usuario)
-        elif message.text.startswith('/evento f'):
-            resposta_completa = comando_evento_f(id_usuario, evento, subcategoria, cursor, usuario)
+        # Executar a função correta com base no tipo ('s' ou 'f')
+        if tipo == "s":
+            resposta_completa = comando_evento_s(id_usuario, evento, cursor, usuario)
+        elif tipo == "f":
+            resposta_completa = comando_evento_f(id_usuario, evento, cursor, usuario)
         else:
             resposta = "Comando inválido. Use /evento s <evento> ou /evento f <evento>."
             bot.send_message(message.chat.id, resposta)
             return
 
-        # Exibir resposta e botões de navegação, se houver mais páginas
+        # Exibir resposta e botões de navegação se houver várias páginas de resultados
         if isinstance(resposta_completa, tuple):
-            subcategoria_pesquisada, lista, total_pages = resposta_completa
+            lista, total_pages = resposta_completa
             resposta = f"{lista}\n\nPágina 1 de {total_pages}"
 
             markup = InlineKeyboardMarkup()
             if total_pages > 1:
-                markup.add(InlineKeyboardButton("Próxima", callback_data=f"evt_next_{id_usuario}_{evento[:20]}_{subcategoria_pesquisada[:20]}_2"))
+                markup.add(InlineKeyboardButton("Próxima", callback_data=f"evt_next_{id_usuario}_{evento[:20]}_2"))
 
             bot.send_message(message.chat.id, resposta, reply_markup=markup)
         else:
@@ -228,7 +227,6 @@ def handle_evento_command(message):
         traceback.print_exc()
     finally:
         fechar_conexao(cursor, conn)
-
 
 def handle_callback_query_evento(call):
     data_parts = call.data.split('_')

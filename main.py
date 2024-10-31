@@ -1230,21 +1230,23 @@ def alterar_usuario(user_id, coluna, valor_novo,chat_id):
     finally:
         fechar_conexao(cursor, conn)
 
-def adicionar_protecao_temporaria(user_id,chat_id):
+def adicionar_protecao_temporaria(user_id, chat_id):
     try:
         conn, cursor = conectar_banco_dados()
-        horas_protecao = random.randint(1, 3,)
+        horas_protecao = random.randint(1, 3)
         fim_protecao = datetime.now() + timedelta(hours=horas_protecao)
+        data_ativacao = datetime.now()
 
-        # Atualizar ou inserir a proteção na tabela de usuários
+        # Atualizar ou inserir a proteção na tabela de protecoes_travessura
         cursor.execute("""
-            INSERT INTO protecoes (id_usuario, fim_protecao)
-            VALUES (%s, %s)
-            ON DUPLICATE KEY UPDATE fim_protecao = %s
-        """, (user_id, fim_protecao, fim_protecao))
+            INSERT INTO protecoes_travessura (id_usuario, fim_protecao, data_ativacao, ativa)
+            VALUES (%s, %s, %s, 1)
+            ON DUPLICATE KEY UPDATE fim_protecao = %s, data_ativacao = %s, ativa = 1
+        """, (user_id, fim_protecao, data_ativacao, fim_protecao, data_ativacao))
+        
         conn.commit()
 
-        #Informar o usuário sobre a proteção mágica
+        # Informar o usuário sobre a proteção mágica
         bot.send_message(chat_id, f"🕯️ Um encanto protetor envolve você! Por {horas_protecao} horas, sua aura está protegida de travessuras sombrias. Aproveite a calma e segurança dessa bênção!")
     
     except Exception as e:

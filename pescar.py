@@ -411,12 +411,8 @@ def send_card_message(message, *args, cursor=None, conn=None):
             quantidade = verifica_inventario_troca(id_usuario, id_personagem) * multiplicador_peixes
 
             imagem = evento_aleatorio.get('imagem', "https://telegra.ph/file/8a50bf408515b52a36734.jpg")
-            texto = f"🎣 Parabéns! Sua isca era boa e você recebeu:\n\n☃️ {id_personagem} - {nome}\nde {subcategoria_display}\nQuantidade de cartas: {quantidade}"
+            texto = f"🎣 Parabéns! Sua isca era boa e você recebeu:\n\n🎃 {id_personagem} - {nome}\nde {subcategoria_display}\nQuantidade de cartas: {quantidade}"
 
-            if multiplicador_sorte > 1:
-                # Chance de recompensa extra
-                recompensa_extra = aplicar_recompensa_extra(id_usuario, subcategoria)
-                texto += f"\n\n🍀 Bônus de Sorte ativado: {recompensa_extra}"
 
             text = truncar_texto(texto) if embaralhamento_ativo else texto
 
@@ -437,9 +433,11 @@ def send_card_message(message, *args, cursor=None, conn=None):
             texto = f"🎣 Parabéns! Sua isca era boa e você recebeu:\n\n{emoji_categoria}<code> {id_personagem}</code> - {nome}\nde {subcategoria_display}\nQuantidade de cartas: {quantidade}"
 
             if multiplicador_sorte > 1:
-                # Chance de recompensa extra
+            # Chance de recompensa extra
                 recompensa_extra = aplicar_recompensa_extra(id_usuario, subcategoria)
-                texto += f"\n\n🍀 Bônus de Sorte ativado: {recompensa_extra}"
+                if recompensa_extra is not None:
+                    texto += f"\n\n🍀 Bônus de Sorte ativado: {recompensa_extra}"
+
 
             text = truncar_texto(texto) if embaralhamento_ativo else texto
 

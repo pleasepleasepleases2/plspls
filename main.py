@@ -259,8 +259,9 @@ def exibir_cartas_categoria(call):
     bot.edit_message_text(mensagem_loja, chat_id, call.message.message_id, reply_markup=markup)
 @bot.message_handler(func=lambda message: True)  # Handler para todas as mensagens
 def aplicar_travessura_grupal(message):
-    """Aplica a travessura grupal às mensagens enquanto a travessura está ativa."""
+    """Aplica a travessura grupal às mensagens enquanto a travessura está ativa, e segue normal se não ativa."""
     chat_id = message.chat.id
+    # Verifica se a travessura grupal está ativa para o chat
     if travessura_ativa.get(chat_id):
         print(f"DEBUG: Travessura Grupal ativa para mensagem {message.message_id} no chat {chat_id}")
         escolha = random.choice(['eco', 'reacao', 'resposta'])
@@ -271,6 +272,10 @@ def aplicar_travessura_grupal(message):
             reagir_com_emoji(chat_id, message)
         elif escolha == 'resposta':
             resposta_direta(chat_id, message)
+    else:
+        print(f"DEBUG: Travessura Grupal inativa para mensagem {message.message_id} no chat {chat_id}")
+        # Aqui o fluxo continua normalmente, pois não há travessura ativa
+
 # Função para confirmar a compra de uma carta selecionada
 @bot.callback_query_handler(func=lambda call: call.data.startswith('escolher_carta_bruxa_'))
 def confirmar_compra_carta(call):

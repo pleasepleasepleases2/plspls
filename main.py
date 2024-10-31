@@ -1507,7 +1507,7 @@ def iniciar_compartilhamento(user_id, chat_id):
         conn.commit()
 
         # Enviar a mensagem informando sobre o compartilhamento
-        bot.send_message(chat_id, f"🎃 Você ganhou {cenouras_ganhas} cenouras! Agora escolha alguém para compartilhar usando o comando +compartilhar <id do jogador>.")
+        bot.send_message(chat_id, f"🎃 Você ganhou {cenouras_ganhas} cenouras! Agora escolha alguém para compartilhar usando o comando +compartilhar em resposta a mensagem de outro usuario.")
     
     except Exception as e:
         print(f"Erro ao iniciar o compartilhamento: {e}")

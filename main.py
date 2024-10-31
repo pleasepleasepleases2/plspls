@@ -2541,7 +2541,7 @@ def realizar_halloween_travessura(user_id, chat_id, nome):
         elif chance == 13:
             # Travessura acontece com todos os que mandaram mensagem no grupo nos últimos 10 minutos
             travessura_grupal(user_id,chat_id)
-
+            iniciar_travessura_grupal(chat_id, duracao_segundos=120)
         elif chance == 14:
             # Troca de ordem nos comandos de troca
             troca_invertida(user_id,chat_id)

@@ -21,6 +21,27 @@ cache = TTLCache(maxsize=1000, ttl=600)
 cache_cartas = TTLCache(maxsize=1000, ttl=3600)
 cache_submenus = TTLCache(maxsize=1000, ttl=3600)
 cache_eventos = TTLCache(maxsize=1000, ttl=3600)
+def aplicar_recompensa_extra(user_id, subcategoria):
+    """
+    Função para conceder uma recompensa extra com base no bônus de sorte ativo.
+    """
+    conn, cursor = conectar_banco_dados()
+    # Escolha entre cenouras ou uma carta da mesma subcategoria com 50% de chance
+    if random.random() < 0.5:  # 50% de chance
+        # Recompensa de cenouras
+        cenouras_extras = random.randint(10, 50)
+        aumentar_cenouras(user_id, cenouras_extras)
+        return f"Você ganhou {cenouras_extras} cenouras extras!"
+    else:
+        # Recompensa de carta extra
+        cartas = obter_cartas_subcateg(subcategoria, conn)
+        if cartas:
+            carta_escolhida = random.choice(cartas)  # Seleciona uma carta aleatória
+            id_personagem, _, nome, _ = carta_escolhida  # Acessa o id_personagem e o nome
+            add_to_inventory(user_id, id_personagem)  # Adiciona ao inventário do usuário
+            return f"Você ganhou uma carta extra: {nome} (ID: {id_personagem}) da subcategoria {subcategoria}!"
+        else:
+            return "Nenhuma carta extra foi encontrada para a subcategoria."
 
 @cached(cache_cartas)
 def obter_cartas_subcateg(subcategoria, conn):

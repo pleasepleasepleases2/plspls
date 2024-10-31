@@ -17,100 +17,77 @@ from gif import *
 import random
 import traceback
 
-def comando_evento_s(id_usuario, evento, subcategoria, cursor, usuario_inicial, page=1):
-    subcategoria = subcategoria.strip().title()
-    def formatar_id(id_personagem):
-        return str(id_personagem).zfill(4)
-    
+def comando_evento_s(id_usuario, evento, cursor, usuario_inicial, page=1):
     items_per_page = 20
     offset = (page - 1) * items_per_page
     
     sql_usuario = f"""
-        SELECT e.emoji, e.id_personagem, e.nome AS nome_personagem, e.subcategoria
+        SELECT e.emoji, e.id_personagem, e.nome AS nome_personagem
         FROM evento e
         JOIN inventario i ON e.id_personagem = i.id_personagem
-        WHERE i.id_usuario = {id_usuario} AND e.evento = '{evento}'
+        WHERE i.id_usuario = %s AND e.evento = %s
         ORDER BY CAST(e.id_personagem AS UNSIGNED) ASC
-        LIMIT {items_per_page} OFFSET {offset};
+        LIMIT %s OFFSET %s;
     """
-    cursor.execute(sql_usuario)
+    cursor.execute(sql_usuario, (id_usuario, evento, items_per_page, offset))
     resultados_usuario = cursor.fetchall()
 
     sql_total = f"""
         SELECT COUNT(*)
         FROM evento e
         JOIN inventario i ON e.id_personagem = i.id_personagem
-        WHERE i.id_usuario = {id_usuario} AND e.evento = '{evento}';
+        WHERE i.id_usuario = %s AND e.evento = %s;
     """
-    cursor.execute(sql_total)
+    cursor.execute(sql_total, (id_usuario, evento))
     total_items = cursor.fetchone()[0]
     total_pages = ceil(total_items / items_per_page)
     
     if resultados_usuario:
-        lista_cartas = ""
+        lista_cartas = "".join([f"{emoji} {id_personagem} — {nome_personagem}\n" for emoji, id_personagem, nome_personagem in resultados_usuario])
+        resposta = f"🌾 | Cartas do evento {evento} no inventário de {usuario_inicial}:\n\n{lista_cartas}"
+        return resposta, total_pages
 
-        for carta in resultados_usuario:
-            id_carta = carta[1]
-            emoji_carta = carta[0]
-            nome_carta = carta[2]
-            subcategoria_carta = carta[3].title()
-            lista_cartas += f"{emoji_carta} {id_carta} — {nome_carta}\n"
-        if lista_cartas:
-            resposta = f"🌾 | Cartas do evento {evento} no inventario de {usuario_inicial}:\n\n{lista_cartas}"
-            return subcategoria_carta, resposta, total_pages
-    return f"🌧 Sem cartas de {subcategoria} no evento {evento}! A jornada continua..."
+    return f"🌧 Sem cartas do evento {evento} no inventário. A jornada continua..."
 
-def comando_evento_f(id_usuario, evento, subcategoria, cursor, usuario_inicial, page=1):
-    subcategoria = subcategoria.strip().title()
-    def formatar_id(id_personagem):
-        return str(id_personagem).zfill(4)
-    
+def comando_evento_f(id_usuario, evento, cursor, usuario_inicial, page=1):
     items_per_page = 20
     offset = (page - 1) * items_per_page
     
     sql_faltantes = f"""
-        SELECT e.emoji, e.id_personagem, e.nome AS nome_personagem, e.subcategoria
+        SELECT e.emoji, e.id_personagem, e.nome AS nome_personagem
         FROM evento e
-        WHERE e.evento = '{evento}' 
+        WHERE e.evento = %s 
             AND NOT EXISTS (
                 SELECT 1
                 FROM inventario i
-                WHERE i.id_usuario = {id_usuario} AND i.id_personagem = e.id_personagem
+                WHERE i.id_usuario = %s AND i.id_personagem = e.id_personagem
             )
         ORDER BY CAST(e.id_personagem AS UNSIGNED) ASC
-        LIMIT {items_per_page} OFFSET {offset};
+        LIMIT %s OFFSET %s;
     """
-    cursor.execute(sql_faltantes)
+    cursor.execute(sql_faltantes, (evento, id_usuario, items_per_page, offset))
     resultados_faltantes = cursor.fetchall()
 
     sql_total = f"""
         SELECT COUNT(*)
         FROM evento e
-        WHERE e.evento = '{evento}' 
+        WHERE e.evento = %s 
             AND NOT EXISTS (
                 SELECT 1
                 FROM inventario i
-                WHERE i.id_usuario = {id_usuario} AND i.id_personagem = e.id_personagem
+                WHERE i.id_usuario = %s AND i.id_personagem = e.id_personagem
             );
     """
-    cursor.execute(sql_total)
+    cursor.execute(sql_total, (evento, id_usuario))
     total_items = cursor.fetchone()[0]
     total_pages = ceil(total_items / items_per_page)
 
     if resultados_faltantes:
-        lista_cartas = ""
+        lista_cartas = "".join([f"{emoji} {id_personagem} — {nome_personagem}\n" for emoji, id_personagem, nome_personagem in resultados_faltantes])
+        resposta = f"☀️ | Cartas do evento {evento} faltando no inventário de {usuario_inicial}:\n\n{lista_cartas}"
+        return resposta, total_pages
 
-        for carta in resultados_faltantes:
-            id_carta = carta[1]
-            emoji_carta = carta[0]
-            nome_carta = carta[2]
-            subcategoria_carta = carta[3].title()
-            lista_cartas += f"{emoji_carta} {id_carta}— {nome_carta}\n"
-        if lista_cartas:
-            resposta = f"☀️ | Cartas do evento {evento} que não estão no inventário de {usuario_inicial}:\n\n{lista_cartas}"
-            return subcategoria_carta, resposta, total_pages
-    return f"☀️ Nada como a alegria de ter todas as cartas de {subcategoria} no evento {evento} na cesta!"
-
+    return f"☀️ Nada como a alegria de ter todas as cartas do evento {evento} na cesta!"
         
 def get_random_card_valentine(subcategoria):
     try:

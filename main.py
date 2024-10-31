@@ -3069,96 +3069,28 @@ def realizar_halloween_travessura(user_id, chat_id, nome):
         traceback.print_exc()
         bot.send_message(user_id, "Ocorreu um erro ao realizar a travessura.")
 
-import threading
-import random
-from telebot.types import ReactionTypeEmoji
 
-def iniciar_travessura_grupal(chat_id, duracao_segundos=120):
-    """Inicia a travessura grupal, executando travessuras em mensagens no grupo por uma duração limitada."""
-    travessura_ativa[chat_id] = True
-    bot.send_message(chat_id, "👻 A Travessura Grupal começou! Todos estão sob efeito da travessura.")
-    print(f"DEBUG: Travessura Grupal iniciada no chat {chat_id} por {duracao_segundos} segundos.")
-
-    # Agenda o encerramento da travessura
-    threading.Timer(duracao_segundos, finalizar_travessura_grupal, [chat_id]).start()
-
-def ecoar_mensagem(chat_id, message):
-    """Escolhe uma resposta engraçada e ecoa como reply."""
-    respostas_eco = [
-        f"💬 mimimi: <i>{message.text}</i>",
-        f"💬 disse a bobona: <i>{message.text}</i>",
-        f"💬 nossa, que emocionante... 😴 <i>{message.text}</i>",
-        f"💬 traduzindo: 'blá blá blá' <i>{message.text}</i>",
-        f"💬 mais um monólogo... <i>{message.text}</i>",
-        f"💬 alguém achando que está arrasando: <i>{message.text}</i>",
-        f"💬 resumo: zzz... <i>{message.text}</i>",
-    ]
-    
-    eco_mensagem = random.choice(respostas_eco)
-    bot.send_message(chat_id, eco_mensagem, parse_mode="HTML", reply_to_message_id=message.message_id)
-    print(f"DEBUG: Ecoou mensagem no chat {chat_id} em resposta a {message.message_id}: {eco_mensagem}")
-
-# Ativar uma lista de emojis específicos para reações
-reacoes_emoji = [
-    ReactionTypeEmoji('👍'),
-    ReactionTypeEmoji('😂'),
-    ReactionTypeEmoji('😴'),
-    ReactionTypeEmoji('😳'),
-    ReactionTypeEmoji('😡'),
-    ReactionTypeEmoji('😭'),
-    ReactionTypeEmoji('🤯'),
-]
-
-def reagir_com_emoji(chat_id, message):
-    """Define uma reação de emoji engraçada na mensagem."""
-    reacao = random.choice(reacoes_emoji)
+def ativar_desconto_loja(user_id, chat_id):
     try:
-        bot.set_message_reaction(
-            chat_id=chat_id,
-            message_id=message.message_id,
-            reaction=[reacao],  # Aqui usamos a lista de reações específicas
-            is_big=random.choice([True, False])  # Alterna entre animação grande e padrão
+        conn, cursor = conectar_banco_dados()
+        fim_desconto = datetime.now() + timedelta(hours=24)
+
+        # Insere ou atualiza o desconto para o usuário
+        cursor.execute("""
+            INSERT INTO descontos_loja (id_usuario, fim_desconto) 
+            VALUES (%s, %s) 
+            ON DUPLICATE KEY UPDATE fim_desconto = %s
+        """, (user_id, fim_desconto, fim_desconto))
+        conn.commit()
+
+        bot.send_message(
+            chat_id, 
+            "🎉 Gostosura! Você ganhou 24 horas de desconto em todas as compras da loja. Aproveite!"
         )
-        print(f"DEBUG: Reação {reacao} definida na mensagem {message.message_id} no chat {chat_id}")
     except Exception as e:
-        print(f"Erro ao definir reação: {e}")
-
-def resposta_direta(chat_id, message):
-    """Responde diretamente com uma frase engraçada."""
-    respostas_diretas = [
-        "🤔 Interessante... se fosse verdade.",
-        "✨ Nossa, fala mais, tô quase dormindo.",
-        "🧐 Sério mesmo? Conta pra alguém que se importa!",
-        "😴 Obrigado por essa informação... zzz...",
-        "💀 Como é mesmo? Ah, esquece, nem interessa.",
-        "😂 Hahaha, boa piada... era piada, né?",
-        "😳 Uau, chocante! Só que não.",
-    ]
-
-    resposta = random.choice(respostas_diretas)
-    bot.send_message(chat_id, resposta, reply_to_message_id=message.message_id)
-    print(f"DEBUG: Respondeu diretamente no chat {chat_id} em resposta a {message.message_id}: {resposta}")
-
-def travessura_grupal(chat_id, message):
-    """Executa uma travessura grupal escolhendo entre eco, reação e resposta direta, enquanto ativa."""
-    if travessura_ativa.get(chat_id):
-        escolha = random.choice(['eco', 'reacao', 'resposta'])
-        print(f"DEBUG: Escolha da travessura grupal no chat {chat_id} para mensagem {message.message_id}: {escolha}")
-        
-        if escolha == 'eco':
-            ecoar_mensagem(chat_id, message)
-        elif escolha == 'reacao':
-            reagir_com_emoji(chat_id, message)
-        elif escolha == 'resposta':
-            resposta_direta(chat_id, message)
-
-def finalizar_travessura_grupal(chat_id):
-    """Encerra a travessura grupal, removendo o estado ativo."""
-    if travessura_ativa.get(chat_id):
-        del travessura_ativa[chat_id]
-        bot.send_message(chat_id, "🎃 A Travessura Grupal acabou! Vocês estão livres... por enquanto.")
-        print(f"DEBUG: Travessura Grupal finalizada no chat {chat_id}")
-
+        print(f"Erro ao ativar desconto na loja: {e}")
+    finally:
+        fechar_conexao(cursor, conn)
 @bot.callback_query_handler(func=lambda call: call.data.startswith("pronomes_"))
 def pronomes(call):
     atualizar_pronomes(call)

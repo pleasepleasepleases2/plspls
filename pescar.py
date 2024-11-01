@@ -145,24 +145,31 @@ def categoria_handler(message, categoria, id_usuario):
     try:
         conn, cursor = conectar_banco_dados()
         chat_id = message.chat.id
-        
+
         # Verificar se a travessura de embaralhamento está ativa
         embaralhamento_ativo = verificar_travessura_ativa(id_usuario)
+        
+        # Inicializar variáveis de evento
         evento_ativo = True
         chance_evento = random.random()
-        
-        # Inicializar subcategorias do evento, caso a categoria seja 'geral'
-        subcategories_valentine = None
-        if categoria.lower() == 'geral' and chance_evento <= 0.5:
-            if evento_ativo:
-                subcategories_valentine = get_random_subcategories_all_valentine(conn)
-                print(f"DEBUG: subcategories_valentine - {subcategories_valentine}")
 
+        if categoria.lower() == 'geral':
+            print("DEBUG: Categoria 'geral' selecionada, verificando chance de evento.")
+
+            # Verifica a chance de ativação do evento
+            if evento_ativo and chance_evento <= 0.5:
+                subcategories_valentine = get_random_subcategories_all_valentine(conn)
+                
+                # Sorteia entre a opção de múltiplas subcategorias ou apenas uma
                 if random.random() <= 0.5:
-                    # Escolher subcategorias aleatórias e configurar mensagem
+                    print("DEBUG: Evento ativo com escolha entre duas subcategorias.")
+
+                    # Seleciona duas subcategorias e configura o markup com botões para cada uma
                     subcategories_aleatorias = random.sample(subcategories_valentine, k=2)
                     image_link = "https://telegra.ph/file/d651e2963427bcc6972e0.jpg"
                     caption = "A escuridão de Halloween se aproxima, mas você está preparado! Escolha uma categoria e siga por este caminho misterioso:\n\n"
+                    
+                    # Configurar botões inline para seleção de subcategoria
                     markup = telebot.types.InlineKeyboardMarkup(row_width=2)
                     emoji_numbers = ['🧙‍♀️', '🧟‍♀️']
                     row_buttons = []
@@ -172,23 +179,27 @@ def categoria_handler(message, categoria, id_usuario):
                         row_buttons.append(telebot.types.InlineKeyboardButton(button_text, callback_data=f"subcategory_{subcategory}_valentine"))
                     markup.row(*row_buttons)
 
+                    # Enviar a mensagem com imagem e botões para escolher subcategoria
                     bot.edit_message_media(
                         chat_id=message.chat.id,
                         message_id=message.message_id,
                         reply_markup=markup,
                         media=telebot.types.InputMediaPhoto(media=image_link, caption=caption)
                     )
-                    return  # Encerrar a função para evitar execução duplicada
                 else:
-                    # Configuração com uma única subcategoria para seleção
+                    print("DEBUG: Evento ativo com escolha de uma única subcategoria.")
+
+                    # Se apenas uma subcategoria, exibe um botão único
                     subcategoria_aleatoria = random.choice(subcategories_valentine)
                     emoji_numbers = ['🧙‍♀️', '🧟‍♀️']
                     button_text = emoji_numbers[subcategories_valentine.index(subcategoria_aleatoria)]
 
+                    # Configura botão único para subcategoria
                     keyboard = telebot.types.InlineKeyboardMarkup()
                     button = telebot.types.InlineKeyboardButton(button_text, callback_data=f"subcategory_{subcategoria_aleatoria}_valentine")
                     keyboard.add(button)
 
+                    # Configuração de imagem e texto para a seleção de uma subcategoria
                     caption = "Uma bruma encantada envolve o cenário, deixando você com apenas uma opção mágica:\n\n"
                     bot.edit_message_media(
                         chat_id=message.chat.id,
@@ -196,39 +207,43 @@ def categoria_handler(message, categoria, id_usuario):
                         reply_markup=keyboard,
                         media=telebot.types.InputMediaPhoto(media="https://telegra.ph/file/8a50bf408515b52a36734.jpg", caption=caption)
                     )
-                    return
+            else:
+                print("DEBUG: Evento não ativado para 'geral', prosseguindo com lógica padrão de subcategorias.")
+                # Caso não ative o evento, segue com a lógica padrão de 'geral' com subcategorias
 
-        # Tratamento para outras categorias além de "geral"
-        subcategorias = buscar_subcategorias(categoria)
-        subcategorias = [subcategoria for subcategoria in subcategorias if subcategoria]
+        else:
+            # Lógica padrão para categorias diferentes de "geral"
+            subcategorias = buscar_subcategorias(categoria)
+            subcategorias = [subcategoria for subcategoria in subcategorias if subcategoria]
 
-        if not subcategorias:
-            bot.send_message(chat_id, f"Nenhuma subcategoria encontrada para a categoria '{categoria}'.")
-            return None
+            if not subcategorias:
+                bot.send_message(chat_id, f"Nenhuma subcategoria encontrada para a categoria '{categoria}'.")
+                return None
 
-        resposta_texto = "Sua isca atraiu 6 espécies, qual peixe você vai levar?\n\n"
-        subcategorias_aleatorias = random.sample(subcategorias, min(6, len(subcategorias)))
+            # Configuração padrão de texto e botões de subcategorias
+            resposta_texto = "Sua isca atraiu 6 espécies, qual peixe você vai levar?\n\n"
+            subcategorias_aleatorias = random.sample(subcategorias, min(6, len(subcategorias)))
 
-        for i, subcategoria in enumerate(subcategorias_aleatorias, start=1):
-            subcategoria_final = truncar_texto(subcategoria) if embaralhamento_ativo else subcategoria
-            resposta_texto += f"{i}\uFE0F\u20E3 - {subcategoria_final}\n"
+            for i, subcategoria in enumerate(subcategorias_aleatorias, start=1):
+                subcategoria_final = truncar_texto(subcategoria) if embaralhamento_ativo else subcategoria
+                resposta_texto += f"{i}\uFE0F\u20E3 - {subcategoria_final}\n"
 
-        markup = telebot.types.InlineKeyboardMarkup(row_width=6)
-        row_buttons = []
-        for i, subcategoria in enumerate(subcategorias_aleatorias, start=1):
-            subcategoria_final = truncar_texto(subcategoria) if embaralhamento_ativo else subcategoria
-            button_text = f"{i}\uFE0F\u20E3"
-            callback_data = f"choose_subcategoria_{subcategoria}"
-            row_buttons.append(telebot.types.InlineKeyboardButton(button_text, callback_data=callback_data))
+            markup = telebot.types.InlineKeyboardMarkup(row_width=6)
+            row_buttons = []
+            for i, subcategoria in enumerate(subcategorias_aleatorias, start=1):
+                subcategoria_final = truncar_texto(subcategoria) if embaralhamento_ativo else subcategoria
+                button_text = f"{i}\uFE0F\u20E3"
+                callback_data = f"choose_subcategoria_{subcategoria}"
+                row_buttons.append(telebot.types.InlineKeyboardButton(button_text, callback_data=callback_data))
 
-        markup.row(*row_buttons)
-        imagem_url = "https://telegra.ph/file/8a50bf408515b52a36734.jpg"
-        bot.edit_message_media(
-            chat_id=chat_id,
-            message_id=message.message_id,
-            reply_markup=markup,
-            media=telebot.types.InputMediaPhoto(media=imagem_url, caption=resposta_texto)
-        )
+            markup.row(*row_buttons)
+            imagem_url = "https://telegra.ph/file/8a50bf408515b52a36734.jpg"
+            bot.edit_message_media(
+                chat_id=chat_id,
+                message_id=message.message_id,
+                reply_markup=markup,
+                media=telebot.types.InputMediaPhoto(media=imagem_url, caption=resposta_texto)
+            )
 
     except mysql.connector.Error as err:
         bot.send_message(chat_id, f"Erro ao buscar subcategorias: {err}")

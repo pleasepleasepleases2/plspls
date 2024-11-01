@@ -148,8 +148,51 @@ def categoria_handler(message, categoria, id_usuario):
         
         # Verificar se a travessura de embaralhamento está ativa
         embaralhamento_ativo = verificar_travessura_ativa(id_usuario)
+        evento_ativo = True
+        chance_evento = random.random()
+        if categoria.lower() == 'geral'and chance_evento <= 0.5
+            if evento_ativo:
+                subcategories_valentine = get_random_subcategories_all_valentine(conn)
+                if random.random() <= 0.5:
+                    subcategories_aleatorias = random.sample(subcategories_valentine, k=2)
+                    image_link = "https://telegra.ph/file/d651e2963427bcc6972e0.jpg"
+                    caption = "A escuridão de Halloween se aproxima, mas você está preparado! Escolha uma categoria e siga por este caminho misterioso:\n\n"
+                    markup = telebot.types.InlineKeyboardMarkup(row_width=2)
+                    emoji_numbers = ['🧙‍♀️', '🧟‍♀️']
+                    row_buttons = []
+                    for i, subcategory in enumerate(subcategories_aleatorias):
+                        caption += f"{emoji_numbers[i]} - {subcategory} \n"
+                        button_text = emoji_numbers[i]
+                        row_buttons.append(telebot.types.InlineKeyboardButton(button_text, callback_data=f"subcategory_{subcategory}_valentine"))
+                    markup.row(*row_buttons)
 
-        if categoria.lower() == 'geral': 
+                    imagem_url = "https://telegra.ph/file/8a50bf408515b52a36734.jpg"
+                    bot.edit_message_media(
+                        chat_id=message.chat.id,
+                        message_id=message.message_id,
+                        reply_markup=markup,
+                        media=telebot.types.InputMediaPhoto(media=imagem_url, caption=caption)
+                    )
+                else:
+                    caption = "Uma bruma encantada envolve o cenário, deixando você com apenas uma opção mágica:\n\n"
+                    subcategoria_aleatoria = random.choice(subcategories_valentine)
+                    emoji_numbers = ['🧙‍♀️', '🧟‍♀️']
+                    button_text = emoji_numbers[subcategories_valentine.index(subcategoria_aleatoria)]
+
+                    keyboard = telebot.types.InlineKeyboardMarkup()
+                    button = telebot.types.InlineKeyboardButton(button_text, callback_data=f"subcategory_{subcategoria_aleatoria}_valentine")
+                    keyboard.add(button)
+
+                    imagem_url = "https://telegra.ph/file/8a50bf408515b52a36734.jpg"
+                    bot.edit_message_media(
+                        chat_id=message.chat.id,
+                        message_id=message.message_id,
+                        reply_markup=keyboard,
+                        media=telebot.types.InputMediaPhoto(media=imagem_url, caption=caption)
+                    )
+
+
+        else:
             subcategorias = buscar_subcategorias(categoria)
             subcategorias = [subcategoria for subcategoria in subcategorias if subcategoria]
 

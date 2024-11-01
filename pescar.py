@@ -150,7 +150,7 @@ def categoria_handler(message, categoria, id_usuario):
         embaralhamento_ativo = verificar_travessura_ativa(id_usuario)
         evento_ativo = True
         chance_evento = random.random()
-        if categoria.lower() == 'geral'and chance_evento <= 0.5
+        if categoria.lower() == 'geral'and chance_evento <= 0.5:
             if evento_ativo:
                 subcategories_valentine = get_random_subcategories_all_valentine(conn)
                 if random.random() <= 0.5:

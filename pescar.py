@@ -141,93 +141,92 @@ def truncar_texto(texto, truncar_percent=0.5):
     return texto_embaralhado
 
 
-def categoria_handler(message, categoria,id_usuario):
+def categoria_handler(message, categoria, id_usuario):
     try:
         conn, cursor = conectar_banco_dados()
+        chat_id = message.chat.id
+        
+        # Verificar se a travessura de embaralhamento está ativa
+        embaralhamento_ativo = verificar_travessura_ativa(id_usuario)
 
-        chat_id = message.chat.id 
-        evento_ativo = True
-        chance_evento = random.random()
-        if categoria.lower() == 'geral' and chance_evento <= 0.5:
-            if evento_ativo:
-                subcategories_valentine = get_random_subcategories_all_valentine(conn)
-                if random.random() <= 0.5:
-                    subcategories_aleatorias = random.sample(subcategories_valentine, k=2)
-                    image_link = "https://telegra.ph/file/d651e2963427bcc6972e0.jpg"
-                    caption = "A escuridão de Halloween se aproxima, mas você está preparado! Escolha uma categoria e siga por este caminho misterioso:\n\n"
-                    markup = telebot.types.InlineKeyboardMarkup(row_width=2)
-                    emoji_numbers = ['🧙‍♀️', '🧟‍♀️']
-                    row_buttons = []
-                    for i, subcategory in enumerate(subcategories_aleatorias):
-                        caption += f"{emoji_numbers[i]} - {subcategory} \n"
-                        button_text = emoji_numbers[i]
-                        row_buttons.append(telebot.types.InlineKeyboardButton(button_text, callback_data=f"subcategory_{subcategory}_valentine"))
-                    markup.row(*row_buttons)
+        if categoria.lower() == 'geral': 
+            subcategorias = buscar_subcategorias(categoria)
+            subcategorias = [subcategoria for subcategoria in subcategorias if subcategoria]
 
-                    imagem_url = "https://telegra.ph/file/8a50bf408515b52a36734.jpg"
-                    bot.edit_message_media(
-                        chat_id=message.chat.id,
-                        message_id=message.message_id,
-                        reply_markup=markup,
-                        media=telebot.types.InputMediaPhoto(media=imagem_url, caption=caption)
-                    )
-                else:
-                    caption = "Uma bruma encantada envolve o cenário, deixando você com apenas uma opção mágica:\n\n"
-                    subcategoria_aleatoria = random.choice(subcategories_valentine)
-                    emoji_numbers = ['🧙‍♀️', '🧟‍♀️']
-                    button_text = emoji_numbers[subcategories_valentine.index(subcategoria_aleatoria)]
+            if not subcategorias:
+                bot.send_message(chat_id, f"Nenhuma subcategoria encontrada para a categoria '{categoria}'.")
+                return None
 
-                    keyboard = telebot.types.InlineKeyboardMarkup()
-                    button = telebot.types.InlineKeyboardButton(button_text, callback_data=f"subcategory_{subcategoria_aleatoria}_valentine")
-                    keyboard.add(button)
+            respostatexto = "Sua isca atraiu 6 espécies, qual peixe você vai levar?\n\n"
+            resposta_texto = truncar_texto(respostatexto) if embaralhamento_ativo else respostatexto
+            subcategorias_aleatorias = random.sample(subcategorias, min(6, len(subcategorias)))
 
-                    imagem_url = "https://telegra.ph/file/8a50bf408515b52a36734.jpg"
-                    bot.edit_message_media(
-                        chat_id=message.chat.id,
-                        message_id=message.message_id,
-                        reply_markup=keyboard,
-                        media=telebot.types.InputMediaPhoto(media=imagem_url, caption=caption)
-                    )
-            else:
-                subcategorias = buscar_subcategorias(categoria)
-                subcategorias = [subcategoria for subcategoria in subcategorias if subcategoria]
+            for i, subcategoria in enumerate(subcategorias_aleatorias, start=1):
+                subcategoria_final = truncar_texto(subcategoria) if embaralhamento_ativo else subcategoria
+                resposta_texto += f"{i}\uFE0F\u20E3 - {subcategoria_final}\n"
 
-                if subcategorias:
-                    resposta_texto = "Uau, parece que você atraiu algo inesperado... \nSua isca trouxe esses peixinhos curiosos e encantados:\n\n"
-                    subcategorias_aleatorias = random.sample(subcategorias, min(6, len(subcategorias)))
+            markup = telebot.types.InlineKeyboardMarkup(row_width=6)
+            row_buttons = []
+            for i, subcategoria in enumerate(subcategorias_aleatorias, start=1):
+                subcategoria_final = truncar_texto(subcategoria) if embaralhamento_ativo else subcategoria
+                button_text = f"{i}\uFE0F\u20E3"
+                callback_data = f"choose_subcategoria_{subcategoria}"
+                row_buttons.append(telebot.types.InlineKeyboardButton(button_text, callback_data=callback_data))
 
-                    for i, subcategoria in enumerate(subcategorias_aleatorias, start=1):
-                        resposta_texto += f"{i}\uFE0F\u20E3 - {subcategoria}\n"
+            markup.row(*row_buttons)
+            imagem_url = "https://telegra.ph/file/8a50bf408515b52a36734.jpg"
+            bot.edit_message_media(
+                chat_id=chat_id,
+                message_id=message.message_id,
+                reply_markup=markup,
+                media=telebot.types.InputMediaPhoto(media=imagem_url, caption=resposta_texto)
+            )
+            return None  
 
-                    markup = telebot.types.InlineKeyboardMarkup(row_width=6)
-                    row_buttons = []
-                    for i, subcategoria in enumerate(subcategorias_aleatorias, start=1):
-                        button_text = f"{i}\uFE0F\u20E3"
-                        callback_data = f"choose_subcategoria_{subcategoria}"
-                        row_buttons.append(telebot.types.InlineKeyboardButton(button_text, callback_data=callback_data))
-                    markup.row(*row_buttons)
+        # Tratamento para categorias diferentes de "geral"
+        subcategorias = buscar_subcategorias(categoria)
+        subcategorias = [subcategoria for subcategoria in subcategorias if subcategoria]
 
-                    imagem_url = "https://telegra.ph/file/8a50bf408515b52a36734.jpg"
-                    bot.edit_message_media(
-                        chat_id=message.chat.id,
-                        message_id=message.message_id,
-                        reply_markup=markup,
-                        media=telebot.types.InputMediaPhoto(media=imagem_url, caption=resposta_texto)
-                    )
-                else:
-                    bot.send_message(message.chat.id, f"Nenhuma subcategoria encontrada para a categoria '{categoria}'.")
-    except Exception as e:
-        print(f"Erro ao processar categoria: {e}")
+        if not subcategorias:
+            bot.send_message(chat_id, f"Nenhuma subcategoria encontrada para a categoria '{categoria}'.")
+            return None
+
+        resposta_texto = "Sua isca atraiu 6 espécies, qual peixe você vai levar?\n\n"
+        subcategorias_aleatorias = random.sample(subcategorias, min(6, len(subcategorias)))
+
+        for i, subcategoria in enumerate(subcategorias_aleatorias, start=1):
+            subcategoria_final = truncar_texto(subcategoria) if embaralhamento_ativo else subcategoria
+            resposta_texto += f"{i}\uFE0F\u20E3 - {subcategoria_final}\n"
+
+        markup = telebot.types.InlineKeyboardMarkup(row_width=6)
+        row_buttons = []
+        for i, subcategoria in enumerate(subcategorias_aleatorias, start=1):
+            subcategoria_final = truncar_texto(subcategoria) if embaralhamento_ativo else subcategoria
+            button_text = f"{i}\uFE0F\u20E3"
+            callback_data = f"choose_subcategoria_{subcategoria}"
+            row_buttons.append(telebot.types.InlineKeyboardButton(button_text, callback_data=callback_data))
+
+        markup.row(*row_buttons)
+        imagem_url = "https://telegra.ph/file/8a50bf408515b52a36734.jpg"
+        bot.edit_message_media(
+            chat_id=chat_id,
+            message_id=message.message_id,
+            reply_markup=markup,
+            media=telebot.types.InputMediaPhoto(media=imagem_url, caption=resposta_texto)
+        )
+
+    except mysql.connector.Error as err:
+        bot.send_message(chat_id, f"Erro ao buscar subcategorias: {err}")
     finally:
         fechar_conexao(cursor, conn)
+
 
 def criar_markup(subcategorias, tipo):
     markup = telebot.types.InlineKeyboardMarkup()
     row_buttons = []
-    emoji_numbers = ['🧟‍♂️', '🧙‍♀️'] if tipo == "valentine" else [f"{i}\uFE0F\u20E3" for i in range(1, 7)]
+    emoji_numbers = ['☃️', '❄️'] if tipo == "valentine" else [f"{i}\uFE0F\u20E3" for i in range(1, 7)]
     for i, subcategoria in enumerate(subcategorias):
         button_text = emoji_numbers[i] if tipo == "valentine" else f"{i+1}\uFE0F\u20E3"
-        
         callback_data = f"subcategory_{subcategoria}_{tipo}"
         row_buttons.append(telebot.types.InlineKeyboardButton(button_text, callback_data=callback_data))
     markup.add(*row_buttons)
@@ -667,70 +666,67 @@ def embaralhar_texto_visivel(texto):
 # Função para o comando de pesca
 def pescar(message):
     try:
+        print("Comando pescar acionado")
         nome = message.from_user.first_name
         user_id = message.from_user.id
 
-        # Verificar bloqueio de comandos
         bloqueado, minutos_restantes = verificar_bloqueio_comandos(user_id)
         if bloqueado:
             bot.send_message(message.chat.id, f"👻 Você está invisível e seus comandos serão ignorados por mais {minutos_restantes} minutos.")
             return
 
-        # Verificar iscas
+        # Verificar a quantidade de iscas disponíveis
         qtd_iscas = verificar_giros(user_id)
         if qtd_iscas == 0:
             bot.send_message(message.chat.id, "Você está sem iscas.", reply_to_message_id=message.message_id)
-            return
-
-        # Atualizar última interação
-        if not verificar_tempo_passado(message.chat.id):
-            return
         else:
-            ultima_interacao[message.chat.id] = datetime.now()
+            # Verificar se o tempo desde a última interação é suficiente
+            if not verificar_tempo_passado(message.chat.id):
+                return
+            else:
+                ultima_interacao[message.chat.id] = datetime.now()
 
-        # Verificar se é beta tester
-        if verificar_id_na_tabelabeta(user_id):
-            # Diminuir o número de iscas
-            diminuir_giros(user_id, 1)
+            # Verificar se o usuário é beta tester
+            if verificar_id_na_tabelabeta(user_id):
+                # Diminuir o número de iscas
+                diminuir_giros(user_id, 1)
 
-            # Criar o teclado de categorias
-            keyboard = telebot.types.InlineKeyboardMarkup()
-            primeira_coluna = [
-                telebot.types.InlineKeyboardButton(text="☁  Música", callback_data='pescar_musica'),
-                telebot.types.InlineKeyboardButton(text="🌷 Anime", callback_data='pescar_animanga'),
-                telebot.types.InlineKeyboardButton(text="🧶  Jogos", callback_data='pescar_jogos')
-            ]
-            segunda_coluna = [
-                telebot.types.InlineKeyboardButton(text="🍰  Filmes", callback_data='pescar_filmes'),
-                telebot.types.InlineKeyboardButton(text="🍄  Séries", callback_data='pescar_series'),
-                telebot.types.InlineKeyboardButton(text="🍂  Misc", callback_data='pescar_miscelanea')
-            ]
-            keyboard.add(*primeira_coluna)
-            keyboard.add(*segunda_coluna)
-            
-                # Adicionar o botão "Geral"
-            keyboard.row(telebot.types.InlineKeyboardButton(text="🎃 Evento", callback_data='pescar_geral'))
+                # Criar o teclado de categorias para escolha
+                keyboard = telebot.types.InlineKeyboardMarkup()
 
+                primeira_coluna = [
+                    telebot.types.InlineKeyboardButton(text="☁  Música", callback_data='pescar_musica'),
+                    telebot.types.InlineKeyboardButton(text="🌷 Anime", callback_data='pescar_animanga'),
+                    telebot.types.InlineKeyboardButton(text="🧶  Jogos", callback_data='pescar_jogos')
+                ]
+                segunda_coluna = [
+                    telebot.types.InlineKeyboardButton(text="🍰  Filmes", callback_data='pescar_filmes'),
+                    telebot.types.InlineKeyboardButton(text="🍄  Séries", callback_data='pescar_series'),
+                    telebot.types.InlineKeyboardButton(text="🍂  Misc", callback_data='pescar_miscelanea')
+                ]
 
-            # Enviar a imagem e o teclado de categorias
-            photo = "https://pub-6f23ef52e8614212a14d24b0cf55ae4a.r2.dev/BQACAgEAAxkBAAIeq2ckA3TkUqJpUN8HGwSScRjS3dY6AAIZBQACy-MhRXObx3AerywHNgQ.jpg"
-            texto = f'<i>Olá! {nome}, \nVocê tem disponível: {qtd_iscas} iscas. \nBoa pesca!\n\nSelecione uma categoria:</i>'
-            
-            # Verificar se a travessura está ativa e embaralhar, se necessário
-            if verificar_travessura_embaralhamento(message.from_user.id):
-                texto = truncar_texto(texto)
-            
-            bot.send_photo(message.chat.id, photo=photo, caption=texto, reply_markup=keyboard, reply_to_message_id=message.message_id, parse_mode="HTML")
-        else:
-            bot.send_message(message.chat.id, "Ei visitante, você não foi convidado! 😡", reply_to_message_id=message.message_id)
+                keyboard.add(*primeira_coluna)
+                keyboard.add(*segunda_coluna)
+                keyboard.row(telebot.types.InlineKeyboardButton(text="🫧  Geral", callback_data='pescar_geral'))
+
+                # Enviar a imagem e o teclado de categorias
+                photo = "https://pub-6f23ef52e8614212a14d24b0cf55ae4a.r2.dev/BQACAgEAAxkBAAIeq2ckA3TkUqJpUN8HGwSScRjS3dY6AAIZBQACy-MhRXObx3AerywHNgQ.jpg"
+                texto = f'<i>Olá! {nome}, \nVocê tem disponível: {qtd_iscas} iscas. \nBoa pesca!\n\nSelecione uma categoria:</i>'
+                # Verificar se a travessura está ativa e embaralhar, se necessário
+                if verificar_travessura_embaralhamento(message.from_user.id):
+                    texto = truncar_texto(texto)
+                bot.send_photo(message.chat.id, photo=photo, caption=texto, reply_markup=keyboard, reply_to_message_id=message.message_id, parse_mode="HTML")
+            else:
+                bot.send_message(message.chat.id, "Ei visitante, você não foi convidado! 😡", reply_to_message_id=message.message_id)
 
     except ValueError as e:
         print(f"Erro: {e}")
-        newrelic.agent.record_exception()
+        newrelic.agent.record_exception()    
         bot.send_message(message.chat.id, "Você foi banido permanentemente do garden. Entre em contato com o suporte caso haja dúvidas.", reply_to_message_id=message.message_id)
     except Exception as e:
         error_details = traceback.format_exc()  # Captura toda a stack trace
         print(f"Erro inesperado: {error_details}")  # Log mais detalhado
+        
         bot.send_message(message.chat.id, "Ocorreu um erro inesperado ao tentar pescar.", reply_to_message_id=message.message_id)
 
 def verificar_bloqueio_pesca(user_id):

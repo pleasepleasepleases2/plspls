@@ -224,7 +224,7 @@ def categoria_handler(message, categoria, id_usuario):
 def criar_markup(subcategorias, tipo):
     markup = telebot.types.InlineKeyboardMarkup()
     row_buttons = []
-    emoji_numbers = ['☃️', '❄️'] if tipo == "valentine" else [f"{i}\uFE0F\u20E3" for i in range(1, 7)]
+    emoji_numbers = ['🧟‍♂️', '🧙‍♀️'] if tipo == "valentine" else [f"{i}\uFE0F\u20E3" for i in range(1, 7)]
     for i, subcategoria in enumerate(subcategorias):
         button_text = emoji_numbers[i] if tipo == "valentine" else f"{i+1}\uFE0F\u20E3"
         callback_data = f"subcategory_{subcategoria}_{tipo}"
@@ -666,67 +666,70 @@ def embaralhar_texto_visivel(texto):
 # Função para o comando de pesca
 def pescar(message):
     try:
-        print("Comando pescar acionado")
         nome = message.from_user.first_name
         user_id = message.from_user.id
 
+        # Verificar bloqueio de comandos
         bloqueado, minutos_restantes = verificar_bloqueio_comandos(user_id)
         if bloqueado:
             bot.send_message(message.chat.id, f"👻 Você está invisível e seus comandos serão ignorados por mais {minutos_restantes} minutos.")
             return
 
-        # Verificar a quantidade de iscas disponíveis
+        # Verificar iscas
         qtd_iscas = verificar_giros(user_id)
         if qtd_iscas == 0:
             bot.send_message(message.chat.id, "Você está sem iscas.", reply_to_message_id=message.message_id)
+            return
+
+        # Atualizar última interação
+        if not verificar_tempo_passado(message.chat.id):
+            return
         else:
-            # Verificar se o tempo desde a última interação é suficiente
-            if not verificar_tempo_passado(message.chat.id):
-                return
-            else:
-                ultima_interacao[message.chat.id] = datetime.now()
+            ultima_interacao[message.chat.id] = datetime.now()
 
-            # Verificar se o usuário é beta tester
-            if verificar_id_na_tabelabeta(user_id):
-                # Diminuir o número de iscas
-                diminuir_giros(user_id, 1)
+        # Verificar se é beta tester
+        if verificar_id_na_tabelabeta(user_id):
+            # Diminuir o número de iscas
+            diminuir_giros(user_id, 1)
 
-                # Criar o teclado de categorias para escolha
-                keyboard = telebot.types.InlineKeyboardMarkup()
+            # Criar o teclado de categorias
+            keyboard = telebot.types.InlineKeyboardMarkup()
+            primeira_coluna = [
+                telebot.types.InlineKeyboardButton(text="☁  Música", callback_data='pescar_musica'),
+                telebot.types.InlineKeyboardButton(text="🌷 Anime", callback_data='pescar_animanga'),
+                telebot.types.InlineKeyboardButton(text="🧶  Jogos", callback_data='pescar_jogos')
+            ]
+            segunda_coluna = [
+                telebot.types.InlineKeyboardButton(text="🍰  Filmes", callback_data='pescar_filmes'),
+                telebot.types.InlineKeyboardButton(text="🍄  Séries", callback_data='pescar_series'),
+                telebot.types.InlineKeyboardButton(text="🍂  Misc", callback_data='pescar_miscelanea')
+            ]
+            keyboard.add(*primeira_coluna)
+            keyboard.add(*segunda_coluna)
+            
+            # Inserir o novo botão "Geral" com subcategorias
+            subcategorias = get_random_subcategories_all_valentine(conectar_banco_dados())
+            keyboard.add(criar_markup(subcategorias, "valentine"))
 
-                primeira_coluna = [
-                    telebot.types.InlineKeyboardButton(text="☁  Música", callback_data='pescar_musica'),
-                    telebot.types.InlineKeyboardButton(text="🌷 Anime", callback_data='pescar_animanga'),
-                    telebot.types.InlineKeyboardButton(text="🧶  Jogos", callback_data='pescar_jogos')
-                ]
-                segunda_coluna = [
-                    telebot.types.InlineKeyboardButton(text="🍰  Filmes", callback_data='pescar_filmes'),
-                    telebot.types.InlineKeyboardButton(text="🍄  Séries", callback_data='pescar_series'),
-                    telebot.types.InlineKeyboardButton(text="🍂  Misc", callback_data='pescar_miscelanea')
-                ]
-
-                keyboard.add(*primeira_coluna)
-                keyboard.add(*segunda_coluna)
-                keyboard.row(telebot.types.InlineKeyboardButton(text="🫧  Geral", callback_data='pescar_geral'))
-
-                # Enviar a imagem e o teclado de categorias
-                photo = "https://pub-6f23ef52e8614212a14d24b0cf55ae4a.r2.dev/BQACAgEAAxkBAAIeq2ckA3TkUqJpUN8HGwSScRjS3dY6AAIZBQACy-MhRXObx3AerywHNgQ.jpg"
-                texto = f'<i>Olá! {nome}, \nVocê tem disponível: {qtd_iscas} iscas. \nBoa pesca!\n\nSelecione uma categoria:</i>'
-                # Verificar se a travessura está ativa e embaralhar, se necessário
-                if verificar_travessura_embaralhamento(message.from_user.id):
-                    texto = truncar_texto(texto)
-                bot.send_photo(message.chat.id, photo=photo, caption=texto, reply_markup=keyboard, reply_to_message_id=message.message_id, parse_mode="HTML")
-            else:
-                bot.send_message(message.chat.id, "Ei visitante, você não foi convidado! 😡", reply_to_message_id=message.message_id)
+            # Enviar a imagem e o teclado de categorias
+            photo = "https://pub-6f23ef52e8614212a14d24b0cf55ae4a.r2.dev/BQACAgEAAxkBAAIeq2ckA3TkUqJpUN8HGwSScRjS3dY6AAIZBQACy-MhRXObx3AerywHNgQ.jpg"
+            texto = f'<i>Olá! {nome}, \nVocê tem disponível: {qtd_iscas} iscas. \nBoa pesca!\n\nSelecione uma categoria:</i>'
+            
+            # Verificar se a travessura está ativa e embaralhar, se necessário
+            if verificar_travessura_embaralhamento(message.from_user.id):
+                texto = truncar_texto(texto)
+            
+            bot.send_photo(message.chat.id, photo=photo, caption=texto, reply_markup=keyboard, reply_to_message_id=message.message_id, parse_mode="HTML")
+        else:
+            bot.send_message(message.chat.id, "Ei visitante, você não foi convidado! 😡", reply_to_message_id=message.message_id)
 
     except ValueError as e:
         print(f"Erro: {e}")
-        newrelic.agent.record_exception()    
+        newrelic.agent.record_exception()
         bot.send_message(message.chat.id, "Você foi banido permanentemente do garden. Entre em contato com o suporte caso haja dúvidas.", reply_to_message_id=message.message_id)
     except Exception as e:
         error_details = traceback.format_exc()  # Captura toda a stack trace
         print(f"Erro inesperado: {error_details}")  # Log mais detalhado
-        
         bot.send_message(message.chat.id, "Ocorreu um erro inesperado ao tentar pescar.", reply_to_message_id=message.message_id)
 
 def verificar_bloqueio_pesca(user_id):

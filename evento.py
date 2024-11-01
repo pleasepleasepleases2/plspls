@@ -105,7 +105,7 @@ def get_random_card_valentine(subcategoria):
     try:
         conn, cursor = conectar_banco_dados()
         cursor.execute(
-            "SELECT id_personagem, nome, subcategoria, imagem FROM evento WHERE subcategoria = %s AND evento = 'Inverno' ORDER BY RAND() LIMIT 1",
+            "SELECT id_personagem, nome, subcategoria, imagem FROM evento WHERE subcategoria = %s AND evento = 'Festival das Abóboras' ORDER BY RAND() LIMIT 1",
             (subcategoria,))
         evento_aleatorio = cursor.fetchone()
         if evento_aleatorio:

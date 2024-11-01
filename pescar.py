@@ -141,7 +141,7 @@ def truncar_texto(texto, truncar_percent=0.5):
     return texto_embaralhado
 
 
-def categoria_handler(message, categoria):
+def categoria_handler(message, categoria, id_usuario):
     try:
         conn, cursor = conectar_banco_dados()
         chat_id = message.chat.id

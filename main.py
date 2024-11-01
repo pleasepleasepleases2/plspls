@@ -1033,39 +1033,70 @@ def handle_callback_query_evento(call):
 
 @bot.message_handler(commands=['halloween'])
 def handle_halloween(message):
-    user_id = message.from_user.id  # Obtém o ID do usuário
+    user_id = message.from_user.id
     chat_id = message.chat.id
     nome = message.from_user.first_name
-    print(f"DEBUG: Comando /halloween acionado pelo usuário {user_id}")
-    chance = random.random()  # Gera um número entre 0 e 1
-    print(f"DEBUG: Chance sorteada para gostosura ou travessura: {chance}")
+    agora = datetime.now()
+    comando = 'halloween'
     
-    # Verifica se o usuário já está em um jogo ativo
-    if user_id in jogos_em_andamento and jogos_em_andamento[user_id]['ativo']:
-        bot.send_message(chat_id, "🕸️ Você já está enredado em um jogo! Termine seu feitiço atual antes de buscar outra aventura.")
-        return
+    conn, cursor = conectar_banco_dados()
+    try:
+        # Verificar o último uso do comando no banco de dados
+        cursor.execute("""
+            SELECT ultimo_uso FROM uso_comandos 
+            WHERE id_usuario = %s AND comando = %s
+        """, (user_id, comando))
+        resultado = cursor.fetchone()
 
-    # Chance de travessura ou gostosura
-    if chance < 0.5:
-        print(f"DEBUG: Executando gostosura para o usuário {user_id}")
-        realizar_halloween_gostosura(user_id, chat_id)  # Executa uma das funções de gostosura
-    else:
-        print(f"DEBUG: Executando travessura para o usuário {user_id}")
+        if resultado:
+            ultimo_uso = resultado[0]
+            tempo_decorrido = agora - ultimo_uso
+            if tempo_decorrido.total_seconds() < 1800:  # 30 minutos
+                tempo_restante = 1800 - tempo_decorrido.total_seconds()
+                minutos, segundos = divmod(int(tempo_restante), 60)
+                bot.send_message(
+                    chat_id,
+                    f"🕰️ Você já usou o comando recentemente. Tente novamente em {minutos} minutos e {segundos} segundos."
+                )
+                return
         
-        # Verificar se a proteção está ativa
-        if verificar_protecao_travessura(user_id):
-            # Se a proteção está ativa, remover e informar ao usuário
-            conn, cursor = conectar_banco_dados()
-            cursor.execute("DELETE FROM protecoes_travessura WHERE id_usuario = %s", (user_id,))
-            conn.commit()
-            fechar_conexao(cursor, conn)
-            
-            # Mensagem de proteção ativa
-            bot.send_message(chat_id, f"🌙 Uma proteção mágica brilha ao seu redor, {nome}! A travessura se dissolve no ar, e agora sua proteção foi dissipada. Tome cuidado, pois novas sombras podem se aproximar...")
-            print(f"DEBUG: Proteção ativada e gasta para o usuário {user_id}")
+        # Atualizar ou inserir o tempo de uso do comando
+        cursor.execute("""
+            INSERT INTO uso_comandos (id_usuario, comando, ultimo_uso) 
+            VALUES (%s, %s, %s)
+            ON DUPLICATE KEY UPDATE ultimo_uso = %s
+        """, (user_id, comando, agora, agora))
+        conn.commit()
+        
+        chance = random.random()
+        print(f"DEBUG: Chance sorteada para gostosura ou travessura: {chance}")
+
+        # Verifica se o usuário já está em um jogo ativo
+        if user_id in jogos_em_andamento and jogos_em_andamento[user_id]['ativo']:
+            bot.send_message(chat_id, "🕸️ Você já está enredado em um jogo! Termine seu feitiço atual antes de buscar outra aventura.")
+            return
+
+        # Chance de travessura ou gostosura
+        if chance < 0.5:
+            print(f"DEBUG: Executando gostosura para o usuário {user_id}")
+            realizar_halloween_gostosura(user_id, chat_id)
         else:
-            # Se não há proteção, aplicar travessura
-            realizar_halloween_travessura(user_id, chat_id, nome)
+            print(f"DEBUG: Executando travessura para o usuário {user_id}")
+            
+            if verificar_protecao_travessura(user_id):
+                cursor.execute("DELETE FROM protecoes_travessura WHERE id_usuario = %s", (user_id,))
+                conn.commit()
+                bot.send_message(chat_id, f"🌙 Uma proteção mágica brilha ao seu redor, {nome}! A travessura se dissolve no ar, e agora sua proteção foi dissipada.")
+                print(f"DEBUG: Proteção ativada e gasta para o usuário {user_id}")
+            else:
+                realizar_halloween_travessura(user_id, chat_id, nome)
+    
+    except Exception as e:
+        print(f"Erro ao registrar o uso do comando /halloween: {e}")
+        bot.send_message(chat_id, "Ocorreu um erro ao processar o comando.")
+    finally:
+        fechar_conexao(cursor, conn)
+
 
 def aplicar_travessura(id_usuario, tipo_travessura):
     """

@@ -206,7 +206,7 @@ def handle_evento_command(message):
 
             markup = InlineKeyboardMarkup()
             if total_pages > 1:
-                markup.add(InlineKeyboardButton("Próxima", callback_data=f"evt_next_{id_usuario}_{evento[:20]}_{page=2}"))
+                markup.add(InlineKeyboardButton("Próxima", callback_data=f"evt_next_{id_usuario}_{evento[:20]}_{page=2}")
 
             bot.send_message(message.chat.id, resposta, reply_markup=markup)
         else:

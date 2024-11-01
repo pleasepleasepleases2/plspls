@@ -306,7 +306,18 @@ def aumentarcenouras(id_usuario, quantidade=1):
     finally:
         cursor.close()
         conn.close()
-        
+        # Handler para o callback "Geral"
+@bot.callback_query_handler(func=lambda call: call.data == 'pescar_geral')
+def callback_geral(call):
+    # Obter subcategorias aleatórias para o submenu
+    conn, _ = conectar_banco_dados()
+    subcategorias = get_random_subcategories_all_valentine(conn)
+    conn.close()
+    
+    # Criar o menu de subcategorias usando `criar_markup`
+    markup = criar_markup(subcategorias, "valentine")
+    bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text="Escolha uma subcategoria:", reply_markup=markup)
+
 @bot.message_handler(commands=['travessuras'])
 def handle_inverter(message):
     user_id = message.from_user.id

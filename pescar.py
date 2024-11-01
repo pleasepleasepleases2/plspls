@@ -166,7 +166,7 @@ def categoria_handler(message, categoria, id_usuario):
 
                     # Seleciona duas subcategorias e configura o markup com botões para cada uma
                     subcategories_aleatorias = random.sample(subcategories_valentine, k=2)
-                    image_link = "https://telegra.ph/file/d651e2963427bcc6972e0.jpg"
+                    image_link = "https://pub-6f23ef52e8614212a14d24b0cf55ae4a.r2.dev/BQACAgEAAxkBAAIewGckVg4-uoYSZw2qcCkO7If4izRJAAJuBAACy-MpRa-8e3udhSwmNgQ.jpg"
                     caption = "A escuridão de Halloween se aproxima, mas você está preparado! Escolha uma categoria e siga por este caminho misterioso:\n\n"
                     
                     # Configurar botões inline para seleção de subcategoria

@@ -490,7 +490,7 @@ def loja(message):
         keyboard.row(telebot.types.InlineKeyboardButton(text="💼 Pacotes de Ações", callback_data='acoes_vendinha'))
 
         # URL da imagem da vendinha
-        image_url = "https://pub-6f23ef52e8614212a14d24b0cf55ae4a.r2.dev/AgACAgEAAxkBAAIeumckNcz6MktPo931JXrO4kggfixmAAKFrTEbrCwgRSD3616J467OAQADAgADeQADNgQ.jpg"
+        image_url = "https://pub-6f23ef52e8614212a14d24b0cf55ae4a.r2.dev/AgACAgEAAxkBAAIevWckR24NZLiulyoyM6p4gICs3xU5AAItrjEby-MpRZ9k194KIDqPAQADAgADeQADNgQ.jpg"
         
         # Envia a imagem e o teclado interativo
         bot.send_photo(message.chat.id, image_url,

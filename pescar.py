@@ -154,9 +154,9 @@ def categoria_handler(message, categoria,id_usuario):
                 if random.random() <= 0.5:
                     subcategories_aleatorias = random.sample(subcategories_valentine, k=2)
                     image_link = "https://telegra.ph/file/d651e2963427bcc6972e0.jpg"
-                    caption = "O frio chegou mas você estava preparado! Escolha uma categoria para poder se esquentar: \n\n"
+                    caption = "A escuridão de Halloween se aproxima, mas você está preparado! Escolha uma categoria e siga por este caminho misterioso:\n\n"
                     markup = telebot.types.InlineKeyboardMarkup(row_width=2)
-                    emoji_numbers = ['☃️', '❄️']
+                    emoji_numbers = ['🧙‍♀️', '🧟‍♀️']
                     row_buttons = []
                     for i, subcategory in enumerate(subcategories_aleatorias):
                         caption += f"{emoji_numbers[i]} - {subcategory} \n"
@@ -172,9 +172,9 @@ def categoria_handler(message, categoria,id_usuario):
                         media=telebot.types.InputMediaPhoto(media=imagem_url, caption=caption)
                     )
                 else:
-                    caption = "Uma tempestade de neve te atinge, deixando você com apenas uma opção:\n\n"
+                    caption = "Uma bruma encantada envolve o cenário, deixando você com apenas uma opção mágica:\n\n"
                     subcategoria_aleatoria = random.choice(subcategories_valentine)
-                    emoji_numbers = ['☃️', '❄️']
+                    emoji_numbers = ['🧙‍♀️', '🧟‍♀️']
                     button_text = emoji_numbers[subcategories_valentine.index(subcategoria_aleatoria)]
 
                     keyboard = telebot.types.InlineKeyboardMarkup()
@@ -193,7 +193,7 @@ def categoria_handler(message, categoria,id_usuario):
                 subcategorias = [subcategoria for subcategoria in subcategorias if subcategoria]
 
                 if subcategorias:
-                    resposta_texto = "Poxa, Parece que o calor chegou mais cedo... \nSua isca trouxe esses peixes normais:\n\n"
+                    resposta_texto = "Uau, parece que você atraiu algo inesperado... \nSua isca trouxe esses peixinhos curiosos e encantados:\n\n"
                     subcategorias_aleatorias = random.sample(subcategorias, min(6, len(subcategorias)))
 
                     for i, subcategoria in enumerate(subcategorias_aleatorias, start=1):

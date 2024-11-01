@@ -173,7 +173,7 @@ def categoria_handler(message, categoria, id_usuario):
                         reply_markup=markup,
                         media=telebot.types.InputMediaPhoto(media=imagem_url, caption=caption)
                     )
-        elif categoria.lower() == 'geral'
+        elif categoria.lower() == 'geral':
             caption = "Uma bruma encantada envolve o cenário, deixando você com apenas uma opção mágica:\n\n"
             subcategoria_aleatoria = random.choice(subcategories_valentine)
             emoji_numbers = ['🧙‍♀️', '🧟‍♀️']

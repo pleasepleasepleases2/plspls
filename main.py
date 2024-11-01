@@ -4375,30 +4375,44 @@ def callback_peixes(call):
 @bot.callback_query_handler(func=lambda call: call.data.startswith('choose_subcategoria_'))
 def callback_subcategoria_handler(call):
     try:
+        # Extrair dados do callback
         data = call.data.split('_')
         subcategoria = data[2]
         chat_id = call.message.chat.id
         message_id = call.message.message_id
         conn, cursor = conectar_banco_dados()
 
-        # Verifica se existe um evento fixo para a subcategoria
+        # Debug: Exibir informações da chamada e subcategoria selecionada
+        print(f"DEBUG: Callback acionado com subcategoria '{subcategoria}', chat_id: {chat_id}, message_id: {message_id}")
+        
+        # Tentar obter um evento fixo para a subcategoria
         evento_fixo = obter_carta_evento_fixo(subcategoria=subcategoria)
         chance = random.randint(1, 100)
-
-        # Se existe evento fixo e a chance de 5% se aplica, envia o evento fixo
+        
+        # Debug: Mostrar se foi encontrado um evento fixo e a chance gerada
+        print(f"DEBUG: Evento fixo encontrado: {evento_fixo is not None}, Chance sorteada: {chance}%")
+        
+        # Se o evento fixo existe e a chance de 5% se aplica, enviar o evento fixo
         if evento_fixo and chance <= 5:
             emoji, id_personagem_carta, nome, subcategoria, imagem = evento_fixo
+            print(f"DEBUG: Enviando evento fixo - Emoji: {emoji}, ID Personagem: {id_personagem_carta}, Nome: {nome}")
             send_card_message(call.message, emoji, id_personagem_carta, nome, subcategoria, imagem)
         else:
             # Caso contrário, envia uma carta aleatória normal da subcategoria
+            print(f"DEBUG: Enviando carta aleatória para a subcategoria '{subcategoria}'")
             subcategoria_handler(call.message, subcategoria, cursor, conn, None, chat_id, message_id)
     
     except Exception as e:
         traceback.print_exc()
         erro = traceback.format_exc()
+        print(f"DEBUG: Erro em callback_subcategoria_handler: {e}")
         bot.send_message(grupodeerro, f"Erro em categoria_callback: {e}\n{erro}")
+    
     finally:
+        # Fechar conexão com o banco de dados e log final
         fechar_conexao(cursor, conn)
+        print("DEBUG: Conexão com o banco de dados fechada após callback_subcategoria_handler")
+
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("confirmar_casamento_"))
 def handle_confirmar_casamento(call):

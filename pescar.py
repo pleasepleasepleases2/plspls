@@ -707,8 +707,10 @@ def pescar(message):
             keyboard.add(*primeira_coluna)
             keyboard.add(*segunda_coluna)
             
-            # Inserir o novo botão "Geral" com subcategorias
-            subcategorias = get_random_subcategories_all_valentine(conectar_banco_dados())
+            # Conectar ao banco e obter subcategorias
+            conn, _ = conectar_banco_dados()
+            subcategorias = get_random_subcategories_all_valentine(conn)
+            conn.close()  # Fechar conexão após uso
             keyboard.add(criar_markup(subcategorias, "valentine"))
 
             # Enviar a imagem e o teclado de categorias

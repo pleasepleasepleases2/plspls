@@ -227,6 +227,7 @@ def criar_markup(subcategorias, tipo):
     emoji_numbers = ['🧟‍♂️', '🧙‍♀️'] if tipo == "valentine" else [f"{i}\uFE0F\u20E3" for i in range(1, 7)]
     for i, subcategoria in enumerate(subcategorias):
         button_text = emoji_numbers[i] if tipo == "valentine" else f"{i+1}\uFE0F\u20E3"
+        
         callback_data = f"subcategory_{subcategoria}_{tipo}"
         row_buttons.append(telebot.types.InlineKeyboardButton(button_text, callback_data=callback_data))
     markup.add(*row_buttons)
@@ -707,11 +708,9 @@ def pescar(message):
             keyboard.add(*primeira_coluna)
             keyboard.add(*segunda_coluna)
             
-            # Conectar ao banco e obter subcategorias
-            conn, _ = conectar_banco_dados()
-            subcategorias = get_random_subcategories_all_valentine(conn)
-            conn.close()  # Fechar conexão após uso
-            keyboard.add(criar_markup(subcategorias, "valentine"))
+                # Adicionar o botão "Geral"
+            keyboard.row(telebot.types.InlineKeyboardButton(text="🎃 Evento", callback_data='pescar_geral'))
+
 
             # Enviar a imagem e o teclado de categorias
             photo = "https://pub-6f23ef52e8614212a14d24b0cf55ae4a.r2.dev/BQACAgEAAxkBAAIeq2ckA3TkUqJpUN8HGwSScRjS3dY6AAIZBQACy-MhRXObx3AerywHNgQ.jpg"

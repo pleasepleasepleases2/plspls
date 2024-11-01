@@ -3870,8 +3870,8 @@ def truncar_texto(texto, truncar_percent=0.5):
 import traceback
 
 # Inicializar dicionário global de resultados, se ainda não estiver
-if not hasattr(globals(), 'resultados_gnome'):
-    globals().resultados_gnome = {}
+if 'resultados_gnome' not in globals():
+    globals()['resultados_gnome'] = {}
 
 @bot.message_handler(commands=['gnome'])
 def handle_gnome(message):
@@ -3928,8 +3928,8 @@ def handle_gnome(message):
             categoria = categoria_errada
         
         # Salvar resultados e enviar a primeira carta
-        globals().resultados_gnome[user_id] = truncar_texto(resultados_personagens) if embaralhamento_ativo else resultados_personagens
-        enviar_primeira_carta(chat_id, user_id, globals().resultados_gnome[user_id], 0)
+        globals()['resultados_gnome'][user_id] = truncar_texto(resultados_personagens) if embaralhamento_ativo else resultados_personagens
+        enviar_primeira_carta(chat_id, user_id, globals()['resultados_gnome'][user_id], 0)
 
     except Exception as e:
         print(f"Erro: {e}")
@@ -3937,6 +3937,7 @@ def handle_gnome(message):
         bot.send_message(chat_id, "Ocorreu um erro ao processar seu comando.")
     finally:
         fechar_conexao(cursor, conn)
+
 
 
 def verificar_categoria_errada(user_id):

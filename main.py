@@ -222,7 +222,20 @@ def bloquear_acao(user_id, acao, minutos, id_bloqueado=None):
     
     finally:
         fechar_conexao(cursor, conn)
-
+def callback_subcategory(call):
+    try:
+        subcategory_data = call.data.split("_")
+        subcategory = subcategory_data[1]
+        card = get_random_card_valentine(subcategory)
+        if card:
+            evento_aleatorio = card
+            send_card_message(call.message, evento_aleatorio)
+        else:
+            bot.answer_callback_query(call.id, "Ocorreu um erro ao processar sua solicitação. Tente novamente mais tarde.")
+    except Exception as e:
+        newrelic.agent.record_exception()    
+        print(f"Erro ao processar callback de subcategoria: {e}")
+        traceback.print_exc()
 @bot.callback_query_handler(func=lambda call: call.data.startswith('votar_'))
 def votar_usuario(call):
     id_usuario_avaliador = call.from_user.id

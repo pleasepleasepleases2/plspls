@@ -490,7 +490,7 @@ def loja(message):
         keyboard.row(telebot.types.InlineKeyboardButton(text="💼 Pacotes de Ações", callback_data='acoes_vendinha'))
 
         # URL da imagem da vendinha
-        image_url = "https://telegra.ph/file/ea116d98a5bd8d6179612.jpg"
+        image_url = "https://pub-6f23ef52e8614212a14d24b0cf55ae4a.r2.dev/AgACAgEAAxkBAAIeumckNcz6MktPo931JXrO4kggfixmAAKFrTEbrCwgRSD3616J467OAQADAgADeQADNgQ.jpg"
         
         # Envia a imagem e o teclado interativo
         bot.send_photo(message.chat.id, image_url,
@@ -510,7 +510,7 @@ def handle_callback_loja_loja(call):
             data_atual = datetime.today().strftime("%Y-%m-%d")
             id_usuario = call.from_user.id
             ids_do_dia = obter_ids_loja_do_dia(data_atual)
-            imagem_url = 'https://telegra.ph/file/a60b21f603ad26eb8608a.jpg'
+            imagem_url = 'https://pub-6f23ef52e8614212a14d24b0cf55ae4a.r2.dev/AgACAgEAAxkBAAIeumckNcz6MktPo931JXrO4kggfixmAAKFrTEbrCwgRSD3616J467OAQADAgADeQADNgQ.jpg'
             original_message_id = call.message.message_id
             keyboard = telebot.types.InlineKeyboardMarkup()
             primeira_coluna = [

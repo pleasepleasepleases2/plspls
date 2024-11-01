@@ -4336,13 +4336,17 @@ def categoria_callback(call):
         categoria = call.data.replace('pescar_', '')
         chat_id = call.message.chat.id
         message_id = call.message.message_id
+        id_usuario = call.from_user.id  # Captura o ID do usuário que acionou o callback
 
         if chat_id and message_id:
+            # Passamos o ID do usuário para verificar travessura ou embaralhamento
             ultimo_clique[chat_id] = {'categoria': categoria}
-            categoria_handler(call.message, categoria)
+            categoria_handler(call.message, categoria, id_usuario)
         else:
             print("Invalid message or chat data in the callback query.")
     except Exception as e:
+        print(f"Erro em categoria_callback: {e}")
+
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith('peixes_'))
 def callback_peixes(call):

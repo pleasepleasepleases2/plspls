@@ -17,12 +17,15 @@ from gif import *
 import random
 import traceback
 
+from math import ceil
+
 def comando_evento_s(id_usuario, evento, cursor, usuario_inicial, page=1):
     items_per_page = 20
     offset = (page - 1) * items_per_page
     
+    # Consulta SQL para cartas que o usuário possui do evento
     sql_usuario = f"""
-        SELECT e.emoji, e.id_personagem, e.nome AS nome_personagem
+        SELECT e.emoji, e.id_personagem, e.nome AS nome_personagem, e.subcategoria
         FROM evento e
         JOIN inventario i ON e.id_personagem = i.id_personagem
         WHERE i.id_usuario = %s AND e.evento = %s
@@ -32,7 +35,8 @@ def comando_evento_s(id_usuario, evento, cursor, usuario_inicial, page=1):
     cursor.execute(sql_usuario, (id_usuario, evento, items_per_page, offset))
     resultados_usuario = cursor.fetchall()
 
-    sql_total = f"""
+    # Contagem total de cartas do evento que o usuário possui
+    sql_total = """
         SELECT COUNT(*)
         FROM evento e
         JOIN inventario i ON e.id_personagem = i.id_personagem
@@ -41,20 +45,24 @@ def comando_evento_s(id_usuario, evento, cursor, usuario_inicial, page=1):
     cursor.execute(sql_total, (id_usuario, evento))
     total_items = cursor.fetchone()[0]
     total_pages = ceil(total_items / items_per_page)
-    
-    if resultados_usuario:
-        lista_cartas = "".join([f"{emoji} {id_personagem} — {nome_personagem}\n" for emoji, id_personagem, nome_personagem in resultados_usuario])
-        resposta = f"🌾 | Cartas do evento {evento} no inventário de {usuario_inicial}:\n\n{lista_cartas}"
-        return resposta, total_pages
 
-    return f"🌧 Sem cartas do evento {evento} no inventário. A jornada continua..."
+    if resultados_usuario:
+        lista_cartas = "\n".join(
+            f"{carta[0]} {str(carta[1]).zfill(4)} — {carta[2]}"
+            for carta in resultados_usuario
+        )
+        resposta = f"🌾 | Cartas do evento {evento} no inventário de {usuario_inicial}:\n\n{lista_cartas}"
+        return evento, resposta, total_pages
+    else:
+        return f"🌧 Sem cartas do evento {evento} no inventário. A jornada continua..."
 
 def comando_evento_f(id_usuario, evento, cursor, usuario_inicial, page=1):
     items_per_page = 20
     offset = (page - 1) * items_per_page
     
+    # Consulta SQL para cartas faltantes do evento
     sql_faltantes = f"""
-        SELECT e.emoji, e.id_personagem, e.nome AS nome_personagem
+        SELECT e.emoji, e.id_personagem, e.nome AS nome_personagem, e.subcategoria
         FROM evento e
         WHERE e.evento = %s 
             AND NOT EXISTS (
@@ -68,7 +76,8 @@ def comando_evento_f(id_usuario, evento, cursor, usuario_inicial, page=1):
     cursor.execute(sql_faltantes, (evento, id_usuario, items_per_page, offset))
     resultados_faltantes = cursor.fetchall()
 
-    sql_total = f"""
+    # Contagem total de cartas faltantes do evento
+    sql_total_faltantes = """
         SELECT COUNT(*)
         FROM evento e
         WHERE e.evento = %s 
@@ -78,16 +87,19 @@ def comando_evento_f(id_usuario, evento, cursor, usuario_inicial, page=1):
                 WHERE i.id_usuario = %s AND i.id_personagem = e.id_personagem
             );
     """
-    cursor.execute(sql_total, (evento, id_usuario))
-    total_items = cursor.fetchone()[0]
-    total_pages = ceil(total_items / items_per_page)
+    cursor.execute(sql_total_faltantes, (evento, id_usuario))
+    total_items_faltantes = cursor.fetchone()[0]
+    total_pages = ceil(total_items_faltantes / items_per_page)
 
     if resultados_faltantes:
-        lista_cartas = "".join([f"{emoji} {id_personagem} — {nome_personagem}\n" for emoji, id_personagem, nome_personagem in resultados_faltantes])
-        resposta = f"☀️ | Cartas do evento {evento} faltando no inventário de {usuario_inicial}:\n\n{lista_cartas}"
-        return resposta, total_pages
-
-    return f"☀️ Nada como a alegria de ter todas as cartas do evento {evento} na cesta!"
+        lista_cartas = "\n".join(
+            f"{carta[0]} {str(carta[1]).zfill(4)} — {carta[2]}"
+            for carta in resultados_faltantes
+        )
+        resposta = f"☀️ | Cartas do evento {evento} que não estão no inventário de {usuario_inicial}:\n\n{lista_cartas}"
+        return evento, resposta, total_pages
+    else:
+        return f"☀️ Nada como a alegria de ter todas as cartas do evento {evento} na cesta!"
         
 def get_random_card_valentine(subcategoria):
     try:

@@ -231,35 +231,38 @@ def handle_callback_query_evento(call):
     action = data_parts[1]
     id_usuario_inicial = int(data_parts[2])
     evento = data_parts[3]
-    subcategoria = data_parts[4]
-    page = int(data_parts[5])
+    page = int(data_parts[4])
     
     try:
         conn, cursor = conectar_banco_dados()
 
+        # Atualizar a página de acordo com o botão pressionado
         if action == "prev":
             page -= 1
         elif action == "next":
             page += 1
 
+        # Chamar a função correta com base na mensagem original
         if call.message.text.startswith('🌾'):
-            resposta_completa = comando_evento_s(id_usuario_inicial, evento, subcategoria, cursor, call.from_user.first_name, page)
+            resposta_completa = comando_evento_s(id_usuario_inicial, evento, cursor, call.from_user.first_name, page)
         else:
-            resposta_completa = comando_evento_f(id_usuario_inicial, evento, subcategoria, cursor, call.from_user.first_name, page)
+            resposta_completa = comando_evento_f(id_usuario_inicial, evento, cursor, call.from_user.first_name, page)
 
+        # Manipular o retorno e criar a interface de navegação
         if isinstance(resposta_completa, tuple):
-            subcategoria_pesquisada, lista, total_pages = resposta_completa
+            evento, lista, total_pages = resposta_completa
             resposta = f"{lista}\n\nPágina {page} de {total_pages}"
 
             markup = InlineKeyboardMarkup()
             if page > 1:
-                markup.add(InlineKeyboardButton("Anterior", callback_data=f"evt_prev_{id_usuario_inicial}_{evento}_{subcategoria}_{page}"))
+                markup.add(InlineKeyboardButton("Anterior", callback_data=f"evt_prev_{id_usuario_inicial}_{evento}_{page - 1}"))
             if page < total_pages:
-                markup.add(InlineKeyboardButton("Próxima", callback_data=f"evt_next_{id_usuario_inicial}_{evento}_{subcategoria}_{page}"))
+                markup.add(InlineKeyboardButton("Próxima", callback_data=f"evt_next_{id_usuario_inicial}_{evento}_{page + 1}"))
 
             bot.edit_message_text(resposta, chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=markup)
         else:
             bot.edit_message_text(resposta_completa, chat_id=call.message.chat.id, message_id=call.message.message_id)
+
     except Exception as e:
         traceback.print_exc()
     finally:

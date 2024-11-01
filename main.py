@@ -990,20 +990,26 @@ def handle_callback_query_evento(call):
         else:
             resposta_completa = comando_evento_f(id_usuario_inicial, evento, cursor, call.from_user.first_name, page)
 
-        # Verificar a resposta e montar a mensagem com os botões de navegação
         if isinstance(resposta_completa, tuple):
             subcategoria_pesquisada, lista, total_pages = resposta_completa
+            # Corrigir a página e exibir apenas se estiver dentro do total
+            if page > total_pages:
+                bot.answer_callback_query(call.id, "Não há mais páginas.")
+                return
+
             resposta = f"{lista}\n\nPágina {page} de {total_pages}"
 
             # Definir botões de navegação
             markup = InlineKeyboardMarkup()
             if page > 1:
-                markup.add(InlineKeyboardButton("Anterior", callback_data=f"evt_prev_{id_usuario_inicial}_{evento}_{page}"))
+                markup.add(InlineKeyboardButton("Anterior", callback_data=f"evt_prev_{id_usuario_inicial}_{evento}_{page - 1}"))
             if page < total_pages:
-                markup.add(InlineKeyboardButton("Próxima", callback_data=f"evt_next_{id_usuario_inicial}_{evento}_{page}"))
+                markup.add(InlineKeyboardButton("Próxima", callback_data=f"evt_next_{id_usuario_inicial}_{evento}_{page + 1}"))
 
             bot.edit_message_text(resposta, chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=markup)
+        
         else:
+            # Caso não tenha resultados, exibir mensagem apropriada e desativar a navegação
             bot.edit_message_text(resposta_completa, chat_id=call.message.chat.id, message_id=call.message.message_id)
 
     except Exception as e:

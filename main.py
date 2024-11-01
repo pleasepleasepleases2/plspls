@@ -968,6 +968,48 @@ def callback_query_cesta(call):
         bot.answer_callback_query(call.id, "Erro ao processar o callback.")
     finally:
         processing_lock.release()
+def handle_callback_query_evento(call):
+    data_parts = call.data.split('_')
+    action = data_parts[1]
+    id_usuario_inicial = int(data_parts[2])
+    evento = data_parts[3]
+    page = int(data_parts[4])
+    
+    try:
+        conn, cursor = conectar_banco_dados()
+
+        # Verificar a ação de navegação: anterior ou próxima página
+        if action == "prev":
+            page -= 1
+        elif action == "next":
+            page += 1
+
+        # Selecionar a função correta para o tipo de evento (s para "tem" e f para "falta")
+        if call.message.text.startswith('🌾'):
+            resposta_completa = comando_evento_s(id_usuario_inicial, evento, cursor, call.from_user.first_name, page)
+        else:
+            resposta_completa = comando_evento_f(id_usuario_inicial, evento, cursor, call.from_user.first_name, page)
+
+        # Verificar a resposta e montar a mensagem com os botões de navegação
+        if isinstance(resposta_completa, tuple):
+            subcategoria_pesquisada, lista, total_pages = resposta_completa
+            resposta = f"{lista}\n\nPágina {page} de {total_pages}"
+
+            # Definir botões de navegação
+            markup = InlineKeyboardMarkup()
+            if page > 1:
+                markup.add(InlineKeyboardButton("Anterior", callback_data=f"evt_prev_{id_usuario_inicial}_{evento}_{page}"))
+            if page < total_pages:
+                markup.add(InlineKeyboardButton("Próxima", callback_data=f"evt_next_{id_usuario_inicial}_{evento}_{page}"))
+
+            bot.edit_message_text(resposta, chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=markup)
+        else:
+            bot.edit_message_text(resposta_completa, chat_id=call.message.chat.id, message_id=call.message.message_id)
+
+    except Exception as e:
+        traceback.print_exc()
+    finally:
+        fechar_conexao(cursor, conn)
 
 @bot.message_handler(commands=['halloween'])
 def handle_halloween(message):

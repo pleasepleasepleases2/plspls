@@ -13,6 +13,8 @@ from loja import *
 from gnome import *
 from operacoes import *
 from inventario import *
+
+from pescar import *
 from gif import *
 import random
 import traceback

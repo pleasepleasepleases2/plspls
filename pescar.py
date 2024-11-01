@@ -212,11 +212,11 @@ def categoria_handler(message, categoria, id_usuario):
             else:
                 print("DEBUG: Evento não ativado para 'geral', prosseguindo com lógica padrão de subcategorias.")
                 # Caso não ative o evento, segue com a lógica padrão de 'geral' com subcategorias
-                tratar_subcategorias_padroes(chat_id, cursor, embaralhamento_ativo)
+                tratar_subcategorias_padroes(chat_id, cursor, embaralhamento_ativo, categoria, message)
 
         else:
             # Lógica padrão para categorias diferentes de "geral"
-            tratar_subcategorias_padroes(chat_id, cursor, embaralhamento_ativo)
+            tratar_subcategorias_padroes(chat_id, cursor, embaralhamento_ativo, categoria, message)
 
     except mysql.connector.Error as err:
         bot.send_message(chat_id, f"Erro ao buscar subcategorias: {err}")
@@ -224,14 +224,14 @@ def categoria_handler(message, categoria, id_usuario):
         fechar_conexao(cursor, conn)
 
 # Função para tratar subcategorias no caso padrão
-def tratar_subcategorias_padroes(chat_id, cursor, embaralhamento_ativo):
+def tratar_subcategorias_padroes(chat_id, cursor, embaralhamento_ativo, categoria, message):
     print("DEBUG: Entrando na função para tratar subcategorias padrão.")
     
     subcategorias = buscar_subcategorias(categoria)
     subcategorias = [subcategoria for subcategoria in subcategorias if subcategoria]
 
     if not subcategorias:
-        bot.send_message(chat_id, f"Nenhuma subcategoria encontrada para a categoria.")
+        bot.send_message(chat_id, f"Nenhuma subcategoria encontrada para a categoria '{categoria}'.")
         print("DEBUG: Nenhuma subcategoria encontrada.")
         return None
 

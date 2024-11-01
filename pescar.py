@@ -173,18 +173,18 @@ def categoria_handler(message, categoria, id_usuario):
                         reply_markup=markup,
                         media=telebot.types.InputMediaPhoto(media=imagem_url, caption=caption)
                     )
-                else:
-                    caption = "Uma bruma encantada envolve o cenário, deixando você com apenas uma opção mágica:\n\n"
-                    subcategoria_aleatoria = random.choice(subcategories_valentine)
-                    emoji_numbers = ['🧙‍♀️', '🧟‍♀️']
-                    button_text = emoji_numbers[subcategories_valentine.index(subcategoria_aleatoria)]
+        elif categoria.lower() == 'geral'
+            caption = "Uma bruma encantada envolve o cenário, deixando você com apenas uma opção mágica:\n\n"
+            subcategoria_aleatoria = random.choice(subcategories_valentine)
+            emoji_numbers = ['🧙‍♀️', '🧟‍♀️']
+            button_text = emoji_numbers[subcategories_valentine.index(subcategoria_aleatoria)]
 
-                    keyboard = telebot.types.InlineKeyboardMarkup()
-                    button = telebot.types.InlineKeyboardButton(button_text, callback_data=f"subcategory_{subcategoria_aleatoria}_valentine")
-                    keyboard.add(button)
+            keyboard = telebot.types.InlineKeyboardMarkup()
+            button = telebot.types.InlineKeyboardButton(button_text, callback_data=f"subcategory_{subcategoria_aleatoria}_valentine")
+            keyboard.add(button)
 
-                    imagem_url = "https://telegra.ph/file/8a50bf408515b52a36734.jpg"
-                    bot.edit_message_media(
+            imagem_url = "https://telegra.ph/file/8a50bf408515b52a36734.jpg"
+            bot.edit_message_media(
                         chat_id=message.chat.id,
                         message_id=message.message_id,
                         reply_markup=keyboard,
@@ -193,38 +193,38 @@ def categoria_handler(message, categoria, id_usuario):
 
 
         else:
-
-        # Tratamento para categorias diferentes de "geral"
-        subcategorias = buscar_subcategorias(categoria)
-        subcategorias = [subcategoria for subcategoria in subcategorias if subcategoria]
-
-        if not subcategorias:
-            bot.send_message(chat_id, f"Nenhuma subcategoria encontrada para a categoria '{categoria}'.")
-            return None
-
-        resposta_texto = "Sua isca atraiu 6 espécies, qual peixe você vai levar?\n\n"
-        subcategorias_aleatorias = random.sample(subcategorias, min(6, len(subcategorias)))
-
-        for i, subcategoria in enumerate(subcategorias_aleatorias, start=1):
-            subcategoria_final = truncar_texto(subcategoria) if embaralhamento_ativo else subcategoria
-            resposta_texto += f"{i}\uFE0F\u20E3 - {subcategoria_final}\n"
-
-        markup = telebot.types.InlineKeyboardMarkup(row_width=6)
-        row_buttons = []
-        for i, subcategoria in enumerate(subcategorias_aleatorias, start=1):
-            subcategoria_final = truncar_texto(subcategoria) if embaralhamento_ativo else subcategoria
-            button_text = f"{i}\uFE0F\u20E3"
-            callback_data = f"choose_subcategoria_{subcategoria}"
-            row_buttons.append(telebot.types.InlineKeyboardButton(button_text, callback_data=callback_data))
-
-        markup.row(*row_buttons)
-        imagem_url = "https://telegra.ph/file/8a50bf408515b52a36734.jpg"
-        bot.edit_message_media(
-            chat_id=chat_id,
-            message_id=message.message_id,
-            reply_markup=markup,
-            media=telebot.types.InputMediaPhoto(media=imagem_url, caption=resposta_texto)
-        )
+    
+            # Tratamento para categorias diferentes de "geral"
+            subcategorias = buscar_subcategorias(categoria)
+            subcategorias = [subcategoria for subcategoria in subcategorias if subcategoria]
+    
+            if not subcategorias:
+                bot.send_message(chat_id, f"Nenhuma subcategoria encontrada para a categoria '{categoria}'.")
+                return None
+    
+            resposta_texto = "Sua isca atraiu 6 espécies, qual peixe você vai levar?\n\n"
+            subcategorias_aleatorias = random.sample(subcategorias, min(6, len(subcategorias)))
+    
+            for i, subcategoria in enumerate(subcategorias_aleatorias, start=1):
+                subcategoria_final = truncar_texto(subcategoria) if embaralhamento_ativo else subcategoria
+                resposta_texto += f"{i}\uFE0F\u20E3 - {subcategoria_final}\n"
+    
+            markup = telebot.types.InlineKeyboardMarkup(row_width=6)
+            row_buttons = []
+            for i, subcategoria in enumerate(subcategorias_aleatorias, start=1):
+                subcategoria_final = truncar_texto(subcategoria) if embaralhamento_ativo else subcategoria
+                button_text = f"{i}\uFE0F\u20E3"
+                callback_data = f"choose_subcategoria_{subcategoria}"
+                row_buttons.append(telebot.types.InlineKeyboardButton(button_text, callback_data=callback_data))
+    
+            markup.row(*row_buttons)
+            imagem_url = "https://telegra.ph/file/8a50bf408515b52a36734.jpg"
+            bot.edit_message_media(
+                chat_id=chat_id,
+                message_id=message.message_id,
+                reply_markup=markup,
+                media=telebot.types.InputMediaPhoto(media=imagem_url, caption=resposta_texto)
+            )
 
     except mysql.connector.Error as err:
         bot.send_message(chat_id, f"Erro ao buscar subcategorias: {err}")

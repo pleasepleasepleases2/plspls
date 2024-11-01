@@ -3867,14 +3867,23 @@ def truncar_texto(texto, truncar_percent=0.5):
 
     return texto_embaralhado
 
+import traceback
+
+# Inicializar dicionário global de resultados, se ainda não estiver
+if not hasattr(globals(), 'resultados_gnome'):
+    globals().resultados_gnome = {}
+
 @bot.message_handler(commands=['gnome'])
 def handle_gnome(message):
     chat_id = message.chat.id
     user_id = message.from_user.id
-    # Verificar se a travessura de embaralhamento está ativa
     embaralhamento_ativo = verificar_travessura_ativa(user_id)
+
     try:
         partes = message.text.split()
+        conn, cursor = conectar_banco_dados()
+
+        # Verificar qual SQL usar com base na presença de 'e' no comando
         if 'e' in partes:
             nome = ' '.join(partes[2:])
             sql_personagens = """
@@ -3903,34 +3912,32 @@ def handle_gnome(message):
                 LEFT JOIN inventario i ON p.id_personagem = i.id_personagem AND i.id_usuario = %s
                 WHERE p.nome LIKE %s
             """
-
+        
         values_personagens = (user_id, f"%{nome}%")
-        conn, cursor = conectar_banco_dados()
         cursor.execute(sql_personagens, values_personagens)
         resultados_personagens = cursor.fetchall()
-
+        
         if not resultados_personagens:
             bot.send_message(chat_id, f"Nenhum personagem encontrado com o nome '{nome}'.")
             return
-
-        # Verificar se a travessura de categoria errada está ativa
+        
+        # Aplicar travessura de categoria errada, se ativa
         if verificar_categoria_errada(user_id):
-            conn, cursor = conectar_banco_dados()
             cursor.execute("SELECT subcategoria FROM personagens ORDER BY RAND() LIMIT 1")
             categoria_errada = cursor.fetchone()[0]
-            fechar_conexao(cursor, conn)
             categoria = categoria_errada
-
-        # Salvar os resultados no dicionário global para navegação posterior
-        globals.resultados_gnome[user_id] = truncar_texto(resultados_personagens) if embaralhamento_ativo else resultados_personagens
-
-        # Exibir a primeira carta
-        enviar_primeira_carta(chat_id, user_id, resultados_personagens, 0)
+        
+        # Salvar resultados e enviar a primeira carta
+        globals().resultados_gnome[user_id] = truncar_texto(resultados_personagens) if embaralhamento_ativo else resultados_personagens
+        enviar_primeira_carta(chat_id, user_id, globals().resultados_gnome[user_id], 0)
 
     except Exception as e:
         print(f"Erro: {e}")
+        traceback.print_exc()
+        bot.send_message(chat_id, "Ocorreu um erro ao processar seu comando.")
     finally:
         fechar_conexao(cursor, conn)
+
 
 def verificar_categoria_errada(user_id):
     try:

@@ -132,8 +132,8 @@ def alternar_evento():
     evento_ativo = not evento_ativo
 
 def get_random_subcategories_all_valentine(connection):
-    cursor = connection.cursor()
-    query = "SELECT subcategoria FROM evento WHERE evento = 'Inverno' ORDER BY RAND() LIMIT 2"
+    conn, cursor = conectar_banco_dados()
+    query = "SELECT subcategoria FROM evento WHERE evento = 'Festival das Abóboras' ORDER BY RAND() LIMIT 2"
     cursor.execute(query)
     subcategories_valentine = [row[0] for row in cursor.fetchall()]
 

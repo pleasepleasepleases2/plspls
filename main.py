@@ -3670,7 +3670,7 @@ def handle_addtag_command(message):
 def handle_completos_command(message):
     handle_completos(message)
 
-@bot.message_handler(commands=['pesca', 'pescar'])
+@bot.message_handler(commands=[testando])
 def handle_pescar(message):
     pescar(message)
     

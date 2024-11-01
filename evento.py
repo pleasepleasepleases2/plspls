@@ -168,17 +168,18 @@ def handle_evento_command(message):
         user = message.from_user
         usuario = user.first_name
 
-        # Ajuste para verificar o comando com o nome completo do evento
+        # Dividir o comando para verificar corretamente "s" ou "f" e o evento
         comando_parts = message.text.split(maxsplit=2)
         if len(comando_parts) < 3:
-            resposta = "Comando inválido. Use /evento <evento> <subcategoria>."
+            resposta = "Comando inválido. Use /evento s <evento> ou /evento f <evento>."
             bot.send_message(message.chat.id, resposta)
             return
 
-        evento = comando_parts[1].strip().lower()
-        subcategoria = comando_parts[2].strip().lower()
+        # Identificar o tipo de consulta ("s" ou "f") e o evento
+        tipo_consulta = comando_parts[1].strip().lower()
+        evento = comando_parts[2].strip().lower()
 
-        # Consultar o evento usando o nome correto
+        # Verificar se o evento existe na tabela usando o nome correto
         sql_evento_existente = "SELECT DISTINCT evento FROM evento WHERE evento = %s"
         cursor.execute(sql_evento_existente, (evento,))
         evento_existente = cursor.fetchone()
@@ -188,17 +189,17 @@ def handle_evento_command(message):
             bot.send_message(message.chat.id, resposta)
             return
 
-        # Lógica para verificar se é "s" ou "f"
-        if message.text.startswith('/evento s'):
+        # Verificar tipo de consulta ("s" ou "f") e chamar a função correta
+        if tipo_consulta == 's':
             resposta_completa = comando_evento_s(id_usuario, evento, cursor, usuario)
-        elif message.text.startswith('/evento f'):
+        elif tipo_consulta == 'f':
             resposta_completa = comando_evento_f(id_usuario, evento, cursor, usuario)
         else:
             resposta = "Comando inválido. Use /evento s <evento> ou /evento f <evento>."
             bot.send_message(message.chat.id, resposta)
             return
 
-        # Exibir contagem e páginas desde a primeira página
+        # Exibir resposta e botões de navegação, se houver mais páginas
         if isinstance(resposta_completa, tuple):
             evento, lista, total_pages, total_personagens_subcategoria = resposta_completa
             resposta = (
@@ -219,6 +220,7 @@ def handle_evento_command(message):
         traceback.print_exc()
     finally:
         fechar_conexao(cursor, conn)
+
 
 
 def handle_callback_query_evento(call):

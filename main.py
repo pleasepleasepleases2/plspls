@@ -2322,9 +2322,16 @@ def realizar_halloween_gostosura(user_id, chat_id):
             iniciar_compartilhamento(user_id, chat_id)
 
         elif chance == 7:
-            print(f"DEBUG: Ganhando caixa misteriosa para o usuário {user_id}")
-            bot.send_photo(chat_id, url_imagem, caption="📦 Uma caixa misteriosa apareceu na sua porta!")
-            ganhar_caixa_misteriosa(user_id, chat_id)
+            print(f"DEBUG: Adicionando bônus de sorte para o usuário {user_id}")
+            duracao_horas = random.randint(1, 3)
+            multiplicador_sorte = 1.5  # Aumenta a chance em 50%
+            adicionar_bonus_sorte(user_id, multiplicador_sorte, duracao_horas, chat_id)
+            bot.send_photo(
+                chat_id,
+                url_imagem,
+                caption=f"🍀 Você recebeu um Bônus de Sorte! Suas chances de receber recompensas melhores foram aumentadas em {int((multiplicador_sorte - 1) * 100)}% nas próximas {duracao_horas} horas!"
+            )
+        
 
         elif chance == 8:
             print(f"DEBUG: Ativando desconto de 24 horas para o usuário {user_id}")
@@ -2357,17 +2364,6 @@ def realizar_halloween_gostosura(user_id, chat_id):
             # Chamando a nova função para configurar o boost
             adicionar_boost(user_id, 'cenouras', multiplicador, duracao_horas, chat_id)
 
-        elif chance == 12:
-            print(f"DEBUG: Adicionando bônus de sorte para o usuário {user_id}")
-            duracao_horas = random.randint(1, 3)
-            multiplicador_sorte = 1.5  # Aumenta a chance em 50%
-            adicionar_bonus_sorte(user_id, multiplicador_sorte, duracao_horas, chat_id)
-            bot.send_photo(
-                chat_id,
-                url_imagem,
-                caption=f"🍀 Você recebeu um Bônus de Sorte! Suas chances de receber recompensas melhores foram aumentadas em {int((multiplicador_sorte - 1) * 100)}% nas próximas {duracao_horas} horas!"
-            )
-        
     except Exception as e:
         print(f"DEBUG: Erro ao realizar gostosura para o usuário {user_id}: {e}")
         traceback.print_exc()
@@ -2876,7 +2872,7 @@ def realizar_halloween_travessura(user_id, chat_id, nome):
             bot.send_message(chat_id, "🛡️ Você está protegido contra travessuras! Nada aconteceu desta vez.")
             return
 
-        chance = random.randint(1, 17)  # 22 tipos de travessuras diferentes
+        chance = random.randint(1, 15)  # 22 tipos de travessuras diferentes
         print(f"DEBUG: Chance sorteada: {chance}")
 
         if chance == 1:
@@ -2989,9 +2985,9 @@ def realizar_halloween_travessura(user_id, chat_id, nome):
             mudar_favorito_usuario(user_id,chat_id)
 
         elif chance == 6:
-            # Bloquear pesca por um tempo aleatório entre 5 e 30 minutos
-            duracao_bloqueio = random.randint(2, 30)
-            bloquear_pesca_usuario(user_id, duracao_bloqueio)
+            iniciar_sombra_roubo_cenouras(user_id)
+            bot.send_photo(chat_id, url_imagem, caption="🕯️ Travessura! Uma sombra está roubando suas cenouras a cada 10 segundos. Use /exorcizar para parar!")
+
 
         elif chance == 7:
             # Bloquear o envio de comandos por um tempo aleatório entre 5 e 30 minutos
@@ -3023,9 +3019,8 @@ def realizar_halloween_travessura(user_id, chat_id, nome):
             finally:
                 fechar_conexao(cursor, conn)
         elif chance == 9:
-            # Pega-pega (passar uma praga para outros usuários)
-            bot.send_photo(chat_id, url_imagem, caption=f"👹 Travessura! Você foi amaldiçoado, use /praga para passar a praga para outra pessoa.")
-            iniciar_pega_pega(user_id,nome)
+            # Alucinação: mensagens incompletas
+            ativar_travessura_embaralhamento(chat_id, user_id)
 
         elif chance == 10:
             # Nada acontece
@@ -3054,15 +3049,6 @@ def realizar_halloween_travessura(user_id, chat_id, nome):
             # Bloquear raspadinha por 1 dia
             bloquear_acao(user_id, "raspadinha", 1440)
             bot.send_photo(chat_id, url_imagem, caption="🎰 Travessura! Você está bloqueado de jogar raspadinha e usar a fonte por 1 dia.")
-
-        elif chance == 16:
-            iniciar_sombra_roubo_cenouras(user_id)
-            bot.send_photo(chat_id, url_imagem, caption="🕯️ Travessura! Uma sombra está roubando suas cenouras a cada 10 segundos. Use /exorcizar para parar!")
-
-        elif chance == 17:
-            # Alucinação: mensagens incompletas
-            ativar_travessura_embaralhamento(chat_id, user_id)
-            
 
     except Exception as e:
         print(f"DEBUG: Erro ao realizar travessura para o usuário {user_id}: {e}")

@@ -172,16 +172,27 @@ def handle_evento_command(message):
         comando_parts = message.text.split(maxsplit=2)
         
         # Verificação para garantir que o comando tenha pelo menos dois argumentos
-        if len(comando_parts) < 3:
-            resposta = "Comando inválido. Use /evento <evento> <subcategoria>."
+        if len(comando_parts) < 2:
+            resposta = "Comando inválido. Use /evento s <evento> ou /evento f <evento>."
             bot.send_message(message.chat.id, resposta)
             return
-        
-        # Extrair evento e subcategoria corretamente
-        evento = comando_parts[1].strip().lower()
-        subcategoria = comando_parts[2].strip().lower()
 
-        # Usar SQL com parâmetros para garantir segurança e precisão na consulta
+        # Verificar se é um comando de tipo "s" ou "f" e extrair o evento corretamente
+        tipo_consulta = comando_parts[1].strip().lower()
+        if tipo_consulta not in ["s", "f"]:
+            resposta = "Comando inválido. Use /evento s <evento> ou /evento f <evento>."
+            bot.send_message(message.chat.id, resposta)
+            return
+
+        # Verifica se o nome do evento foi fornecido após o tipo de consulta
+        if len(comando_parts) < 3:
+            resposta = f"Por favor, forneça o nome do evento após '{tipo_consulta}'."
+            bot.send_message(message.chat.id, resposta)
+            return
+
+        evento = comando_parts[2].strip().lower()
+
+        # Consulta para verificar se o evento existe
         sql_evento_existente = "SELECT DISTINCT evento FROM evento WHERE evento = %s"
         cursor.execute(sql_evento_existente, (evento,))
         evento_existente = cursor.fetchone()
@@ -191,15 +202,11 @@ def handle_evento_command(message):
             bot.send_message(message.chat.id, resposta)
             return
 
-        # Verificar se é um comando de subcategoria "s" ou "f"
-        if message.text.startswith('/evento s'):
+        # Processar de acordo com o tipo de consulta
+        if tipo_consulta == "s":
             resposta_completa = comando_evento_s(id_usuario, evento, cursor, usuario)
-        elif message.text.startswith('/evento f'):
+        elif tipo_consulta == "f":
             resposta_completa = comando_evento_f(id_usuario, evento, cursor, usuario)
-        else:
-            resposta = "Comando inválido. Use /evento s <evento> ou /evento f <evento>."
-            bot.send_message(message.chat.id, resposta)
-            return
 
         # Exibir resposta e botões de navegação, se houver mais páginas
         if isinstance(resposta_completa, tuple):
@@ -208,7 +215,6 @@ def handle_evento_command(message):
 
             markup = InlineKeyboardMarkup()
             if total_pages > 1:
-                # Dentro do código onde criamos a marcação para o botão "Próxima"
                 markup.add(InlineKeyboardButton("Próxima", callback_data=f"evt_next_{id_usuario}_{evento[:20]}_{2}"))
 
             bot.send_message(message.chat.id, resposta, reply_markup=markup)

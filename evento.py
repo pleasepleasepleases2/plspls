@@ -164,58 +164,52 @@ def handle_evento_command(message):
     try:
         verificar_id_na_tabela(message.from_user.id, "ban", "iduser")
         conn, cursor = conectar_banco_dados()
-        qnt_carta(message.from_user.id)
         id_usuario = message.from_user.id
         user = message.from_user
         usuario = user.first_name
-        
+
+        # Ajuste para verificar o comando com o nome completo do evento
         comando_parts = message.text.split(maxsplit=2)
-        
-        # Verificação para garantir que o comando tenha pelo menos dois argumentos
-        if len(comando_parts) < 2:
-            resposta = "Comando inválido. Use /evento s <evento> ou /evento f <evento>."
-            bot.send_message(message.chat.id, resposta)
-            return
-
-        # Verificar se é um comando de tipo "s" ou "f" e extrair o evento corretamente
-        tipo_consulta = comando_parts[1].strip().lower()
-        if tipo_consulta not in ["s", "f"]:
-            resposta = "Comando inválido. Use /evento s <evento> ou /evento f <evento>."
-            bot.send_message(message.chat.id, resposta)
-            return
-
-        # Verifica se o nome do evento foi fornecido após o tipo de consulta
         if len(comando_parts) < 3:
-            resposta = f"Por favor, forneça o nome do evento após '{tipo_consulta}'."
+            resposta = "Comando inválido. Use /evento <evento> <subcategoria>."
             bot.send_message(message.chat.id, resposta)
             return
 
-        evento = comando_parts[2].strip().lower()
+        evento = comando_parts[1].strip().lower()
+        subcategoria = comando_parts[2].strip().lower()
 
-        # Consulta para verificar se o evento existe
+        # Consultar o evento usando o nome correto
         sql_evento_existente = "SELECT DISTINCT evento FROM evento WHERE evento = %s"
         cursor.execute(sql_evento_existente, (evento,))
         evento_existente = cursor.fetchone()
-        
+
         if not evento_existente:
             resposta = f"Evento '{evento}' não encontrado na tabela de eventos."
             bot.send_message(message.chat.id, resposta)
             return
 
-        # Processar de acordo com o tipo de consulta
-        if tipo_consulta == "s":
+        # Lógica para verificar se é "s" ou "f"
+        if message.text.startswith('/evento s'):
             resposta_completa = comando_evento_s(id_usuario, evento, cursor, usuario)
-        elif tipo_consulta == "f":
+        elif message.text.startswith('/evento f'):
             resposta_completa = comando_evento_f(id_usuario, evento, cursor, usuario)
+        else:
+            resposta = "Comando inválido. Use /evento s <evento> ou /evento f <evento>."
+            bot.send_message(message.chat.id, resposta)
+            return
 
-        # Exibir resposta e botões de navegação, se houver mais páginas
+        # Exibir contagem e páginas desde a primeira página
         if isinstance(resposta_completa, tuple):
-            evento, lista, total_pages = resposta_completa
-            resposta = f"{lista}\n\nPágina 1 de {total_pages}"
+            evento, lista, total_pages, total_personagens_subcategoria = resposta_completa
+            resposta = (
+                f"{lista}\n\n"
+                f"📄 | Página 1/{total_pages}\n"
+                f"🐟 | Personagens mostrados: {len(lista.splitlines())}/{total_personagens_subcategoria}\n\n"
+            )
 
             markup = InlineKeyboardMarkup()
             if total_pages > 1:
-                markup.add(InlineKeyboardButton("Próxima", callback_data=f"evt_next_{id_usuario}_{evento[:20]}_{2}"))
+                markup.add(InlineKeyboardButton("Próxima", callback_data=f"evt_next_{id_usuario}_{evento}_{2}"))
 
             bot.send_message(message.chat.id, resposta, reply_markup=markup)
         else:
@@ -225,6 +219,7 @@ def handle_evento_command(message):
         traceback.print_exc()
     finally:
         fechar_conexao(cursor, conn)
+
 
 def handle_callback_query_evento(call):
     data_parts = call.data.split('_')
@@ -236,22 +231,24 @@ def handle_callback_query_evento(call):
     try:
         conn, cursor = conectar_banco_dados()
 
-        # Atualizar a página de acordo com o botão pressionado
         if action == "prev":
             page -= 1
         elif action == "next":
             page += 1
 
-        # Chamar a função correta com base na mensagem original
+        # Chamar a função correta com base no tipo de evento e página
         if call.message.text.startswith('🌾'):
             resposta_completa = comando_evento_s(id_usuario_inicial, evento, cursor, call.from_user.first_name, page)
         else:
             resposta_completa = comando_evento_f(id_usuario_inicial, evento, cursor, call.from_user.first_name, page)
 
-        # Manipular o retorno e criar a interface de navegação
         if isinstance(resposta_completa, tuple):
-            evento, lista, total_pages = resposta_completa
-            resposta = f"{lista}\n\nPágina {page} de {total_pages}"
+            evento, lista, total_pages, total_personagens_subcategoria = resposta_completa
+            resposta = (
+                f"{lista}\n\n"
+                f"📄 | Página {page}/{total_pages}\n"
+                f"🐟 | Personagens mostrados: {len(lista.splitlines())}/{total_personagens_subcategoria}\n\n"
+            )
 
             markup = InlineKeyboardMarkup()
             if page > 1:

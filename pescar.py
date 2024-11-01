@@ -141,84 +141,78 @@ def truncar_texto(texto, truncar_percent=0.5):
     return texto_embaralhado
 
 
-def categoria_handler(message, categoria, id_usuario):
+def categoria_handler(message, categoria):
     try:
         conn, cursor = conectar_banco_dados()
         chat_id = message.chat.id
-        
-        # Verificar se a travessura de embaralhamento está ativa
-        embaralhamento_ativo = verificar_travessura_ativa(id_usuario)
 
-        if categoria.lower() == 'geral': 
+        # Lógica para categoria "geral"
+        if categoria.lower() == 'geral':
+            # Determina 50% de chance de ativar o evento
+            if random.random() < 0.5:
+                # Logica de evento ativada
+                ativar_evento = random.random() < 0.5
+                
+                if ativar_evento:
+                    # 50% de chance de mostrar escolha de subcategorias do evento ou uma carta de evento
+                    if random.random() < 0.5:
+                        # Escolha entre duas subcategorias do evento
+                        subcategorias = get_random_subcategories_all_valentine(conn)
+                        resposta_texto = "Escolha uma subcategoria especial do evento para descobrir seu prêmio!"
+                        markup = criar_markup(subcategorias, tipo="valentine")
+                        bot.send_message(chat_id, resposta_texto, reply_markup=markup)
+                    else:
+                        # Exibir diretamente uma carta de evento
+                        carta = get_random_card_valentine(random.choice(get_random_subcategories_all_valentine(conn)))
+                        if carta:
+                            send_card_message(message, carta)
+                        else:
+                            bot.send_message(chat_id, "Nenhuma carta de evento disponível.")
+                else:
+                    # Continua com lógica atual para "geral" (mostrando várias subcategorias)
+                    subcategorias = buscar_subcategorias(categoria)
+                    if subcategorias:
+                        subcategorias_aleatorias = random.sample(subcategorias, min(6, len(subcategorias)))
+                        resposta_texto = "Sua isca atraiu 6 espécies, qual peixe você vai levar?\n\n"
+                        for i, subcategoria in enumerate(subcategorias_aleatorias, start=1):
+                            resposta_texto += f"{i}\uFE0F\u20E3 - {subcategoria}\n"
+                        markup = criar_markup(subcategorias_aleatorias, tipo="geral")
+                        imagem_url = "https://telegra.ph/file/8a50bf408515b52a36734.jpg"
+                        bot.edit_message_media(
+                            chat_id=message.chat.id,
+                            message_id=message.message_id,
+                            reply_markup=markup,
+                            media=telebot.types.InputMediaPhoto(media=imagem_url, caption=resposta_texto)
+                        )
+            else:
+                bot.send_message(message.chat.id, "Nenhuma subcategoria encontrada para a categoria 'geral'.")
+        else:
+            # Manipulação para outras categorias fora do "Geral"
             subcategorias = buscar_subcategorias(categoria)
             subcategorias = [subcategoria for subcategoria in subcategorias if subcategoria]
 
-            if not subcategorias:
-                bot.send_message(chat_id, f"Nenhuma subcategoria encontrada para a categoria '{categoria}'.")
-                return None
+            if subcategorias:
+                subcategorias_aleatorias = random.sample(subcategorias, min(6, len(subcategorias)))
+                resposta_texto = "Sua isca atraiu 6 espécies, qual peixe você vai levar?\n\n"
+                for i, subcategoria in enumerate(subcategorias_aleatorias, start=1):
+                    resposta_texto += f"{i}\uFE0F\u20E3 - {subcategoria}\n"
 
-            respostatexto = "Sua isca atraiu 6 espécies, qual peixe você vai levar?\n\n"
-            resposta_texto = truncar_texto(respostatexto) if embaralhamento_ativo else respostatexto
-            subcategorias_aleatorias = random.sample(subcategorias, min(6, len(subcategorias)))
+                # Criar teclado de subcategorias
+                markup = criar_markup(subcategorias_aleatorias, tipo="outra")
 
-            for i, subcategoria in enumerate(subcategorias_aleatorias, start=1):
-                subcategoria_final = truncar_texto(subcategoria) if embaralhamento_ativo else subcategoria
-                resposta_texto += f"{i}\uFE0F\u20E3 - {subcategoria_final}\n"
-
-            markup = telebot.types.InlineKeyboardMarkup(row_width=6)
-            row_buttons = []
-            for i, subcategoria in enumerate(subcategorias_aleatorias, start=1):
-                subcategoria_final = truncar_texto(subcategoria) if embaralhamento_ativo else subcategoria
-                button_text = f"{i}\uFE0F\u20E3"
-                callback_data = f"choose_subcategoria_{subcategoria}"
-                row_buttons.append(telebot.types.InlineKeyboardButton(button_text, callback_data=callback_data))
-
-            markup.row(*row_buttons)
-            imagem_url = "https://telegra.ph/file/8a50bf408515b52a36734.jpg"
-            bot.edit_message_media(
-                chat_id=chat_id,
-                message_id=message.message_id,
-                reply_markup=markup,
-                media=telebot.types.InputMediaPhoto(media=imagem_url, caption=resposta_texto)
-            )
-            return None  
-
-        # Tratamento para categorias diferentes de "geral"
-        subcategorias = buscar_subcategorias(categoria)
-        subcategorias = [subcategoria for subcategoria in subcategorias if subcategoria]
-
-        if not subcategorias:
-            bot.send_message(chat_id, f"Nenhuma subcategoria encontrada para a categoria '{categoria}'.")
-            return None
-
-        resposta_texto = "Sua isca atraiu 6 espécies, qual peixe você vai levar?\n\n"
-        subcategorias_aleatorias = random.sample(subcategorias, min(6, len(subcategorias)))
-
-        for i, subcategoria in enumerate(subcategorias_aleatorias, start=1):
-            subcategoria_final = truncar_texto(subcategoria) if embaralhamento_ativo else subcategoria
-            resposta_texto += f"{i}\uFE0F\u20E3 - {subcategoria_final}\n"
-
-        markup = telebot.types.InlineKeyboardMarkup(row_width=6)
-        row_buttons = []
-        for i, subcategoria in enumerate(subcategorias_aleatorias, start=1):
-            subcategoria_final = truncar_texto(subcategoria) if embaralhamento_ativo else subcategoria
-            button_text = f"{i}\uFE0F\u20E3"
-            callback_data = f"choose_subcategoria_{subcategoria}"
-            row_buttons.append(telebot.types.InlineKeyboardButton(button_text, callback_data=callback_data))
-
-        markup.row(*row_buttons)
-        imagem_url = "https://telegra.ph/file/8a50bf408515b52a36734.jpg"
-        bot.edit_message_media(
-            chat_id=chat_id,
-            message_id=message.message_id,
-            reply_markup=markup,
-            media=telebot.types.InputMediaPhoto(media=imagem_url, caption=resposta_texto)
-        )
-
+                # Enviar imagem e teclado para a categoria
+                imagem_url = "https://telegra.ph/file/8a50bf408515b52a36734.jpg"
+                bot.edit_message_media(
+                    chat_id=message.chat.id,
+                    message_id=message.message_id,
+                    reply_markup=markup,
+                    media=telebot.types.InputMediaPhoto(media=imagem_url, caption=resposta_texto)
+                )
     except mysql.connector.Error as err:
-        bot.send_message(chat_id, f"Erro ao buscar subcategorias: {err}")
+        bot.send_message(message.chat.id, f"Erro ao buscar subcategorias: {err}")
     finally:
         fechar_conexao(cursor, conn)
+
 
 
 def criar_markup(subcategorias, tipo):

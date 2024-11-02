@@ -243,7 +243,7 @@ def tratar_subcategorias_padroes(chat_id, cursor, embaralhamento_ativo, categori
         row_buttons.append(telebot.types.InlineKeyboardButton(button_text, callback_data=callback_data))
 
     markup.row(*row_buttons)
-    imagem_url = "https://telegra.ph/file/8a50bf408515b52a36734.jpg"
+    imagem_url = "https://pub-6f23ef52e8614212a14d24b0cf55ae4a.r2.dev/BQACAgEAAxkBAAIe2mclk364BFT09Tsi0rXJkiNPmeJjAALIBAAC7WgxRcuynIUuCS8uNgQ.jpg"
     bot.edit_message_media(
         chat_id=chat_id,
         message_id=message.message_id,

@@ -13,21 +13,17 @@ def realizar_troca(message, eu, voce, minhacarta, suacarta, chat_id, qntminha_an
     retries = 0
     while retries < MAX_RETRIES:
         try:
-            print("DEBUG: Iniciando a conexão com o banco de dados...")
             conn, cursor = conectar_banco_dados()
 
-            print(f"DEBUG: Verificando quantidade da carta {minhacarta} para o usuário {eu}...")
             cursor.execute("SELECT quantidade FROM inventario WHERE id_usuario = %s AND id_personagem = %s", (eu, minhacarta))
             qntminha = cursor.fetchone()
             
-            print(f"DEBUG: Verificando quantidade da carta {suacarta} para o usuário {voce}...")
             cursor.execute("SELECT quantidade FROM inventario WHERE id_usuario = %s AND id_personagem = %s", (voce, suacarta))
             qntsua = cursor.fetchone()
 
             qntminha = qntminha[0] if qntminha else 0
             qntsua = qntsua[0] if qntsua else 0
 
-            print(f"DEBUG: Quantidade antes da troca - qntminha={qntminha}, qntsua={qntsua}")
 
             if qntminha > 0 and qntsua > 0:
                 print(f"DEBUG: Quantidades válidas. Realizando atualização das quantidades...")
@@ -35,36 +31,26 @@ def realizar_troca(message, eu, voce, minhacarta, suacarta, chat_id, qntminha_an
                 cursor.execute("UPDATE inventario SET quantidade = quantidade - 1 WHERE id_usuario = %s AND id_personagem = %s", (eu, minhacarta))
                 cursor.execute("UPDATE inventario SET quantidade = quantidade - 1 WHERE id_usuario = %s AND id_personagem = %s", (voce, suacarta))
 
-                print(f"DEBUG: Verificando inventário de {voce} para adicionar a carta {minhacarta}...")
                 cursor.execute("SELECT quantidade FROM inventario WHERE id_usuario = %s AND id_personagem = %s", (voce, minhacarta))
                 qnt_voce_minhacarta = cursor.fetchone()
 
                 if qnt_voce_minhacarta:
-                    print(f"DEBUG: Carta {minhacarta} já existe no inventário de {voce}, atualizando quantidade...")
                     cursor.execute("UPDATE inventario SET quantidade = quantidade + 1 WHERE id_usuario = %s AND id_personagem = %s", (voce, minhacarta))
                 else:
-                    print(f"DEBUG: Carta {minhacarta} não existe no inventário de {voce}, inserindo nova entrada...")
                     cursor.execute("INSERT INTO inventario (id_usuario, id_personagem, quantidade) VALUES (%s, %s, 1)", (voce, minhacarta,))
 
-                print(f"DEBUG: Verificando inventário de {eu} para adicionar a carta {suacarta}...")
-                cursor.execute("SELECT quantidade FROM inventario WHERE id_usuario = %s AND id_personagem = %s", (eu, suacarta))
+                    cursor.execute("SELECT quantidade FROM inventario WHERE id_usuario = %s AND id_personagem = %s", (eu, suacarta))
                 qnt_eu_suacarta = cursor.fetchone()
 
                 if qnt_eu_suacarta:
-                    print(f"DEBUG: Carta {suacarta} já existe no inventário de {eu}, atualizando quantidade...")
                     cursor.execute("UPDATE inventario SET quantidade = quantidade + 1 WHERE id_usuario = %s AND id_personagem = %s", (eu, suacarta))
                 else:
-                    print(f"DEBUG: Carta {suacarta} não existe no inventário de {eu}, inserindo nova entrada...")
                     cursor.execute("INSERT INTO inventario (id_usuario, id_personagem, quantidade) VALUES (%s, %s, 1)", (eu, suacarta,))
 
                 conn.commit()
 
-                print("DEBUG: Comitando as mudanças no banco de dados...")
-
                 qntminha_depois = verifica_inventario_troca(eu, minhacarta)
                 qntsua_depois = verifica_inventario_troca(voce, suacarta)
-
-                print(f"DEBUG: Quantidade após a troca - qntminha_depois={qntminha_depois}, qntsua_depois={qntsua_depois}")
 
                 sql_insert = """
                     INSERT INTO historico_trocas 
@@ -77,9 +63,8 @@ def realizar_troca(message, eu, voce, minhacarta, suacarta, chat_id, qntminha_an
 
                 conn.commit()
 
-                print("DEBUG: Inserido histórico de troca com sucesso.")
 
-                image_url = "https://telegra.ph/file/8672c8f91c8e77bcdad45.jpg"
+                image_url = "https://pub-6f23ef52e8614212a14d24b0cf55ae4a.r2.dev/BQACAgEAAxkBAAIe3WcllmUOQwUnpp5VMHZWngABFsU6bAACyQQAAu1oMUXnYh3PF56CezYE.jpg"
                 bot.edit_message_media(
                     chat_id=message.chat.id,
                     message_id=message.message_id,

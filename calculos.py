@@ -17,7 +17,7 @@ def calcular_progresso_evento(cursor, id_usuario, evento):
         progresso = (cartas_usuario / total_cartas_evento) * 100
 
     barra_progresso = '█' * math.floor(progresso / 10) + '░' * (10 - math.floor(progresso / 10))
-    return f"{evento.capitalize()}\n{barra_progresso} {progresso:.2f}%"
+    return f"{barra_progresso} {progresso:.2f}%"
 
 def gerar_id_unico():
     if "ultimo_id" not in globals.user_data:

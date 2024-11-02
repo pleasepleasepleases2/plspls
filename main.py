@@ -5067,7 +5067,7 @@ def verificar_cartas(message):
         conn, cursor = conectar_banco_dados()
         id_usuario = message.from_user.id
 
-        # Forçar a mesma collation em todas as colunas envolvidas na operação UNION
+        # Definir a consulta SQL para a wishlist com collation uniforme
         sql_wishlist = f"""
             SELECT p.id_personagem, 
                    p.nome COLLATE utf8mb4_general_ci AS nome_personagem, 
@@ -5122,7 +5122,15 @@ def verificar_cartas(message):
                 subcategoria_carta = carta_atualizada[2]
                 lista_wishlist_atualizada += f"{emoji_carta} ∙ <code>{id_carta}</code> - {nome_carta} de {subcategoria_carta}\n"
 
-            bot.send_message(message.chat.id, lista_wishlist_atualizada, reply_to_message_id=message.message_id, parse_mode="HTML")
+            # Enviar mensagem com a foto
+            imagem_url = "https://pub-6f23ef52e8614212a14d24b0cf55ae4a.r2.dev/BQACAgEAAxkBAAIe5mclnBkjVDX23Cd6UPDZqVLhCveaAAI0BQACsqkwRUye8-fjLlt-NgQ.jpg"
+            bot.send_photo(
+                message.chat.id,
+                photo=imagem_url,
+                caption=lista_wishlist_atualizada,
+                reply_to_message_id=message.message_id,
+                parse_mode="HTML"
+            )
         else:
             bot.send_message(message.chat.id, "Sua wishlist está vazia! Devo te desejar parabéns?", reply_to_message_id=message.message_id)
 
@@ -5202,9 +5210,6 @@ def ping_command(message):
         message_id=sent_message.message_id,
         text=f"🏓 Pong!\nPing: {ping:.2f} segundos\nTarefas na fila: {queue_size}"
     )
-@bot.message_handler(commands=['wishlist'])
-def handle_wishlist(message):
-    verificar_cartas(message)
 
 @bot.message_handler(commands=['addw'])
 def handle_add_to_wishlist(message):

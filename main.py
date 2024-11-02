@@ -215,7 +215,6 @@ def bloquear_acao(user_id, acao, minutos, id_bloqueado=None):
         )
         conn.commit()
 
-        print(f"DEBUG: Ação '{acao}' bloqueada para o usuário {user_id} até {fim_bloqueio}")
     
     except Exception as e:
         print(f"Erro ao inserir bloqueio: {e}")
@@ -288,13 +287,6 @@ def verificar_travessura(id_usuario):
     finally:
         fechar_conexao(cursor, conn)
 def aumentarcenouras(id_usuario, quantidade=1):
-    """
-    Aumenta a quantidade de cenouras do usuário no banco de dados.
-    
-    Parâmetros:
-        - id_usuario: ID do usuário no banco de dados.
-        - quantidade: Quantidade de cenouras a adicionar (padrão é 1).
-    """
     try:
         conn, cursor = conectar_banco_dados()
         
@@ -309,7 +301,7 @@ def aumentarcenouras(id_usuario, quantidade=1):
             # Atualiza a quantidade de cenouras
             cursor.execute("UPDATE usuarios SET cenouras = ? WHERE id_usuario = ?", (novas_cenouras, id_usuario))
             conn.commit()
-            print(f"DEBUG: Cenouras do usuário {id_usuario} atualizadas para {novas_cenouras}")
+
         else:
             print(f"DEBUG: Usuário {id_usuario} não encontrado no banco de dados.")
         
@@ -415,48 +407,10 @@ def handle_inverter_travessura(message):
         conn.commit()
 
         bot.send_message(chat_id, f"✨ A travessura '{nome_estilizado}' foi invertida e removida com sucesso!")
-        print(f"DEBUG: Travessura '{nome_estilizado}' removida para o usuário {user_id}")
 
     except Exception as e:
         print(f"Erro ao inverter: {e}")
         traceback.print_exc()
-    finally:
-        fechar_conexao(cursor, conn)
-
-@bot.callback_query_handler(func=lambda call: call.data.startswith('compra_confirmada_'))
-def processar_compra_bruxa(call):
-    chat_id = call.message.chat.id
-    data = call.data.split('_')
-    id_carta = int(data[2])
-    user_id = int(data[3])
-
-    try:
-        # Verifica se o usuário possui cenouras suficientes
-        conn, cursor = conectar_banco_dados()
-        cursor.execute("SELECT cenouras FROM usuarios WHERE id_usuario = %s", (user_id,))
-        resultado = cursor.fetchone()
-
-        if resultado and resultado[0] >= 10:
-            cenouras_deduzidas = random.randint(10, 50)
-            cursor.execute("UPDATE usuarios SET cenouras = cenouras - %s WHERE id_usuario = %s", (cenouras_deduzidas, user_id))
-
-            # Adiciona a carta ao inventário do usuário
-            cursor.execute("SELECT quantidade FROM inventario WHERE id_usuario = %s AND id_personagem = %s", (user_id, id_carta))
-            inventario_result = cursor.fetchone()
-            if inventario_result:
-                cursor.execute("UPDATE inventario SET quantidade = quantidade + 1 WHERE id_usuario = %s AND id_personagem = %s", (user_id, id_carta))
-            else:
-                cursor.execute("INSERT INTO inventario (id_usuario, id_personagem, quantidade) VALUES (%s, %s, 1)", (user_id, id_carta))
-
-            conn.commit()
-            bot.edit_message_text(f"🎉 Compra bem-sucedida! Você gastou {cenouras_deduzidas} cenouras.", chat_id, call.message.message_id)
-        
-        else:
-            bot.send_message(chat_id, "Desculpe, você não tem cenouras suficientes para comprar esta carta.")
-
-    except Exception as e:
-        print(f"Erro ao processar compra da bruxa: {e}")
-        bot.send_message(chat_id, "Erro ao processar sua compra. Tente novamente mais tarde.")
     finally:
         fechar_conexao(cursor, conn)
 
@@ -563,7 +517,6 @@ def ativar_protecao_travessura(user_id, chat_id):
 
 def verificar_protecao_travessura(user_id):
     try:
-        print(f"DEBUG: Verificando proteção de travessura para o usuário {user_id}")
         conn, cursor = conectar_banco_dados()
         
         # Consultar proteção ativa
@@ -580,10 +533,8 @@ def verificar_protecao_travessura(user_id):
                 WHERE id_usuario = %s
             """, (datetime.now(), user_id))
             conn.commit()
-            print(f"DEBUG: Proteção consumida para o usuário {user_id}")
             return True  # Proteção ativa e consumida
-        
-        print(f"DEBUG: Nenhuma proteção ativa para o usuário {user_id}")
+
         return False  # Sem proteção ativa
     
     except Exception as e:
@@ -732,7 +683,6 @@ def iniciar_pega_pega(user_id, nome):
             "usuario_atual": user_id,
             "passagens_restantes": passagens_necessarias
         }
-        print(f"DEBUG: Praga iniciada para o usuário {nome} com {passagens_necessarias} passagens necessárias")
         bot.send_message(user_id, f"👻 {nome}, você está amaldiçoado com a praga! Passe-a para {passagens_necessarias} pessoas para se livrar dela!")
     except Exception as e:
         print(f"Erro ao iniciar o pega-pega com praga: {e}")
@@ -820,9 +770,7 @@ jogador = 'X'
 
 def bot_jogada(tabuleiro):
     """Decide entre uma jogada inteligente (Minimax) e uma aleatória com 95% e 5% de chance, respectivamente."""
-    if random.random() < 0.95:
-        print("DEBUG: Bot fazendo jogada inteligente usando Minimax.")
-        
+    if random.random() < 0.95:        
         best_score = -np.inf
         best_move = None
         
@@ -838,16 +786,13 @@ def bot_jogada(tabuleiro):
                         best_move = (i, j)
         
         if best_move:
-            print(f"DEBUG: Bot escolheu a posição {best_move} com pontuação {best_score}.")
             tabuleiro[best_move] = bot_jogador
     else:
         # Jogada aleatória
-        print("DEBUG: Bot fazendo jogada aleatória.")
         empty_positions = [(i, j) for i in range(3) for j in range(3) if tabuleiro[i, j] == ' ']
         if empty_positions:
             move = random.choice(empty_positions)
             tabuleiro[move] = bot_jogador
-            print(f"DEBUG: Bot escolheu a posição aleatória {move}.")
 
 def minimax(tabuleiro, depth, is_maximizing):
     # Verifica as condições de vitória, derrota ou empate
@@ -1096,7 +1041,6 @@ def handle_halloween(message):
         conn.commit()
         
         chance = random.random()
-        print(f"DEBUG: Chance sorteada para gostosura ou travessura: {chance}")
 
         # Verifica se o usuário já está em um jogo ativo
         if user_id in jogos_em_andamento and jogos_em_andamento[user_id]['ativo']:
@@ -1105,16 +1049,13 @@ def handle_halloween(message):
 
         # Chance de travessura ou gostosura
         if chance < 0.5:
-            print(f"DEBUG: Executando gostosura para o usuário {user_id}")
             realizar_halloween_gostosura(user_id, chat_id)
         else:
-            print(f"DEBUG: Executando travessura para o usuário {user_id}")
             
             if verificar_protecao_travessura(user_id):
                 cursor.execute("DELETE FROM protecoes_travessura WHERE id_usuario = %s", (user_id,))
                 conn.commit()
                 bot.send_message(chat_id, f"🌙 Uma proteção mágica brilha ao seu redor, {nome}! A travessura se dissolve no ar, e agora sua proteção foi dissipada.")
-                print(f"DEBUG: Proteção ativada e gasta para o usuário {user_id}")
             else:
                 realizar_halloween_travessura(user_id, chat_id, nome)
     
@@ -1199,7 +1140,6 @@ def iniciar_sombra_roubo_cenouras(user_id, duracao_minutos=10):
             fim_travessura = resultado[0]
             if datetime.now() < fim_travessura:
                 bot.send_message(user_id, "👻 A sombra já está roubando suas cenouras! Use /exorcizar para se livrar dela!")
-                print(f"DEBUG: Sombra já ativa para {user_id}, expira em {fim_travessura}")
                 return
 
         # Registrar a travessura com duração no banco de dados
@@ -1211,20 +1151,16 @@ def iniciar_sombra_roubo_cenouras(user_id, duracao_minutos=10):
         """, (user_id, fim_roubo, fim_roubo))
         conn.commit()
         
-        print(f"DEBUG: Sombra iniciada para o usuário {user_id} até {fim_roubo}")
 
         roubo_ativo[user_id] = True
 
         def roubar_cenouras_periodicamente():
-            print(f"DEBUG: Iniciando roubo periódico de cenouras para {user_id}")
             while datetime.now() < fim_roubo and roubo_ativo.get(user_id, False):
                 # Nova conexão em cada ciclo
                 conn, cursor = conectar_banco_dados()
                 quantidade_roubada = random.randint(1, 10)  # Quantidade aleatória de cenouras entre 1 e 10
                 sucesso, cenouras_restantes = diminuir_cenouras(user_id, quantidade_roubada)
-                
-                print(f"DEBUG: Tentativa de roubo de {quantidade_roubada} cenouras para {user_id}, sucesso: {sucesso}, cenouras restantes: {cenouras_restantes}")
-        
+                        
                 if sucesso:
                     bot.send_message(user_id, f"👻 <i>A sombra sussurra, estendendo suas garras e pegando {quantidade_roubada} cenouras! Restam apenas {cenouras_restantes} cenouras... a escuridão está faminta.</i>\n\n <b> Tente usar /exorcizar para espantá-la!</b>",parse_mode="HTML")
                 else:
@@ -1237,7 +1173,6 @@ def iniciar_sombra_roubo_cenouras(user_id, duracao_minutos=10):
                 cursor.execute("DELETE FROM travessuras WHERE id_usuario = %s AND tipo_travessura = 'sombra_rouba_cenouras'", (user_id,))
                 conn.commit()
                 bot.send_message(user_id, "🕯️ A sombra desapareceu, suas cenouras estão seguras por enquanto.")
-                print(f"DEBUG: Sombra removida para o usuário {user_id}")
         
             fechar_conexao(cursor, conn)  # Fecha a conexão no final da thread
 
@@ -1260,10 +1195,8 @@ def diminuir_cenouras(user_id, quantidade):
             cursor.execute("SELECT cenouras FROM usuarios WHERE id_usuario = %s", (user_id,))
             cenouras_restantes = cursor.fetchone()[0]
             
-            print(f"DEBUG: Cenouras de {user_id} após roubo: {cenouras_restantes}")
             return True, cenouras_restantes
         else:
-            print(f"DEBUG: {user_id} não tem cenouras suficientes para roubo.")
             return False, cenouras[0] if cenouras else 0  
     except Exception as e:
         print(f"Erro ao diminuir cenouras: {e}")
@@ -1584,31 +1517,26 @@ def handle_passar_praga(message):
             return
 
         target_user_id = message.reply_to_message.from_user.id
-        print(f"DEBUG: {user_id} tentando passar a praga para {target_user_id} no chat {chat_id}")
 
         # Verificar se o usuário realmente possui a praga ativa
         if chat_id not in praga_ativa or praga_ativa[chat_id]["usuario_atual"] != user_id:
             bot.send_message(chat_id, "⚠️ Você não está amaldiçoado com a praga para poder passá-la.")
-            print(f"DEBUG: Praga ativa para o chat {chat_id}: {praga_ativa.get(chat_id)}")
             return
 
         # Diminuir o contador de passagens
         praga_ativa[chat_id]["passagens_restantes"] -= 1
         passagens_restantes = praga_ativa[chat_id]["passagens_restantes"]
-        print(f"DEBUG: Passagens restantes para a praga no chat {chat_id}: {passagens_restantes}")
 
         # Verificar se essa foi a última passagem
         if passagens_restantes <= 0:
             bot.send_message(chat_id, f"🔔 O tempo acabou! {message.reply_to_message.from_user.first_name} agora sofre com a maldição!")
             realizar_travessura_final(target_user_id, chat_id)
             del praga_ativa[chat_id]
-            print(f"DEBUG: Praga finalizada para o chat {chat_id}")
         else:
             # Atualizar o usuário atual com a praga
             praga_ativa[chat_id]["usuario_atual"] = target_user_id
             bot.send_message(chat_id, f"🕸️ A praga foi passada para {message.reply_to_message.from_user.first_name}! Restam {passagens_restantes} transferências para se livrar dela.")
             bot.send_message(target_user_id, f"👻 Uma praga sombria foi passada para você! Passe-a para mais {passagens_restantes} almas para se livrar dela!")
-            print(f"DEBUG: Praga passada para {target_user_id} com {passagens_restantes} passagens restantes")
 
     except Exception as e:
         print(f"Erro ao passar praga: {e}")
@@ -1664,9 +1592,6 @@ def iniciar_compartilhamento(user_id, chat_id):
         # Verificar se o usuário já tem um compartilhamento ativo
         cursor.execute("SELECT ativo FROM compartilhamentos WHERE id_usuario = %s", (user_id,))
         resultado = cursor.fetchone()
-
-        # DEBUG: Exibir o valor de 'ativo' retornado pelo banco de dados
-        print(f"DEBUG: Resultado da consulta de compartilhamento ativo para {user_id}: {resultado}")
 
         # Interpretar o valor de 'ativo' explicitamente como booleano
         compartilhamento_ativo = bool(resultado[0]) if resultado else False
@@ -2139,16 +2064,13 @@ def adicionar_inverter_travessura(user_id, quantidade=1):
             # Se o usuário já possui um registro, adiciona `quantidade` ao valor atual
             quantidade_atual = resultado[0]
             nova_quantidade = quantidade_atual + quantidade
-            print(f"DEBUG: Quantidade atual para o usuário {user_id}: {quantidade_atual}, Tentativa de adicionar: {quantidade}, Nova quantidade: {nova_quantidade}")
             
             cursor.execute("""
                 UPDATE inversoes SET quantidade = %s WHERE id_usuario = %s
             """, (nova_quantidade, user_id))
-            print(f"DEBUG: Quantidade atualizada para o usuário {user_id}. Nova quantidade: {nova_quantidade}")
         else:
             quantidade = 1
             # Se o usuário não possui um registro, cria o registro inicial com `quantidade`
-            print(f"DEBUG: Nenhum registro encontrado para o usuário {user_id}. Criando com quantidade inicial: {quantidade}")
             cursor.execute("""
                 INSERT INTO inversoes (id_usuario, quantidade) VALUES (%s, %s)
             """, (user_id, quantidade))
@@ -2404,9 +2326,7 @@ url_imagem = "https://pub-6f23ef52e8614212a14d24b0cf55ae4a.r2.dev/BQACAgEAAxkBAA
 
 def realizar_halloween_gostosura(user_id, chat_id):
     try:
-        print(f"DEBUG: Iniciando gostosura para o usuário {user_id}")
         chance = random.randint(1, 11)  # 12 tipos de gostosuras diferentes
-        print(f"DEBUG: Chance sorteada: {chance}")
         url_imagem = "https://pub-6f23ef52e8614212a14d24b0cf55ae4a.r2.dev/BQACAgEAAxkBAAIcfGcVeT6gaLXd0DKA7aihUQJfV62hAAJMBQACSV6xRD2puYHoSyajNgQ.jpg"
 
         if chance == 1:
@@ -2414,35 +2334,28 @@ def realizar_halloween_gostosura(user_id, chat_id):
             aumentar_cenouras(user_id, cenouras_ganhas)
             emoji = random.choice(emojis_gostosura)
             bot.send_photo(chat_id, url_imagem, caption=f"{emoji} 🍬 Você tropeçou em um saco de doces! Dentro dele, estavam {cenouras_ganhas} cenouras. Aproveite a sorte!")
-            print(f"DEBUG: {cenouras_ganhas} cenouras enviadas ao usuário {user_id}")
 
         elif chance == 2:
-            print(f"DEBUG: Adicionando carta faltante de Halloween para o usuário {user_id}")
             bot.send_photo(chat_id, url_imagem, caption="🎃 Uma carta rara do evento Halloween foi adicionada ao seu inventário!")
             adicionar_carta_faltante_halloween(user_id, chat_id)
 
         elif chance == 3:
-            print(f"DEBUG: Adicionando VIP temporário para o usuário {user_id}")
             bot.send_photo(chat_id, url_imagem, caption="🎩 Você foi agraciado com o status VIP! Aproveite os benefícios!")
             adicionar_vip_temporario(user_id, GRUPO_SUGESTAO, chat_id)
 
         elif chance == 4:
-            print(f"DEBUG: Adicionando proteção temporária para o usuário {user_id}")
             bot.send_photo(chat_id, url_imagem, caption="🛡️ Você ganhou uma proteção mágica temporária! Travessuras não te atingem.")
             adicionar_protecao_temporaria(user_id, chat_id)
 
         elif chance == 5:
-            print(f"DEBUG: Realizando combo de gostosura para o usuário {user_id}")
             bot.send_photo(chat_id, url_imagem, caption="✨ Um combo mágico de gostosuras chegou para você!")
             realizar_combo_gostosura(user_id, chat_id)
 
         elif chance == 6:
-            print(f"DEBUG: Iniciando compartilhamento de gostosura para o usuário {user_id}")
             bot.send_photo(chat_id, url_imagem, caption="🎁 Você ganhou um presente mágico! Escolha alguém para compartilhar.")
             iniciar_compartilhamento(user_id, chat_id)
 
         elif chance == 7:
-            print(f"DEBUG: Adicionando bônus de sorte para o usuário {user_id}")
             duracao_horas = random.randint(1, 3)
             multiplicador_sorte = 1.5  # Aumenta a chance em 50%
             adicionar_bonus_sorte(user_id, multiplicador_sorte, duracao_horas, chat_id)
@@ -2454,7 +2367,6 @@ def realizar_halloween_gostosura(user_id, chat_id):
         
 
         elif chance == 8:
-            print(f"DEBUG: Ativando desconto de 24 horas para o usuário {user_id}")
             ativar_desconto_loja(user_id, chat_id)
             bot.send_photo(
                 chat_id,
@@ -2463,17 +2375,14 @@ def realizar_halloween_gostosura(user_id, chat_id):
             )
 
         elif chance == 9:
-            print(f"DEBUG: Ativando fonte extra para o usuário {user_id}")
             bot.send_photo(chat_id, url_imagem, caption="⛲ Uma fonte mágica apareceu no seu caminho. Visite ela antes que desapareça!")
             ativar_fonte_extra(user_id, chat_id)
 
         elif chance == 10:
-            print(f"DEBUG: Adicionando inversão de travessura para o usuário {user_id}")
             bot.send_photo(chat_id, url_imagem, caption="🔄 Você recebeu o poder de inverter uma travessura!")
             adicionar_inverter_travessura(user_id, chat_id)
 
         elif chance == 11:
-            print(f"DEBUG: Adicionando super boost de cenouras para o usuário {user_id}")
             duracao_horas = random.randint(1, 3)
             multiplicador = random.randint(2, 4)# Substitua pelo URL da imagem correta
             bot.send_photo(
@@ -2485,7 +2394,6 @@ def realizar_halloween_gostosura(user_id, chat_id):
             adicionar_boost(user_id, 'cenouras', multiplicador, duracao_horas, chat_id)
 
     except Exception as e:
-        print(f"DEBUG: Erro ao realizar gostosura para o usuário {user_id}: {e}")
         traceback.print_exc()
         bot.send_message(user_id, "⚠️ Ocorreu um erro ao realizar a gostosura.")
 
@@ -2502,7 +2410,6 @@ def adicionar_bonus_sorte(user_id, multiplicador_sorte, duracao_horas, chat_id):
         """, (user_id, multiplicador_sorte, fim_bonus, multiplicador_sorte, fim_bonus))
         
         conn.commit()
-        print(f"DEBUG: Bônus de sorte de {multiplicador_sorte}x adicionado para o usuário {user_id} por {duracao_horas} horas.")
 
     except Exception as e:
         print(f"Erro ao adicionar Bônus de Sorte: {e}")
@@ -2641,7 +2548,6 @@ def ativar_travessura_embaralhamento(chat_id, id_usuario):
         """
         cursor.execute(query, (id_usuario, 'embaralhamento', fim_travessura))
         conn.commit()
-        print(f"[DEBUG] Travessura de embaralhamento ativada para {id_usuario}, termina às {fim_travessura}")
     except Exception as e:
         print(f"Erro ao registrar travessura: {e}")
     finally:
@@ -2986,14 +2892,12 @@ def handle_callback_compra(call):
 
 def realizar_halloween_travessura(user_id, chat_id, nome):
     try:
-        print(f"DEBUG: Iniciando travessura para o usuário {user_id}")
                 # Verificar se o usuário tem proteção ativa
         if verificar_protecao_travessura(user_id):
             bot.send_message(chat_id, "🛡️ Você está protegido contra travessuras! Nada aconteceu desta vez.")
             return
 
         chance = random.randint(1, 15)  # 22 tipos de travessuras diferentes
-        print(f"DEBUG: Chance sorteada: {chance}")
 
         if chance == 1:
             # Perder cenouras
@@ -3171,7 +3075,6 @@ def realizar_halloween_travessura(user_id, chat_id, nome):
             bot.send_photo(chat_id, url_imagem, caption="🎰 Travessura! Você está bloqueado de jogar raspadinha e usar a fonte por 1 dia.")
 
     except Exception as e:
-        print(f"DEBUG: Erro ao realizar travessura para o usuário {user_id}: {e}")
         traceback.print_exc()
         bot.send_message(user_id, "Ocorreu um erro ao realizar a travessura.")
 
@@ -3547,14 +3450,12 @@ def handle_fazer_pedido(call):
 
 def processar_pedido_peixes(call):
     try:
-        print(f"DEBUG: Entrando no 'processar_pedido_peixes' com call data: {call.data}")
         image_url = "https://telegra.ph/file/94c9c66af4ca4d6f0a3e5.jpg"
         caption = ("<b>⛲: Para pedir os seus peixes é simples!</b> \n\nMe envie até <b>5 IDs</b> dos peixes e a quantidade de cenouras que você quer doar "
                    "\n(eu aceito qualquer quantidade entre 10 e 20 cenouras...) \n\n<i>exemplo: ID1 ID2 ID3 ID4 ID5 cenouras</i>")
         media = InputMediaPhoto(image_url, caption=caption, parse_mode="HTML")
         bot.edit_message_media(media, chat_id=call.message.chat.id, message_id=call.message.message_id)
 
-        print("DEBUG: Registrando 'next_step_handler' para process_wish")
         bot.register_next_step_handler(call.message, process_wish)
 
     except Exception as e:
@@ -4480,37 +4381,27 @@ def callback_subcategoria_handler(call):
         chat_id = call.message.chat.id
         message_id = call.message.message_id
         conn, cursor = conectar_banco_dados()
-
-        # Debug: Exibir informações da chamada e subcategoria selecionada
-        print(f"DEBUG: Callback acionado com subcategoria '{subcategoria}', chat_id: {chat_id}, message_id: {message_id}")
         
         # Tentar obter um evento fixo para a subcategoria
         evento_fixo = obter_carta_evento_fixo(subcategoria=subcategoria)
         chance = random.randint(1, 100)
-        
-        # Debug: Mostrar se foi encontrado um evento fixo e a chance gerada
-        print(f"DEBUG: Evento fixo encontrado: {evento_fixo is not None}, Chance sorteada: {chance}%")
-        
+
         # Se o evento fixo existe e a chance de 5% se aplica, enviar o evento fixo
         if evento_fixo and chance <= 5:
             emoji, id_personagem_carta, nome, subcategoria, imagem = evento_fixo
-            print(f"DEBUG: Enviando evento fixo - Emoji: {emoji}, ID Personagem: {id_personagem_carta}, Nome: {nome}")
             send_card_message(call.message, emoji, id_personagem_carta, nome, subcategoria, imagem)
         else:
             # Caso contrário, envia uma carta aleatória normal da subcategoria
-            print(f"DEBUG: Enviando carta aleatória para a subcategoria '{subcategoria}'")
             subcategoria_handler(call.message, subcategoria, cursor, conn, None, chat_id, message_id)
     
     except Exception as e:
         traceback.print_exc()
         erro = traceback.format_exc()
-        print(f"DEBUG: Erro em callback_subcategoria_handler: {e}")
         bot.send_message(grupodeerro, f"Erro em categoria_callback: {e}\n{erro}")
     
     finally:
-        # Fechar conexão com o banco de dados e log final
         fechar_conexao(cursor, conn)
-        print("DEBUG: Conexão com o banco de dados fechada após callback_subcategoria_handler")
+
 
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("confirmar_casamento_"))

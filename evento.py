@@ -412,3 +412,30 @@ def obter_ids_personagens_evento_inventario(id_usuario, evento, subcategoria):
         return []
     finally:
         fechar_conexao(cursor, conn)
+def consultar_informacoes_personagem(id_personagem):
+    """
+    Consulta as informações de um personagem específico na tabela 'evento'.
+    """
+    conn, cursor = conectar_banco_dados()
+    try:
+        query = """
+            SELECT emoji, nome, imagem
+            FROM evento
+            WHERE id_personagem = %s
+        """
+        cursor.execute(query, (id_personagem,))
+        resultado = cursor.fetchone()
+
+        if resultado:
+            emoji, nome, imagem = resultado
+            return emoji, nome, imagem
+        else:
+            print(f"Personagem com ID {id_personagem} não encontrado na tabela de eventos.")
+            return None, None, None
+
+    except mysql.connector.Error as err:
+        print(f"Erro ao consultar informações do personagem: {err}")
+        return None, None, None
+
+    finally:
+        fechar_conexao(cursor, conn)

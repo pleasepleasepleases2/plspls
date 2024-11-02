@@ -20,7 +20,38 @@ import random
 import traceback
 
 from math import ceil
+python
+Copiar código
+import diskcache as dc
+from cachetools import cached, TTLCache
 
+# Configuração do cache persistente em disco para eventos
+cache_eventos = dc.Cache('/tmp/eventos_cache')
+
+# Configuração do cache com TTL de 30 minutos para reduzir consultas repetitivas ao banco de dados
+ttl_cache = TTLCache(maxsize=100, ttl=1800)  # 30 minutos
+
+# Função de cache para carregar dados de evento, com TTL usando `cachetools`
+@cached(ttl_cache)
+def carregar_dados_evento_cache(evento):
+    """Carrega dados do evento no cache com TTL, consultando o banco de dados apenas quando necessário."""
+    conn, cursor = conectar_banco_dados()
+    try:
+        # Total de personagens no evento
+        cursor.execute("SELECT COUNT(*) FROM evento WHERE evento = %s", (evento,))
+        total_personagens = cursor.fetchone()[0]
+
+        # IDs de personagens no evento
+        cursor.execute("SELECT id_personagem FROM evento WHERE evento = %s", (evento,))
+        ids_personagens_evento = [row[0] for row in cursor.fetchall()]
+
+        # Salva no cache de disco
+        cache_eventos[evento] = {
+            "total_personagens": total_personagens,
+            "ids_personagens_evento": ids_personagens_evento
+        }
+    finally:
+        fechar_conexao(cursor, conn)
 def comando_evento_s(id_usuario, evento, cursor, usuario_inicial, page=1):
     items_per_page = 20
     offset = (page - 1) * items_per_page
@@ -364,31 +395,6 @@ def consultar_informacoes_personagem_evento(id_personagem):
         return None
     finally:
         fechar_conexao(cursor, conn)
-# Cache para armazenar dados de eventos
-evento_cache = {}
-
-def carregar_dados_evento_cache(evento):
-    """Função para carregar dados de evento no cache, se ainda não estiverem carregados."""
-    global evento_cache
-    if evento not in evento_cache:
-        conn, cursor = conectar_banco_dados()
-        
-        try:
-            # Total de personagens no evento
-            cursor.execute("SELECT COUNT(*) FROM evento WHERE evento = %s", (evento,))
-            total_personagens = cursor.fetchone()[0]
-            
-            # IDs de personagens no evento
-            cursor.execute("SELECT id_personagem FROM evento WHERE evento = %s", (evento,))
-            ids_personagens_evento = [row[0] for row in cursor.fetchall()]
-            
-            # Salvar no cache
-            evento_cache[evento] = {
-                "total_personagens": total_personagens,
-                "ids_personagens_evento": ids_personagens_evento
-            }
-        finally:
-            fechar_conexao(cursor, conn)
 
 def obter_total_personagens_evento(evento):
     """Obtém o total de personagens para um evento, usando o cache se disponível."""

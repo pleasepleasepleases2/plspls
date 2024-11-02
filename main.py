@@ -3201,7 +3201,7 @@ def trade(message):
         keyboard.add(*primeiro)
 
         # Envio da imagem do picnic com a descrição da troca
-        image_url = "https://telegra.ph/file/8672c8f91c8e77bcdad45.jpg"
+        image_url = "https://pub-6f23ef52e8614212a14d24b0cf55ae4a.r2.dev/BQACAgEAAxkBAAIe4mcllqQhY87GjAABmSu5wAtiBXzAwQACywQAAu1oMUWktELkOcz-hzYE.jpg"
         bot.send_photo(chat_id, image_url, caption=texto, reply_markup=keyboard, reply_to_message_id=message.reply_to_message.message_id)
 
     except Exception as e:

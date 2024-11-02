@@ -3671,11 +3671,14 @@ def ver_repetidos_evento(message):
             return
 
         evento = comando_parts[1].strip().lower()  # Captura todo o texto após o comando como nome do evento
+        print(f"DEBUG: Evento capturado - '{evento}'")  # Depuração para o nome do evento
+
         conn, cursor = conectar_banco_dados()
 
-        # Consulta para obter eventos válidos dinamicamente
+        # Consulta para obter eventos válidos
         cursor.execute("SELECT DISTINCT evento FROM evento")
         eventos_validos = [row[0].lower() for row in cursor.fetchall()]
+        print(f"DEBUG: Eventos válidos - {eventos_validos}")  # Depuração para eventos válidos
 
         if evento not in eventos_validos:
             bot.send_message(message.chat.id, f"O evento '{evento}' não existe. Eventos válidos: {', '.join(eventos_validos)}")
@@ -3690,7 +3693,8 @@ def ver_repetidos_evento(message):
         """, (id_usuario, evento))
         
         cartas_repetidas = cursor.fetchall()
-        
+        print(f"DEBUG: Cartas repetidas - {cartas_repetidas}")  # Depuração para cartas repetidas
+
         if not cartas_repetidas:
             bot.send_message(message.chat.id, f"Você não possui cartas repetidas do evento '{evento}'.")
             return
@@ -3708,6 +3712,7 @@ def ver_repetidos_evento(message):
 
     except mysql.connector.Error as err:
         bot.send_message(message.chat.id, f"Erro ao buscar cartas repetidas do evento: {err}")
+        print(f"Erro ao buscar cartas repetidas do evento: {err}")  # Depuração para erro SQL
     finally:
         fechar_conexao(cursor, conn)
 
@@ -3725,25 +3730,31 @@ def progresso_evento(message):
             return
 
         evento = comando_parts[1].strip().lower()  # Todo o texto após o comando é o nome do evento
+        print(f"DEBUG: Evento capturado para progresso - '{evento}'")  # Depuração para o nome do evento
+
         conn, cursor = conectar_banco_dados()
 
         # Obter eventos válidos diretamente da tabela
         cursor.execute("SELECT DISTINCT evento FROM evento")
         eventos_validos = [row[0].lower() for row in cursor.fetchall()]
+        print(f"DEBUG: Eventos válidos para progresso - {eventos_validos}")  # Depuração para eventos válidos
 
         if evento not in eventos_validos:
             bot.send_message(message.chat.id, f"O evento '{evento}' não existe. Eventos válidos: {', '.join(eventos_validos)}")
             return
 
         progresso_mensagem = calcular_progresso_evento(cursor, id_usuario, evento)
-        
+        print(f"DEBUG: Progresso mensagem - {progresso_mensagem}")  # Depuração para a mensagem de progresso
+
         resposta = f"Progresso de {nome_usuario} no evento {evento.capitalize()}:\n\n" + progresso_mensagem
         bot.send_message(message.chat.id, resposta)
 
     except mysql.connector.Error as err:
         bot.send_message(message.chat.id, f"Erro ao buscar progresso do evento: {err}")
+        print(f"Erro ao buscar progresso do evento: {err}")  # Depuração para erro SQL
     finally:
         fechar_conexao(cursor, conn)
+
 
     
 @bot.message_handler(commands=['saldo'])

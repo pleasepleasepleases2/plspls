@@ -96,7 +96,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from datetime import datetime, timedelta
 import threading
 import time
-
+grupodeerro = -1002209493474
 roubo_ativo = {}
 jogos_em_andamento = {}
 praga_ativa = {}

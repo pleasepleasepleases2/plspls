@@ -381,3 +381,71 @@ def mostrar_pagina_evento_f(message, evento, id_usuario, pagina_atual, total_pag
     finally:
         fechar_conexao(cursor, conn)
 
+def consultar_informacoes_personagem_evento(id_personagem):
+    conn, cursor = conectar_banco_dados()
+    try:
+        cursor.execute("""
+            SELECT emoji, nome, imagem FROM evento WHERE id_personagem = %s
+        """, (id_personagem,))
+        
+        resultado = cursor.fetchone()
+        if resultado:
+            emoji, nome, imagem = resultado
+            return emoji, nome, imagem
+        else:
+            return None
+    except Exception as e:
+        print(f"Erro ao consultar informações do personagem no evento: {e}")
+        return None
+    finally:
+        fechar_conexao(cursor, conn)
+def obter_total_personagens_evento_subcategoria(evento, subcategoria):
+    conn, cursor = conectar_banco_dados()
+    try:
+        cursor.execute("""
+            SELECT COUNT(*) FROM evento WHERE evento = %s
+        """, (evento))
+        
+        total_personagens = cursor.fetchone()[0]
+        return total_personagens
+    except Exception as e:
+        print(f"Erro ao obter total de personagens para o evento: {e}")
+        return 0
+    finally:
+        fechar_conexao(cursor, conn)
+def obter_ids_personagens_evento_faltantes(id_usuario, evento, subcategoria):
+    conn, cursor = conectar_banco_dados()
+    try:
+        cursor.execute("""
+            SELECT e.id_personagem 
+            FROM evento e
+            WHERE e.evento = %s AND
+            AND e.id_personagem NOT IN (
+                SELECT id_personagem FROM inventario WHERE id_usuario = %s
+            )
+        """, (evento, id_usuario))
+        
+        ids_personagens_faltantes = [row[0] for row in cursor.fetchall()]
+        return ids_personagens_faltantes
+    except Exception as e:
+        print(f"Erro ao obter IDs de personagens faltantes para o evento: {e}")
+        return []
+    finally:
+        fechar_conexao(cursor, conn)
+def obter_ids_personagens_evento_inventario(id_usuario, evento, subcategoria):
+    conn, cursor = conectar_banco_dados()
+    try:
+        cursor.execute("""
+            SELECT e.id_personagem 
+            FROM evento e
+            JOIN inventario i ON e.id_personagem = i.id_personagem
+            WHERE i.id_usuario = %s AND e.evento = %s 
+        """, (id_usuario, evento))
+        
+        ids_personagens = [row[0] for row in cursor.fetchall()]
+        return ids_personagens
+    except Exception as e:
+        print(f"Erro ao obter IDs de personagens do inventário para o evento: {e}")
+        return []
+    finally:
+        fechar_conexao(cursor, conn)

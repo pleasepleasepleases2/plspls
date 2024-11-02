@@ -96,7 +96,24 @@ def obter_ids_personagens_evento_inventario(id_usuario, evento):
         return ids_inventario
     finally:
         fechar_conexao(cursor, conn)
-
+# Função para obter a quantidade de cartas de um usuário para um personagem específico
+def obter_quantidade_cartas_usuario(id_usuario, id_personagem):
+    """
+    Consulta a quantidade de cartas de um personagem específico que o usuário possui.
+    """
+    conn, cursor = conectar_banco_dados()
+    try:
+        cursor.execute(
+            "SELECT quantidade FROM inventario WHERE id_usuario = %s AND id_personagem = %s",
+            (id_usuario, id_personagem)
+        )
+        resultado = cursor.fetchone()
+        return resultado[0] if resultado else 0
+    except Exception as e:
+        print(f"Erro ao obter quantidade de cartas do usuário: {e}")
+        return 0
+    finally:
+        fechar_conexao(cursor, conn)
 def obter_ids_personagens_evento_faltantes(id_usuario, evento):
     """Obtém IDs de personagens do evento que estão faltando no inventário do usuário."""
     if evento not in cache_eventos:

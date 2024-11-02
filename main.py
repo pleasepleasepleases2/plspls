@@ -3659,12 +3659,116 @@ def versubs_handler(message):
     versubs_command(message)
 
 @bot.message_handler(commands=['rep'])
-def ver_repetidos_evento_handler(message):
-    ver_repetidos_evento(message)
+def ver_repetidos_evento(message):
+    try:
+        id_usuario = message.from_user.id
+        user = message.from_user
+        nome_usuario = user.first_name
+        comando_parts = message.text.split()
+        if len(comando_parts) != 2:
+            bot.send_message(message.chat.id, "Por favor, use o formato: /rep <nomedoevento>")
+            return
+        evento = comando_parts[1].lower()
+        
+        eventos_validos = ['inverno', 'amor', 'aniversario', 'fixo']
+        if evento not in eventos_validos:
+            bot.send_message(message.chat.id, f"O evento '{evento}' não existe. Por favor, use um dos seguintes: {', '.join(eventos_validos)}")
+            return
+        
+        conn, cursor = conectar_banco_dados()
+        cursor.execute("""
+            SELECT inv.id_personagem, ev.nome, ev.subcategoria, inv.quantidade 
+            FROM inventario inv
+            JOIN evento ev ON inv.id_personagem = ev.id_personagem
+            WHERE inv.id_usuario = %s AND ev.evento = %s AND inv.quantidade > 1
+        """, (id_usuario, evento))
+        
+        cartas_repetidas = cursor.fetchall()
+
+        if not cartas_repetidas:
+            bot.send_message(message.chat.id, f"Você não possui cartas repetidas do evento '{evento}'.")
+            return
+
+        globals.user_event_data[message.message_id] = {
+            'id_usuario': id_usuario,
+            'nome_usuario': nome_usuario,
+            'evento': evento,
+            'cartas_repetidas': cartas_repetidas
+        }
+
+        total_paginas = (len(cartas_repetidas) // 20) + (1 if len(cartas_repetidas) % 20 > 0 else 0)
+        resposta_inicial = "Gerando relatório de cartas repetidas, por favor aguarde..."
+        mensagem = bot.send_message(message.chat.id, resposta_inicial)
+        mostrar_repetidas_evento(mensagem.chat.id, nome_usuario, evento, cartas_repetidas, 1, total_paginas, mensagem.message_id, message.message_id)
+
+    except mysql.connector.Error as err:
+        bot.send_message(message.chat.id, f"Erro ao buscar cartas repetidas do evento: {err}")
+    finally:
+        fechar_conexao(cursor, conn)
+
+@bot.callback_query_handler(func=lambda call: call.data.startswith('rep_'))
+def callback_repetidas_evento(call):
+    try:
+        data_parts = call.data.split('_')
+        action = data_parts[1]
+        original_message_id = int(data_parts[2])
+        pagina_atual = int(data_parts[3])
+
+        if original_message_id not in globals.user_event_data:
+            bot.send_message(call.message.chat.id, "Dados do evento não encontrados.")
+            return
+
+        dados_evento = globals.user_event_data[original_message_id]
+        id_usuario = dados_evento['id_usuario']
+        nome_usuario = dados_evento['nome_usuario']
+        evento = dados_evento['evento']
+        cartas_repetidas = dados_evento['cartas_repetidas']
+
+        total_paginas = (len(cartas_repetidas) // 20) + (1 if len(cartas_repetidas) % 20 > 0 else 0)
+        
+        if action == "prev":
+            pagina_atual -= 1
+        elif action == "next":
+            pagina_atual += 1
+
+        mostrar_repetidas_evento(call.message.chat.id, nome_usuario, evento, cartas_repetidas, pagina_atual, total_paginas, call.message.message_id, original_message_id)
+    
+    except mysql.connector.Error as err:
+        bot.send_message(call.message.chat.id, f"Erro ao buscar cartas repetidas do evento: {err}")
+    finally:
+        fechar_conexao(cursor, conn)
 
 @bot.message_handler(commands=['progresso'])
-def progresso_evento_handler(message):
-    progresso_evento(message)
+def progresso_evento(message):
+    try:
+        id_usuario = message.from_user.id
+        user = message.from_user
+        nome_usuario = user.first_name
+
+        comando_parts = message.text.split()
+        if len(comando_parts) != 2:
+            bot.send_message(message.chat.id, "Por favor, use o formato: /progresso <nomedoevento>")
+            return
+
+        evento = comando_parts[1].lower()
+        
+        eventos_validos = ['inverno', 'amor', 'aniversario', 'fixo', 'festival das aboboras']
+        if evento not in eventos_validos:
+            bot.send_message(message.chat.id, f"O evento '{evento}' não existe. Por favor, use um dos seguintes: {', '.join(eventos_validos)}")
+            return
+        
+        conn, cursor = conectar_banco_dados()
+
+        progresso_mensagem = calcular_progresso_evento(cursor, id_usuario, evento)
+        
+        resposta = f"Progresso de {nome_usuario} no evento {evento.capitalize()}:\n\n" + progresso_mensagem
+        bot.send_message(message.chat.id, resposta)
+
+    except mysql.connector.Error as err:
+        bot.send_message(message.chat.id, f"Erro ao buscar progresso do evento: {err}")
+    finally:
+        fechar_conexao(cursor, conn)
+
     
 @bot.message_handler(commands=['saldo'])
 def saldo_command(message):

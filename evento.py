@@ -48,6 +48,76 @@ def carregar_dados_evento_cache(evento):
         }
     finally:
         fechar_conexao(cursor, conn)
+
+# Função de cache para carregar dados de evento, com TTL usando `cachetools`
+@cached(ttl_cache)
+def carregar_dados_evento_cache(evento):
+    """Carrega dados do evento no cache com TTL, consultando o banco de dados apenas quando necessário."""
+    conn, cursor = conectar_banco_dados()
+    try:
+        # Total de personagens no evento
+        cursor.execute("SELECT COUNT(*) FROM evento WHERE evento = %s", (evento,))
+        total_personagens = cursor.fetchone()[0]
+
+        # IDs de personagens no evento
+        cursor.execute("SELECT id_personagem FROM evento WHERE evento = %s", (evento,))
+        ids_personagens_evento = [row[0] for row in cursor.fetchall()]
+
+        # Salva no cache de disco
+        cache_eventos[evento] = {
+            "total_personagens": total_personagens,
+            "ids_personagens_evento": ids_personagens_evento
+        }
+    finally:
+        fechar_conexao(cursor, conn)
+
+def obter_total_personagens_evento(evento):
+    """Obtém o total de personagens para um evento, usando o cache se disponível."""
+    if evento not in cache_eventos:
+        carregar_dados_evento_cache(evento)
+    return cache_eventos[evento]["total_personagens"]
+
+def obter_ids_personagens_evento_inventario(id_usuario, evento):
+    """Obtém IDs de personagens no inventário do usuário para um evento."""
+    if evento not in cache_eventos:
+        carregar_dados_evento_cache(evento)
+
+    conn, cursor = conectar_banco_dados()
+    try:
+        # Consulta para IDs no inventário
+        query = """
+            SELECT e.id_personagem 
+            FROM evento e
+            JOIN inventario i ON e.id_personagem = i.id_personagem
+            WHERE i.id_usuario = %s AND e.evento = %s 
+        """
+        cursor.execute(query, (id_usuario, evento))
+        ids_inventario = [row[0] for row in cursor.fetchall()]
+        return ids_inventario
+    finally:
+        fechar_conexao(cursor, conn)
+
+def obter_ids_personagens_evento_faltantes(id_usuario, evento):
+    """Obtém IDs de personagens do evento que estão faltando no inventário do usuário."""
+    if evento not in cache_eventos:
+        carregar_dados_evento_cache(evento)
+
+    conn, cursor = conectar_banco_dados()
+    try:
+        # Consulta para IDs faltantes no inventário
+        query = """
+            SELECT e.id_personagem
+            FROM evento e
+            WHERE e.evento = %s 
+            AND e.id_personagem NOT IN (
+                SELECT id_personagem FROM inventario WHERE id_usuario = %s
+            )
+        """
+        cursor.execute(query, (evento, id_usuario))
+        ids_faltantes = [row[0] for row in cursor.fetchall()]
+        return ids_faltantes
+    finally:
+        fechar_conexao(cursor, conn)
 def comando_evento_s(id_usuario, evento, cursor, usuario_inicial, page=1):
     items_per_page = 20
     offset = (page - 1) * items_per_page
@@ -391,55 +461,6 @@ def consultar_informacoes_personagem_evento(id_personagem):
         return None
     finally:
         fechar_conexao(cursor, conn)
-
-def obter_total_personagens_evento(evento):
-    """Obtém o total de personagens para um evento, usando o cache se disponível."""
-    if evento not in evento_cache:
-        carregar_dados_evento_cache(evento)
-    return evento_cache[evento]["total_personagens"]
-
-def obter_ids_personagens_evento_inventario(id_usuario, evento):
-    """Obtém IDs de personagens no inventário do usuário para um evento, usando o cache para dados do evento."""
-    if evento not in evento_cache:
-        carregar_dados_evento_cache(evento)
-    
-    conn, cursor = conectar_banco_dados()
-    try:
-        # Consulta para IDs no inventário
-        query = """
-            SELECT e.id_personagem 
-            FROM evento e
-            JOIN inventario i ON e.id_personagem = i.id_personagem
-            WHERE i.id_usuario = %s AND e.evento = %s 
-        """
-        cursor.execute(query, (id_usuario, evento))
-        ids_inventario = [row[0] for row in cursor.fetchall()]
-        return ids_inventario
-    finally:
-        fechar_conexao(cursor, conn)
-
-def obter_ids_personagens_evento_faltantes(id_usuario, evento):
-    """Obtém IDs de personagens faltantes no inventário do usuário para um evento, usando o cache para dados do evento."""
-    if evento not in evento_cache:
-        carregar_dados_evento_cache(evento)
-
-    conn, cursor = conectar_banco_dados()
-    try:
-        # Consulta para IDs faltantes no inventário
-        query = """
-            SELECT e.id_personagem
-            FROM evento e
-            WHERE e.evento = %s 
-            AND e.id_personagem NOT IN (
-                SELECT id_personagem FROM inventario WHERE id_usuario = %s
-            )
-        """
-        cursor.execute(query, (evento, id_usuario))
-        ids_faltantes = [row[0] for row in cursor.fetchall()]
-        return ids_faltantes
-    finally:
-        fechar_conexao(cursor, conn)
-
 
 def consultar_informacoes_personagem(id_personagem):
     """

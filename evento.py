@@ -383,17 +383,16 @@ def criar_markup_evento(pagina_atual, total_paginas, evento, tipo, id_usuario):
 
 def mostrar_pagina_evento_s(message, evento, id_usuario, pagina_atual, total_paginas, ids_personagens, total_personagens_evento, nome_usuario, call=None):
     try:
-        conn, cursor = conectar_banco_dados()
-        
+        # Conteúdo da mensagem
         resposta = f"🎉 Cartas do evento <i>{evento}</i> no inventário de <b>{nome_usuario}</b>:\n\n"
         resposta += f"📄 | Página {pagina_atual}/{total_paginas}\n"
         resposta += f"🎴 | {len(ids_personagens)}/{total_personagens_evento}\n\n"
 
+        # Seleciona a página atual
         offset = (pagina_atual - 1) * 20
-        ids_pagina = sorted(ids_personagens, key=lambda id: consultar_informacoes_personagem(id)[1])[offset:offset + 20]
+        ids_pagina = sorted(ids_personagens)[offset:offset + 20]
 
         for id_personagem in ids_pagina:
-            # Obtenha os detalhes específicos da carta
             info_personagem = consultar_informacoes_personagem(id_personagem)
             if info_personagem:
                 emoji, nome, _ = info_personagem
@@ -409,22 +408,18 @@ def mostrar_pagina_evento_s(message, evento, id_usuario, pagina_atual, total_pag
 
     except Exception as e:
         print(f"Erro ao mostrar página do evento: {e}")
-    finally:
-        fechar_conexao(cursor, conn)
 
 def mostrar_pagina_evento_f(message, evento, id_usuario, pagina_atual, total_paginas, ids_personagens_faltantes, total_personagens_evento, nome_usuario, call=None):
     try:
-        conn, cursor = conectar_banco_dados()
-        
         resposta = f"🌧️ A cesta de <b>{nome_usuario}</b> ainda não está completa para o evento<i> {evento}</i>:\n\n"
         resposta += f"📄 | Página {pagina_atual}/{total_paginas}\n"
         resposta += f"🎴 | {total_personagens_evento - len(ids_personagens_faltantes)}/{total_personagens_evento}\n\n"
 
+        # Seleciona a página atual
         offset = (pagina_atual - 1) * 20
-        ids_pagina = sorted(ids_personagens_faltantes, key=lambda id: consultar_informacoes_personagem(id)[1])[offset:offset + 20]
+        ids_pagina = sorted(ids_personagens_faltantes)[offset:offset + 20]
 
         for id_personagem in ids_pagina:
-            # Obtenha os detalhes específicos da carta
             info_personagem = consultar_informacoes_personagem(id_personagem)
             if info_personagem:
                 emoji, nome, _ = info_personagem
@@ -439,8 +434,6 @@ def mostrar_pagina_evento_f(message, evento, id_usuario, pagina_atual, total_pag
 
     except Exception as e:
         print(f"Erro ao mostrar página do evento: {e}")
-    finally:
-        fechar_conexao(cursor, conn)
 
 
 def consultar_informacoes_personagem_evento(id_personagem):

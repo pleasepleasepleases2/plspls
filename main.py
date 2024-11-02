@@ -3664,14 +3664,16 @@ def ver_repetidos_evento(message):
         id_usuario = message.from_user.id
         nome_usuario = message.from_user.first_name
 
+        # Pega o nome do evento a partir do segundo elemento em diante
         comando_parts = message.text.split(maxsplit=1)
         if len(comando_parts) < 2:
             bot.send_message(message.chat.id, "Por favor, use o formato: /rep <nome do evento>")
             return
 
-        evento = comando_parts[1].strip().lower()  # Captura o evento completo
+        evento = comando_parts[1].strip().lower()  # Captura todo o texto após o comando como nome do evento
         conn, cursor = conectar_banco_dados()
 
+        # Consulta para obter eventos válidos dinamicamente
         cursor.execute("SELECT DISTINCT evento FROM evento")
         eventos_validos = [row[0].lower() for row in cursor.fetchall()]
 
@@ -3679,6 +3681,7 @@ def ver_repetidos_evento(message):
             bot.send_message(message.chat.id, f"O evento '{evento}' não existe. Eventos válidos: {', '.join(eventos_validos)}")
             return
 
+        # Consulta para cartas repetidas do evento
         cursor.execute("""
             SELECT inv.id_personagem, ev.nome, ev.subcategoria, inv.quantidade 
             FROM inventario inv
@@ -3715,14 +3718,16 @@ def progresso_evento(message):
         id_usuario = message.from_user.id
         nome_usuario = message.from_user.first_name
 
+        # Captura o nome completo do evento após o comando
         comando_parts = message.text.split(maxsplit=1)
         if len(comando_parts) < 2:
             bot.send_message(message.chat.id, "Por favor, use o formato: /progresso <nome do evento>")
             return
 
-        evento = comando_parts[1].strip().lower()  # Captura o evento completo
+        evento = comando_parts[1].strip().lower()  # Todo o texto após o comando é o nome do evento
         conn, cursor = conectar_banco_dados()
 
+        # Obter eventos válidos diretamente da tabela
         cursor.execute("SELECT DISTINCT evento FROM evento")
         eventos_validos = [row[0].lower() for row in cursor.fetchall()]
 

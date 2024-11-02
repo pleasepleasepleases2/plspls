@@ -154,7 +154,6 @@ def categoria_handler(message, categoria, id_usuario):
         chance_evento = random.random()
 
         if categoria.lower() == 'geral':
-            print("DEBUG: Categoria 'geral' selecionada, verificando chance de evento.")
 
             # Verifica a chance de ativação do evento
             if evento_ativo and chance_evento <= 0.5:
@@ -162,8 +161,6 @@ def categoria_handler(message, categoria, id_usuario):
                 
                 # Sorteia entre a opção de múltiplas subcategorias ou apenas uma
                 if random.random() <= 0.5:
-                    print("DEBUG: Evento ativo com escolha entre duas subcategorias.")
-
                     # Seleciona duas subcategorias e configura o markup com botões para cada uma
                     subcategories_aleatorias = random.sample(subcategories_valentine, k=2)
                     image_link = "https://pub-6f23ef52e8614212a14d24b0cf55ae4a.r2.dev/BQACAgEAAxkBAAIewGckVg4-uoYSZw2qcCkO7If4izRJAAJuBAACy-MpRa-8e3udhSwmNgQ.jpg"
@@ -186,9 +183,7 @@ def categoria_handler(message, categoria, id_usuario):
                         reply_markup=markup,
                         media=telebot.types.InputMediaPhoto(media=image_link, caption=caption)
                     )
-                    print("DEBUG: Mensagem de evento com duas subcategorias enviada.")
                 else:
-                    print("DEBUG: Evento ativo com escolha de uma única subcategoria.")
 
                     # Se apenas uma subcategoria, exibe um botão único
                     subcategoria_aleatoria = random.choice(subcategories_valentine)
@@ -208,9 +203,7 @@ def categoria_handler(message, categoria, id_usuario):
                         reply_markup=keyboard,
                         media=telebot.types.InputMediaPhoto(media="https://telegra.ph/file/8a50bf408515b52a36734.jpg", caption=caption)
                     )
-                    print("DEBUG: Mensagem de evento com uma única subcategoria enviada.")
             else:
-                print("DEBUG: Evento não ativado para 'geral', prosseguindo com lógica padrão de subcategorias.")
                 # Caso não ative o evento, segue com a lógica padrão de 'geral' com subcategorias
                 tratar_subcategorias_padroes(chat_id, cursor, embaralhamento_ativo, categoria, message)
 
@@ -225,14 +218,12 @@ def categoria_handler(message, categoria, id_usuario):
 
 # Função para tratar subcategorias no caso padrão
 def tratar_subcategorias_padroes(chat_id, cursor, embaralhamento_ativo, categoria, message):
-    print("DEBUG: Entrando na função para tratar subcategorias padrão.")
     
     subcategorias = buscar_subcategorias(categoria)
     subcategorias = [subcategoria for subcategoria in subcategorias if subcategoria]
 
     if not subcategorias:
         bot.send_message(chat_id, f"Nenhuma subcategoria encontrada para a categoria '{categoria}'.")
-        print("DEBUG: Nenhuma subcategoria encontrada.")
         return None
 
     # Configuração padrão de texto e botões de subcategorias
@@ -259,7 +250,6 @@ def tratar_subcategorias_padroes(chat_id, cursor, embaralhamento_ativo, categori
         reply_markup=markup,
         media=telebot.types.InputMediaPhoto(media=imagem_url, caption=resposta_texto)
     )
-    print("DEBUG: Mensagem de subcategorias padrão enviada.")
 
 def criar_markup(subcategorias, tipo):
     markup = telebot.types.InlineKeyboardMarkup()
@@ -436,8 +426,6 @@ def send_card_message(message, *args, cursor=None, conn=None):
         multiplicador_sorte = verificar_bonus_sorte(id_usuario)
 
         # Debug: Exibindo os argumentos e estado de bônus e boosts
-        print(f"[DEBUG] id_usuario: {id_usuario}, id_user: {id_user}, multiplicador_peixes: {multiplicador_peixes}, multiplicador_sorte: {multiplicador_sorte}, embaralhamento_ativo: {embaralhamento_ativo}, args: {args}")
-
         # Verifica se é um evento fixo (dicionário passado)
         if len(args) == 1 and isinstance(args[0], dict):
             evento_aleatorio = args[0]
@@ -525,7 +513,6 @@ def enviar_mensagem_com_imagem(message, imagem_url, text):
                 media=telebot.types.InputMediaVideo(media=imagem_url, caption=text, parse_mode="HTML")
             )
     except Exception as ex:
-        print(f"[DEBUG] edit_message_media falhou: {ex}")
         if imagem_url.lower().endswith(('.jpg', '.jpeg', '.png')):
             bot.send_photo(chat_id=message.chat.id, photo=imagem_url, caption=text, parse_mode="HTML")
         elif imagem_url.lower().endswith(('.mp4', '.gif')):

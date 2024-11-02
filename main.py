@@ -3700,13 +3700,13 @@ def processar_evento(message):
 
         # Definir parâmetros da função de exibição com base no tipo
         if tipo == 's':
-            ids_personagens = obter_ids_personagens_evento_inventario(id_usuario, evento, subcategoria=None)
+            ids_personagens = obter_ids_personagens_evento_inventario(id_usuario, evento)
             total_personagens = obter_total_personagens_evento(evento)
             total_paginas = (len(ids_personagens) // 15) + (1 if len(ids_personagens) % 15 > 0 else 0)
             mostrar_pagina_evento_s(message, evento, id_usuario, 1, total_paginas, ids_personagens, total_personagens, nome_usuario)
         
         elif tipo == 'f':
-            ids_personagens_faltantes = obter_ids_personagens_evento_faltantes(id_usuario, evento, subcategoria=None)
+            ids_personagens_faltantes = obter_ids_personagens_evento_faltantes(id_usuario, evento)
             total_personagens = obter_total_personagens_evento(evento)
             total_paginas = (len(ids_personagens_faltantes) // 15) + (1 if len(ids_personagens_faltantes) % 15 > 0 else 0)
             mostrar_pagina_evento_f(message, evento, id_usuario, 1, total_paginas, ids_personagens_faltantes, total_personagens, nome_usuario)

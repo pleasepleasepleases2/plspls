@@ -4,7 +4,7 @@ from bd import *
 import functools
 from pescar import *
 import traceback
-
+grupodeerro = -1002209493474
         
 MAX_RETRIES = 5
 RETRY_DELAY = 1  # seconds

@@ -284,8 +284,7 @@ def criar_markup_evento(pagina_atual, total_paginas, evento, tipo, id_usuario):
 
     return markup
 
-# Funções de apoio para exibir as páginas dos personagens do evento
-def mostrar_pagina_evento_s(message, evento, id_usuario, pagina_atual, total_paginas, ids_personagens, total_personagens_evento, nome_usuario):
+def mostrar_pagina_evento_s(message, evento, id_usuario, pagina_atual, total_paginas, ids_personagens, total_personagens_evento, nome_usuario, call=None):
     try:
         conn, cursor = conectar_banco_dados()
         
@@ -297,20 +296,26 @@ def mostrar_pagina_evento_s(message, evento, id_usuario, pagina_atual, total_pag
         ids_pagina = sorted(ids_personagens, key=lambda id: consultar_informacoes_personagem(id)[1])[offset:offset + 15]
 
         for id_personagem in ids_pagina:
-            emoji, nome = consultar_informacoes_personagem(id_personagem)
-            quantidade_cartas = obter_quantidade_cartas_usuario(id_usuario, id_personagem)
-            resposta += f"{emoji} <code>{id_personagem}</code> • {nome} {adicionar_quantidade_cartas(quantidade_cartas)} \n"
+            # Obtenha os detalhes específicos da carta
+            info_personagem = consultar_informacoes_personagem(id_personagem)
+            if info_personagem:
+                emoji, nome, _ = info_personagem
+                quantidade_cartas = obter_quantidade_cartas_usuario(id_usuario, id_personagem)
+                resposta += f"{emoji} <code>{id_personagem}</code> • {nome} {adicionar_quantidade_cartas(quantidade_cartas)} \n"
 
         markup = criar_markup_evento(pagina_atual, total_paginas, evento, 's', id_usuario)
 
-        bot.send_message(message.chat.id, resposta, reply_markup=markup, parse_mode="HTML")
+        if call:
+            bot.edit_message_text(resposta, chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=markup, parse_mode="HTML")
+        else:
+            bot.send_message(message.chat.id, resposta, reply_markup=markup, parse_mode="HTML")
 
     except Exception as e:
         print(f"Erro ao mostrar página do evento: {e}")
     finally:
         fechar_conexao(cursor, conn)
 
-def mostrar_pagina_evento_f(message, evento, id_usuario, pagina_atual, total_paginas, ids_personagens_faltantes, total_personagens_evento, nome_usuario):
+def mostrar_pagina_evento_f(message, evento, id_usuario, pagina_atual, total_paginas, ids_personagens_faltantes, total_personagens_evento, nome_usuario, call=None):
     try:
         conn, cursor = conectar_banco_dados()
         
@@ -322,17 +327,24 @@ def mostrar_pagina_evento_f(message, evento, id_usuario, pagina_atual, total_pag
         ids_pagina = sorted(ids_personagens_faltantes, key=lambda id: consultar_informacoes_personagem(id)[1])[offset:offset + 15]
 
         for id_personagem in ids_pagina:
-            emoji, nome = consultar_informacoes_personagem(id_personagem)
-            resposta += f"{emoji} <code>{id_personagem}</code> • {nome}\n"
+            # Obtenha os detalhes específicos da carta
+            info_personagem = consultar_informacoes_personagem(id_personagem)
+            if info_personagem:
+                emoji, nome, _ = info_personagem
+                resposta += f"{emoji} <code>{id_personagem}</code> • {nome}\n"
 
         markup = criar_markup_evento(pagina_atual, total_paginas, evento, 'f', id_usuario)
 
-        bot.send_message(message.chat.id, resposta, reply_markup=markup, parse_mode="HTML")
+        if call:
+            bot.edit_message_text(resposta, chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=markup, parse_mode="HTML")
+        else:
+            bot.send_message(message.chat.id, resposta, reply_markup=markup, parse_mode="HTML")
 
     except Exception as e:
         print(f"Erro ao mostrar página do evento: {e}")
     finally:
         fechar_conexao(cursor, conn)
+
 
 def consultar_informacoes_personagem_evento(id_personagem):
     conn, cursor = conectar_banco_dados()

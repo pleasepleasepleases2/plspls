@@ -407,7 +407,7 @@ def obter_ids_personagens_evento_faltantes(id_usuario, evento):
     finally:
         fechar_conexao(cursor, conn)
 
-def obter_ids_personagens_evento_inventario(id_usuario, evento, subcategoria):
+def obter_ids_personagens_evento_inventario(id_usuario, evento):
     conn, cursor = conectar_banco_dados()
     try:
         cursor.execute("""

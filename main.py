@@ -489,6 +489,33 @@ def apreender_cartas_cenouras(user_id):
 
     conn.commit()
     fechar_conexao(cursor, conn)
+@bot.callback_query_handler(func=lambda call: call.data.startswith("evento_"))
+def callback_evento_navegacao(call):
+    try:
+        # Extraindo informações do callback_data
+        _, tipo, pagina, evento, id_usuario = call.data.split("_")
+        pagina = int(pagina)
+        id_usuario = int(id_usuario)
+
+        # Buscar subcategoria, total de personagens e exibir página atual
+        nome_usuario = call.from_user.first_name
+
+        if tipo == 's':
+            # Personagens possuídos no evento
+            ids_personagens = obter_ids_personagens_evento_inventario(id_usuario, evento, subcategoria=None)
+            total_personagens = obter_total_personagens_evento_subcategoria(evento, subcategoria=None)
+            total_paginas = (len(ids_personagens) // 15) + (1 if len(ids_personagens) % 15 > 0 else 0)
+            mostrar_pagina_evento_s(call.message, evento, id_usuario, pagina, total_paginas, ids_personagens, total_personagens, nome_usuario, call)
+
+        elif tipo == 'f':
+            # Personagens faltantes no evento
+            ids_personagens_faltantes = obter_ids_personagens_evento_faltantes(id_usuario, evento, subcategoria=None)
+            total_personagens = obter_total_personagens_evento_subcategoria(evento, subcategoria=None)
+            total_paginas = (len(ids_personagens_faltantes) // 15) + (1 if len(ids_personagens_faltantes) % 15 > 0 else 0)
+            mostrar_pagina_evento_f(call.message, evento, id_usuario, pagina, total_paginas, ids_personagens_faltantes, total_personagens, nome_usuario, call)
+
+    except Exception as e:
+        print(f"Erro no callback de navegação do evento: {e}")
 
 def comprar_carta(user_id, carta_id):
     # Desconta as cenouras e adiciona a carta ao inventário do usuário
@@ -3751,8 +3778,41 @@ def set_musica_command(message):
     handle_set_musica(message)
 
 @bot.message_handler(commands=['evento'])
-def evento_command(message):  
-    handle_evento_command(message)
+def processar_evento(message):
+    try:
+        # Dividir o comando para extrair o tipo e o nome do evento
+        parts = message.text.split(" ", 2)
+        if len(parts) < 3:
+            bot.reply_to(message, "Use o formato: /evento <s ou f> <nome do evento>")
+            return
+        
+        tipo = parts[1].strip().lower()
+        evento = parts[2].strip().lower()
+        
+        id_usuario = message.from_user.id
+        nome_usuario = message.from_user.first_name
+
+        # Validar o tipo (apenas 's' e 'f' são permitidos)
+        if tipo not in ['s', 'f']:
+            bot.reply_to(message, "Tipo inválido. Use 's' para possuídos e 'f' para faltantes.")
+            return
+
+        # Definir parâmetros da função de exibição com base no tipo
+        if tipo == 's':
+            ids_personagens = obter_ids_personagens_evento_inventario(id_usuario, evento, subcategoria=None)
+            total_personagens = obter_total_personagens_evento_subcategoria(evento, subcategoria=None)
+            total_paginas = (len(ids_personagens) // 15) + (1 if len(ids_personagens) % 15 > 0 else 0)
+            mostrar_pagina_evento_s(message, evento, id_usuario, 1, total_paginas, ids_personagens, total_personagens, nome_usuario)
+        
+        elif tipo == 'f':
+            ids_personagens_faltantes = obter_ids_personagens_evento_faltantes(id_usuario, evento, subcategoria=None)
+            total_personagens = obter_total_personagens_evento_subcategoria(evento, subcategoria=None)
+            total_paginas = (len(ids_personagens_faltantes) // 15) + (1 if len(ids_personagens_faltantes) % 15 > 0 else 0)
+            mostrar_pagina_evento_f(message, evento, id_usuario, 1, total_paginas, ids_personagens_faltantes, total_personagens, nome_usuario)
+
+    except Exception as e:
+        print(f"Erro ao processar comando /evento: {e}")
+
 
 @bot.message_handler(commands=['setfav'])
 def set_fav_command(message):  

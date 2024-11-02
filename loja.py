@@ -137,7 +137,7 @@ def loja_geral_callback(call):
                 telebot.types.InlineKeyboardButton(text="Sim", callback_data=f'geral_compra_{id_usuario}'),
                 telebot.types.InlineKeyboardButton(text="Não", callback_data='cancelar_compra')
             )
-            imagem_url = "https://telegra.ph/file/d4d5d0af60ec66f35e29c.jpg"
+            imagem_url = "https://pub-6f23ef52e8614212a14d24b0cf55ae4a.r2.dev/BQACAgEAAxkBAAIe1Wclk2eiQkwGjTXrZqQvdjaeLtrbAALHBAAC7WgxRfD2-mIpIl3TNgQ.jpg"
             bot.edit_message_media(
                 chat_id=call.message.chat.id,
                 message_id=call.message.message_id,
@@ -510,7 +510,7 @@ def handle_callback_loja_loja(call):
             data_atual = datetime.today().strftime("%Y-%m-%d")
             id_usuario = call.from_user.id
             ids_do_dia = obter_ids_loja_do_dia(data_atual)
-            imagem_url = 'https://pub-6f23ef52e8614212a14d24b0cf55ae4a.r2.dev/AgACAgEAAxkBAAIeumckNcz6MktPo931JXrO4kggfixmAAKFrTEbrCwgRSD3616J467OAQADAgADeQADNgQ.jpg'
+            imagem_url = 'https://pub-6f23ef52e8614212a14d24b0cf55ae4a.r2.dev/BQACAgEAAxkBAAIe1Wclk2eiQkwGjTXrZqQvdjaeLtrbAALHBAAC7WgxRfD2-mIpIl3TNgQ.jpg'
             original_message_id = call.message.message_id
             keyboard = telebot.types.InlineKeyboardMarkup()
             primeira_coluna = [

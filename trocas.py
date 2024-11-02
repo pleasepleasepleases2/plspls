@@ -15,40 +15,42 @@ def realizar_troca(message, eu, voce, minhacarta, suacarta, chat_id, qntminha_an
         try:
             conn, cursor = conectar_banco_dados()
 
+            # Verificar a quantidade das cartas antes da troca
             cursor.execute("SELECT quantidade FROM inventario WHERE id_usuario = %s AND id_personagem = %s", (eu, minhacarta))
             qntminha = cursor.fetchone()
-            
             cursor.execute("SELECT quantidade FROM inventario WHERE id_usuario = %s AND id_personagem = %s", (voce, suacarta))
             qntsua = cursor.fetchone()
 
             qntminha = qntminha[0] if qntminha else 0
             qntsua = qntsua[0] if qntsua else 0
 
-
+            # Realizar a troca se ambos tiverem ao menos uma carta
             if qntminha > 0 and qntsua > 0:
                 print(f"DEBUG: Quantidades válidas. Realizando atualização das quantidades...")
 
+                # Diminuir uma unidade das cartas dos usuários iniciais
                 cursor.execute("UPDATE inventario SET quantidade = quantidade - 1 WHERE id_usuario = %s AND id_personagem = %s", (eu, minhacarta))
                 cursor.execute("UPDATE inventario SET quantidade = quantidade - 1 WHERE id_usuario = %s AND id_personagem = %s", (voce, suacarta))
 
+                # Adicionar ou atualizar a quantidade da carta na conta do outro usuário
                 cursor.execute("SELECT quantidade FROM inventario WHERE id_usuario = %s AND id_personagem = %s", (voce, minhacarta))
                 qnt_voce_minhacarta = cursor.fetchone()
 
                 if qnt_voce_minhacarta:
                     cursor.execute("UPDATE inventario SET quantidade = quantidade + 1 WHERE id_usuario = %s AND id_personagem = %s", (voce, minhacarta))
                 else:
-                    cursor.execute("INSERT INTO inventario (id_usuario, id_personagem, quantidade) VALUES (%s, %s, 1)", (voce, minhacarta,))
+                    cursor.execute("INSERT INTO inventario (id_usuario, id_personagem, quantidade) VALUES (%s, %s, 1)", (voce, minhacarta))
 
-                    cursor.execute("SELECT quantidade FROM inventario WHERE id_usuario = %s AND id_personagem = %s", (eu, suacarta))
+                cursor.execute("SELECT quantidade FROM inventario WHERE id_usuario = %s AND id_personagem = %s", (eu, suacarta))
                 qnt_eu_suacarta = cursor.fetchone()
 
                 if qnt_eu_suacarta:
                     cursor.execute("UPDATE inventario SET quantidade = quantidade + 1 WHERE id_usuario = %s AND id_personagem = %s", (eu, suacarta))
                 else:
-                    cursor.execute("INSERT INTO inventario (id_usuario, id_personagem, quantidade) VALUES (%s, %s, 1)", (eu, suacarta,))
+                    cursor.execute("INSERT INTO inventario (id_usuario, id_personagem, quantidade) VALUES (%s, %s, 1)", (eu, suacarta))
 
+                # Registrar a troca no histórico
                 conn.commit()
-
                 qntminha_depois = verifica_inventario_troca(eu, minhacarta)
                 qntsua_depois = verifica_inventario_troca(voce, suacarta)
 
@@ -62,19 +64,21 @@ def realizar_troca(message, eu, voce, minhacarta, suacarta, chat_id, qntminha_an
                 cursor.execute(sql_insert, val)
 
                 conn.commit()
-
-
+                # Sucesso na troca
                 image_url = "https://pub-6f23ef52e8614212a14d24b0cf55ae4a.r2.dev/BQACAgEAAxkBAAIe3WcllmUOQwUnpp5VMHZWngABFsU6bAACyQQAAu1oMUXnYh3PF56CezYE.jpg"
                 bot.edit_message_media(
                     chat_id=message.chat.id,
                     message_id=message.message_id,
                     media=telebot.types.InputMediaPhoto(media=image_url, caption="Troca realizada com sucesso. Até a próxima!")
                 )
-                break  # Sai do loop se a troca for realizada com sucesso
+                break  # Troca realizada, sair do loop
+
             else:
+                # Quantidade insuficiente para troca
                 print(f"DEBUG: Troca inválida: qntminha={qntminha}, qntsua={qntsua}")
                 bot.edit_message_caption(chat_id=message.chat.id, message_id=message.message_id, caption="Troca inválida devido a quantidades insuficientes.")
                 break
+
         except mysql.connector.errors.InternalError as err:
             if err.errno == 1213:  # Deadlock
                 print(f"DEBUG: Deadlock detectado, tentando novamente... (tentativa {retries + 1})")
@@ -82,25 +86,31 @@ def realizar_troca(message, eu, voce, minhacarta, suacarta, chat_id, qntminha_an
                 time.sleep(RETRY_DELAY)
                 continue  # Tenta novamente
             else:
+                # Log de erro em caso de falha
                 traceback.print_exc()
                 erro = traceback.format_exc()
                 mensagem = f"Erro na troca: {eu}, {voce}, {minhacarta}, {suacarta}. Erro:\n{erro}"
                 bot.send_message(grupodeerro, mensagem, parse_mode="HTML")
                 bot.edit_message_caption(chat_id=message.chat.id, caption="Houve um problema com a troca, tente novamente!")
                 break
+
         except Exception as e:
+            # Log de erro em caso de falha
             traceback.print_exc()
             erro = traceback.format_exc()
             mensagem = f"Erro na troca: {eu}, {voce}, {minhacarta}, {suacarta}. Erro:\n{erro}"
             bot.send_message(grupodeerro, mensagem, parse_mode="HTML")
             bot.edit_message_caption(chat_id=message.chat.id, caption="Houve um problema com a troca, tente novamente!")
             break
+
         finally:
             print("DEBUG: Fechando conexão com o banco de dados.")
             fechar_conexao(cursor, conn)
+
     else:
         print("DEBUG: Falha ao realizar a troca após várias tentativas.")
         bot.edit_message_caption(chat_id=message.chat.id, caption="Falha ao realizar a troca após várias tentativas. Tente novamente mais tarde.")
+
 def verifica_inventario_troca(id_usuario, id_personagem):
     try:
         conn, cursor = conectar_banco_dados()

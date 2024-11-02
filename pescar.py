@@ -734,7 +734,7 @@ def pescar(message):
 
                 keyboard.add(*primeira_coluna)
                 keyboard.add(*segunda_coluna)
-                keyboard.row(telebot.types.InlineKeyboardButton(text="🫧  Geral", callback_data='pescar_geral'))
+                keyboard.row(telebot.types.InlineKeyboardButton(text="🎃  Evento", callback_data='pescar_geral'))
 
                 # Enviar a imagem e o teclado de categorias
                 photo = "https://pub-6f23ef52e8614212a14d24b0cf55ae4a.r2.dev/BQACAgEAAxkBAAIeq2ckA3TkUqJpUN8HGwSScRjS3dY6AAIZBQACy-MhRXObx3AerywHNgQ.jpg"

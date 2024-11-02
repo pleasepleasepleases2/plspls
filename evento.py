@@ -364,30 +364,66 @@ def consultar_informacoes_personagem_evento(id_personagem):
         return None
     finally:
         fechar_conexao(cursor, conn)
+# Cache para armazenar dados de eventos
+evento_cache = {}
+
+def carregar_dados_evento_cache(evento):
+    """Função para carregar dados de evento no cache, se ainda não estiverem carregados."""
+    global evento_cache
+    if evento not in evento_cache:
+        conn, cursor = conectar_banco_dados()
+        
+        try:
+            # Total de personagens no evento
+            cursor.execute("SELECT COUNT(*) FROM evento WHERE evento = %s", (evento,))
+            total_personagens = cursor.fetchone()[0]
+            
+            # IDs de personagens no evento
+            cursor.execute("SELECT id_personagem FROM evento WHERE evento = %s", (evento,))
+            ids_personagens_evento = [row[0] for row in cursor.fetchall()]
+            
+            # Salvar no cache
+            evento_cache[evento] = {
+                "total_personagens": total_personagens,
+                "ids_personagens_evento": ids_personagens_evento
+            }
+        finally:
+            fechar_conexao(cursor, conn)
+
 def obter_total_personagens_evento(evento):
-    """
-    Retorna o total de personagens para um evento específico.
-    """
+    """Obtém o total de personagens para um evento, usando o cache se disponível."""
+    if evento not in evento_cache:
+        carregar_dados_evento_cache(evento)
+    return evento_cache[evento]["total_personagens"]
+
+def obter_ids_personagens_evento_inventario(id_usuario, evento):
+    """Obtém IDs de personagens no inventário do usuário para um evento, usando o cache para dados do evento."""
+    if evento not in evento_cache:
+        carregar_dados_evento_cache(evento)
+    
     conn, cursor = conectar_banco_dados()
     try:
-        query = "SELECT COUNT(*) FROM evento WHERE evento = %s"
-        cursor.execute(query, (evento,))
-        total = cursor.fetchone()[0]
-        return total
-
-    except mysql.connector.Error as err:
-        print(f"Erro ao obter total de personagens para o evento: {err}")
-        return 0
-
+        # Consulta para IDs no inventário
+        query = """
+            SELECT e.id_personagem 
+            FROM evento e
+            JOIN inventario i ON e.id_personagem = i.id_personagem
+            WHERE i.id_usuario = %s AND e.evento = %s 
+        """
+        cursor.execute(query, (id_usuario, evento))
+        ids_inventario = [row[0] for row in cursor.fetchall()]
+        return ids_inventario
     finally:
         fechar_conexao(cursor, conn)
 
 def obter_ids_personagens_evento_faltantes(id_usuario, evento):
-    """
-    Retorna os IDs dos personagens do evento que estão faltando no inventário do usuário.
-    """
+    """Obtém IDs de personagens faltantes no inventário do usuário para um evento, usando o cache para dados do evento."""
+    if evento not in evento_cache:
+        carregar_dados_evento_cache(evento)
+
     conn, cursor = conectar_banco_dados()
     try:
+        # Consulta para IDs faltantes no inventário
         query = """
             SELECT e.id_personagem
             FROM evento e
@@ -399,31 +435,10 @@ def obter_ids_personagens_evento_faltantes(id_usuario, evento):
         cursor.execute(query, (evento, id_usuario))
         ids_faltantes = [row[0] for row in cursor.fetchall()]
         return ids_faltantes
-
-    except mysql.connector.Error as err:
-        print(f"Erro ao obter IDs de personagens faltantes para o evento: {err}")
-        return []
-
     finally:
         fechar_conexao(cursor, conn)
 
-def obter_ids_personagens_evento_inventario(id_usuario, evento):
-    conn, cursor = conectar_banco_dados()
-    try:
-        cursor.execute("""
-            SELECT e.id_personagem 
-            FROM evento e
-            JOIN inventario i ON e.id_personagem = i.id_personagem
-            WHERE i.id_usuario = %s AND e.evento = %s 
-        """, (id_usuario, evento))
-        
-        ids_personagens = [row[0] for row in cursor.fetchall()]
-        return ids_personagens
-    except Exception as e:
-        print(f"Erro ao obter IDs de personagens do inventário para o evento: {e}")
-        return []
-    finally:
-        fechar_conexao(cursor, conn)
+
 def consultar_informacoes_personagem(id_personagem):
     """
     Consulta as informações de um personagem específico na tabela 'evento'.

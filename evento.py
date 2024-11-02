@@ -267,3 +267,117 @@ def handle_callback_query_evento(call):
     finally:
         fechar_conexao(cursor, conn)
 
+def criar_markup_evento(pagina_atual, total_paginas, evento, tipo, id_usuario):
+    """
+    Cria um teclado inline para navegação entre páginas no contexto de eventos.
+    """
+    markup = types.InlineKeyboardMarkup(row_width=4)
+
+    # Botões de navegação de páginas
+    btn_inicio = types.InlineKeyboardButton("⏪️", callback_data=f"evento_{tipo}_1_{evento}_{id_usuario}")
+    btn_anterior = types.InlineKeyboardButton("⬅️", callback_data=f"evento_{tipo}_{max(1, pagina_atual - 1)}_{evento}_{id_usuario}")
+    btn_proxima = types.InlineKeyboardButton("➡️", callback_data=f"evento_{tipo}_{min(total_paginas, pagina_atual + 1)}_{evento}_{id_usuario}")
+    btn_final = types.InlineKeyboardButton("⏩️", callback_data=f"evento_{tipo}_{total_paginas}_{evento}_{id_usuario}")
+
+    # Adiciona os botões de navegação ao teclado
+    markup.add(btn_inicio, btn_anterior, btn_proxima, btn_final)
+
+    return markup
+@bot.message_handler(commands=['cesta'])
+def processar_cesta(message):
+    try:
+        parts = message.text.split(' ', 2)
+        if len(parts) < 3:
+            bot.reply_to(message, "Por favor, forneça o tipo ('s' ou 'f') e o nome do evento após o comando, por exemplo: /cesta s halloween")
+            return
+
+        tipo = parts[1].strip()
+        evento = parts[2].strip()
+        id_usuario = message.from_user.id
+        nome_usuario = message.from_user.first_name
+
+        apagar_cartas_quantidade_zero_ou_negativa()
+
+        # Caso o tipo seja 's', mostrar as cartas do evento que o usuário possui
+        if tipo == 's':
+            ids_personagens = obter_ids_personagens_evento(id_usuario, evento, incluir=True)
+            total_personagens_evento = obter_total_personagens_evento(evento)
+            total_registros = len(ids_personagens)
+
+            if total_registros > 0:
+                total_paginas = (total_registros // 15) + (1 if total_registros % 15 > 0 else 0)
+                mostrar_pagina_evento_s(message, evento, id_usuario, 1, total_paginas, ids_personagens, total_personagens_evento, nome_usuario)
+            else:
+                bot.reply_to(message, f"🌧️ Sem cartas do evento '{evento}' no inventário. A jornada continua...")
+
+        # Caso o tipo seja 'f', mostrar as cartas do evento que o usuário ainda não possui
+        elif tipo == 'f':
+            ids_personagens_faltantes = obter_ids_personagens_evento(id_usuario, evento, incluir=False)
+            total_personagens_evento = obter_total_personagens_evento(evento)
+            total_registros = len(ids_personagens_faltantes)
+
+            if total_registros > 0:
+                total_paginas = (total_registros // 15) + (1 if total_registros % 15 > 0 else 0)
+                mostrar_pagina_evento_f(message, evento, id_usuario, 1, total_paginas, ids_personagens_faltantes, total_personagens_evento, nome_usuario)
+            else:
+                bot.reply_to(message, f"☀️ Parabéns! Você já possui todas as cartas do evento '{evento}' na sua cesta.")
+
+        else:
+            bot.reply_to(message, "Tipo inválido. Use 's' para os personagens do evento que você possui ou 'f' para os que faltam.")
+
+    except IndexError:
+        bot.reply_to(message, "Por favor, forneça o tipo ('s' ou 'f') e o nome do evento após o comando, por exemplo: /cesta s halloween")
+
+    except Exception as e:
+        print(f"Erro ao processar comando /cesta: {e}")
+
+# Funções de apoio para exibir as páginas dos personagens do evento
+def mostrar_pagina_evento_s(message, evento, id_usuario, pagina_atual, total_paginas, ids_personagens, total_personagens_evento, nome_usuario):
+    try:
+        conn, cursor = conectar_banco_dados()
+        
+        resposta = f"🎉 Cartas do evento '{evento}' no inventário de {nome_usuario}:\n\n"
+        resposta += f"📄 | Página {pagina_atual}/{total_paginas}\n"
+        resposta += f"🎴 | {len(ids_personagens)}/{total_personagens_evento} cartas coletadas\n\n"
+
+        offset = (pagina_atual - 1) * 15
+        ids_pagina = sorted(ids_personagens, key=lambda id: consultar_informacoes_personagem(id)[1])[offset:offset + 15]
+
+        for id_personagem in ids_pagina:
+            emoji, nome = consultar_informacoes_personagem(id_personagem)
+            quantidade_cartas = obter_quantidade_cartas_usuario(id_usuario, id_personagem)
+            resposta += f"{emoji} <code>{id_personagem}</code> • {nome} {adicionar_quantidade_cartas(quantidade_cartas)} \n"
+
+        markup = criar_markup_evento(pagina_atual, total_paginas, evento, 's', id_usuario)
+
+        bot.send_message(message.chat.id, resposta, reply_markup=markup, parse_mode="HTML")
+
+    except Exception as e:
+        print(f"Erro ao mostrar página do evento: {e}")
+    finally:
+        fechar_conexao(cursor, conn)
+
+def mostrar_pagina_evento_f(message, evento, id_usuario, pagina_atual, total_paginas, ids_personagens_faltantes, total_personagens_evento, nome_usuario):
+    try:
+        conn, cursor = conectar_banco_dados()
+        
+        resposta = f"🌧️ A cesta de {nome_usuario} ainda não está completa para o evento '{evento}':\n\n"
+        resposta += f"📄 | Página {pagina_atual}/{total_paginas}\n"
+        resposta += f"🎴 | {total_personagens_evento - len(ids_personagens_faltantes)}/{total_personagens_evento} cartas coletadas\n\n"
+
+        offset = (pagina_atual - 1) * 15
+        ids_pagina = sorted(ids_personagens_faltantes, key=lambda id: consultar_informacoes_personagem(id)[1])[offset:offset + 15]
+
+        for id_personagem in ids_pagina:
+            emoji, nome = consultar_informacoes_personagem(id_personagem)
+            resposta += f"{emoji} <code>{id_personagem}</code> • {nome}\n"
+
+        markup = criar_markup_evento(pagina_atual, total_paginas, evento, 'f', id_usuario)
+
+        bot.send_message(message.chat.id, resposta, reply_markup=markup, parse_mode="HTML")
+
+    except Exception as e:
+        print(f"Erro ao mostrar página do evento: {e}")
+    finally:
+        fechar_conexao(cursor, conn)
+

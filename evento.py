@@ -397,6 +397,14 @@ def criar_markup_evento(pagina_atual, total_paginas, evento, tipo, id_usuario):
     markup.add(btn_inicio, btn_anterior, btn_proxima, btn_final)
 
     return markup
+def adicionar_quantidade_cartas(quantidade):
+    """
+    Retorna uma string formatada com a quantidade de cartas.
+    Se a quantidade for 1, retorna uma string vazia, caso contrário, mostra o número.
+    """
+    if quantidade > 1:
+        return f"𖡩"
+    return ""
 
 def mostrar_pagina_evento_s(message, evento, id_usuario, pagina_atual, total_paginas, ids_personagens, total_personagens_evento, nome_usuario, call=None):
     try:

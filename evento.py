@@ -352,39 +352,49 @@ def consultar_informacoes_personagem_evento(id_personagem):
         return None
     finally:
         fechar_conexao(cursor, conn)
-def obter_total_personagens_evento_subcategoria(evento, subcategoria):
+def obter_total_personagens_evento(evento):
+    """
+    Retorna o total de personagens para um evento específico.
+    """
     conn, cursor = conectar_banco_dados()
     try:
-        cursor.execute("""
-            SELECT COUNT(*) FROM evento WHERE evento = %s
-        """, (evento))
-        
-        total_personagens = cursor.fetchone()[0]
-        return total_personagens
-    except Exception as e:
-        print(f"Erro ao obter total de personagens para o evento: {e}")
+        query = "SELECT COUNT(*) FROM evento WHERE evento = %s"
+        cursor.execute(query, (evento,))
+        total = cursor.fetchone()[0]
+        return total
+
+    except mysql.connector.Error as err:
+        print(f"Erro ao obter total de personagens para o evento: {err}")
         return 0
+
     finally:
         fechar_conexao(cursor, conn)
-def obter_ids_personagens_evento_faltantes(id_usuario, evento, subcategoria):
+
+def obter_ids_personagens_evento_faltantes(id_usuario, evento):
+    """
+    Retorna os IDs dos personagens do evento que estão faltando no inventário do usuário.
+    """
     conn, cursor = conectar_banco_dados()
     try:
-        cursor.execute("""
-            SELECT e.id_personagem 
+        query = """
+            SELECT e.id_personagem
             FROM evento e
-            WHERE e.evento = %s AND
+            WHERE e.evento = %s 
             AND e.id_personagem NOT IN (
                 SELECT id_personagem FROM inventario WHERE id_usuario = %s
             )
-        """, (evento, id_usuario))
-        
-        ids_personagens_faltantes = [row[0] for row in cursor.fetchall()]
-        return ids_personagens_faltantes
-    except Exception as e:
-        print(f"Erro ao obter IDs de personagens faltantes para o evento: {e}")
+        """
+        cursor.execute(query, (evento, id_usuario))
+        ids_faltantes = [row[0] for row in cursor.fetchall()]
+        return ids_faltantes
+
+    except mysql.connector.Error as err:
+        print(f"Erro ao obter IDs de personagens faltantes para o evento: {err}")
         return []
+
     finally:
         fechar_conexao(cursor, conn)
+
 def obter_ids_personagens_evento_inventario(id_usuario, evento, subcategoria):
     conn, cursor = conectar_banco_dados()
     try:

@@ -3664,23 +3664,24 @@ def ver_repetidos_evento(message):
         id_usuario = message.from_user.id
         nome_usuario = message.from_user.first_name
 
-        # Pega o nome do evento a partir do segundo elemento em diante
+        # Captura o nome completo do evento a partir do segundo elemento em diante
         comando_parts = message.text.split(maxsplit=1)
         if len(comando_parts) < 2:
             bot.send_message(message.chat.id, "Por favor, use o formato: /rep <nome do evento>")
             return
 
-        evento = comando_parts[1].strip().lower()  # Captura todo o texto após o comando como nome do evento
+        evento = comando_parts[1].strip().lower()  # Todo o texto após o comando é o nome do evento
         print(f"DEBUG: Evento capturado - '{evento}'")  # Depuração para o nome do evento
 
         conn, cursor = conectar_banco_dados()
 
-        # Consulta para obter eventos válidos
-        cursor.execute("SELECT DISTINCT evento FROM evento")
-        eventos_validos = [row[0].lower() for row in cursor.fetchall()]
-        print(f"DEBUG: Eventos válidos - {eventos_validos}")  # Depuração para eventos válidos
-
-        if evento not in eventos_validos:
+        # Consulta para eventos válidos sem diferenciação de acentos
+        cursor.execute("SELECT DISTINCT evento FROM evento WHERE evento COLLATE utf8mb4_unicode_ci = %s", (evento,))
+        evento_existe = cursor.fetchone()
+        if not evento_existe:
+            cursor.execute("SELECT DISTINCT evento FROM evento")
+            eventos_validos = [row[0] for row in cursor.fetchall()]
+            print(f"DEBUG: Eventos válidos - {eventos_validos}")  # Depuração para eventos válidos
             bot.send_message(message.chat.id, f"O evento '{evento}' não existe. Eventos válidos: {', '.join(eventos_validos)}")
             return
 
@@ -3689,7 +3690,7 @@ def ver_repetidos_evento(message):
             SELECT inv.id_personagem, ev.nome, ev.subcategoria, inv.quantidade 
             FROM inventario inv
             JOIN evento ev ON inv.id_personagem = ev.id_personagem
-            WHERE inv.id_usuario = %s AND ev.evento = %s AND inv.quantidade > 1
+            WHERE inv.id_usuario = %s AND ev.evento COLLATE utf8mb4_unicode_ci = %s AND inv.quantidade > 1
         """, (id_usuario, evento))
         
         cartas_repetidas = cursor.fetchall()
@@ -3699,6 +3700,7 @@ def ver_repetidos_evento(message):
             bot.send_message(message.chat.id, f"Você não possui cartas repetidas do evento '{evento}'.")
             return
 
+        # Armazena dados de repetidos no cache global
         globals.user_event_data[message.message_id] = {
             'id_usuario': id_usuario,
             'nome_usuario': nome_usuario,
@@ -3734,12 +3736,13 @@ def progresso_evento(message):
 
         conn, cursor = conectar_banco_dados()
 
-        # Obter eventos válidos diretamente da tabela
-        cursor.execute("SELECT DISTINCT evento FROM evento")
-        eventos_validos = [row[0].lower() for row in cursor.fetchall()]
-        print(f"DEBUG: Eventos válidos para progresso - {eventos_validos}")  # Depuração para eventos válidos
-
-        if evento not in eventos_validos:
+        # Consulta de eventos válidos sem diferenciação de acentos
+        cursor.execute("SELECT DISTINCT evento FROM evento WHERE evento COLLATE utf8mb4_unicode_ci = %s", (evento,))
+        evento_existe = cursor.fetchone()
+        if not evento_existe:
+            cursor.execute("SELECT DISTINCT evento FROM evento")
+            eventos_validos = [row[0] for row in cursor.fetchall()]
+            print(f"DEBUG: Eventos válidos - {eventos_validos}")  # Depuração para eventos válidos
             bot.send_message(message.chat.id, f"O evento '{evento}' não existe. Eventos válidos: {', '.join(eventos_validos)}")
             return
 
@@ -3754,7 +3757,6 @@ def progresso_evento(message):
         print(f"Erro ao buscar progresso do evento: {err}")  # Depuração para erro SQL
     finally:
         fechar_conexao(cursor, conn)
-
 
     
 @bot.message_handler(commands=['saldo'])

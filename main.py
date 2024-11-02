@@ -456,14 +456,14 @@ def callback_evento_navegacao(call):
 
         if tipo == 's':
             # Personagens possuídos no evento
-            ids_personagens = obter_ids_personagens_evento_inventario(id_usuario, evento, subcategoria=None)
+            ids_personagens = obter_ids_personagens_evento_inventario(id_usuario, evento)
             total_personagens = obter_total_personagens_evento(evento)
             total_paginas = (len(ids_personagens) // 15) + (1 if len(ids_personagens) % 15 > 0 else 0)
             mostrar_pagina_evento_s(call.message, evento, id_usuario, pagina, total_paginas, ids_personagens, total_personagens, nome_usuario, call)
 
         elif tipo == 'f':
             # Personagens faltantes no evento
-            ids_personagens_faltantes = obter_ids_personagens_evento_faltantes(id_usuario, evento, subcategoria=None)
+            ids_personagens_faltantes = obter_ids_personagens_evento_faltantes(id_usuario, evento)
             total_personagens = obter_total_personagens_evento(evento)
             total_paginas = (len(ids_personagens_faltantes) // 15) + (1 if len(ids_personagens_faltantes) % 15 > 0 else 0)
             mostrar_pagina_evento_f(call.message, evento, id_usuario, pagina, total_paginas, ids_personagens_faltantes, total_personagens, nome_usuario, call)

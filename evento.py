@@ -288,12 +288,12 @@ def mostrar_pagina_evento_s(message, evento, id_usuario, pagina_atual, total_pag
     try:
         conn, cursor = conectar_banco_dados()
         
-        resposta = f"🎉 Cartas do evento '{evento}' no inventário de {nome_usuario}:\n\n"
+        resposta = f"🎉 Cartas do evento <i>{evento}</i> no inventário de <b>{nome_usuario}</b>:\n\n"
         resposta += f"📄 | Página {pagina_atual}/{total_paginas}\n"
-        resposta += f"🎴 | {len(ids_personagens)}/{total_personagens_evento} cartas coletadas\n\n"
+        resposta += f"🎴 | {len(ids_personagens)}/{total_personagens_evento}\n\n"
 
-        offset = (pagina_atual - 1) * 15
-        ids_pagina = sorted(ids_personagens, key=lambda id: consultar_informacoes_personagem(id)[1])[offset:offset + 15]
+        offset = (pagina_atual - 1) * 20
+        ids_pagina = sorted(ids_personagens, key=lambda id: consultar_informacoes_personagem(id)[1])[offset:offset + 20]
 
         for id_personagem in ids_pagina:
             # Obtenha os detalhes específicos da carta
@@ -319,12 +319,12 @@ def mostrar_pagina_evento_f(message, evento, id_usuario, pagina_atual, total_pag
     try:
         conn, cursor = conectar_banco_dados()
         
-        resposta = f"🌧️ A cesta de {nome_usuario} ainda não está completa para o evento '{evento}':\n\n"
+        resposta = f"🌧️ A cesta de <b>{nome_usuario}</b> ainda não está completa para o evento<i> {evento}</i>:\n\n"
         resposta += f"📄 | Página {pagina_atual}/{total_paginas}\n"
-        resposta += f"🎴 | {total_personagens_evento - len(ids_personagens_faltantes)}/{total_personagens_evento} cartas coletadas\n\n"
+        resposta += f"🎴 | {total_personagens_evento - len(ids_personagens_faltantes)}/{total_personagens_evento}\n\n"
 
-        offset = (pagina_atual - 1) * 15
-        ids_pagina = sorted(ids_personagens_faltantes, key=lambda id: consultar_informacoes_personagem(id)[1])[offset:offset + 15]
+        offset = (pagina_atual - 1) * 20
+        ids_pagina = sorted(ids_personagens_faltantes, key=lambda id: consultar_informacoes_personagem(id)[1])[offset:offset + 20]
 
         for id_personagem in ids_pagina:
             # Obtenha os detalhes específicos da carta

@@ -193,6 +193,117 @@ def adicionar_carta_faltante_halloween(user_id, chat_id):
         print(f"Erro ao adicionar carta de Halloween faltante: {e}")
     finally:
         fechar_conexao(cursor, conn)
+
+import datetime
+import mysql.connector
+
+# Função para registrar o desafio no banco de dados
+def registrar_desafio(id_usuario, id_desafiado):
+    conn, cursor = conectar_banco_dados()
+    try:
+        hoje = datetime.datetime.now().date()
+        cursor.execute("""
+            INSERT INTO desafios (id_usuario, id_desafiado, data_desafio)
+            VALUES (%s, %s, %s)
+            ON DUPLICATE KEY UPDATE data_desafio = %s
+        """, (id_usuario, id_desafiado, hoje, hoje))
+        conn.commit()
+    finally:
+        fechar_conexao(cursor, conn)
+
+# Verificar se o desafio já ocorreu hoje
+def desafio_ja_ocorreu(id_usuario, id_desafiado):
+    conn, cursor = conectar_banco_dados()
+    try:
+        hoje = datetime.datetime.now().date()
+        cursor.execute("""
+            SELECT data_desafio FROM desafios
+            WHERE id_usuario = %s AND id_desafiado = %s AND data_desafio = %s
+        """, (id_usuario, id_desafiado, hoje))
+        return cursor.fetchone() is not None
+    finally:
+        fechar_conexao(cursor, conn)
+
+@bot.message_handler(commands=['gostoutrav'])
+def iniciar_gostoutrav(message):
+    try:
+        if not message.reply_to_message:
+            bot.reply_to(message, "Por favor, use o comando /gostoutrav em resposta à mensagem do usuário que deseja desafiar.")
+            return
+
+        id_usuario = message.from_user.id
+        nome_usuario = message.from_user.first_name
+        id_desafiado = message.reply_to_message.from_user.id
+        nome_desafiado = message.reply_to_message.from_user.first_name
+
+        if id_usuario == id_desafiado:
+            bot.reply_to(message, "Você não pode desafiar a si mesmo!")
+            return
+
+        # Verifica se o desafio já foi feito hoje
+        if desafio_ja_ocorreu(id_usuario, id_desafiado):
+            bot.reply_to(message, "Você já desafiou esse usuário hoje! Tente novamente amanhã.")
+            return
+
+        # Registrar o desafio
+        registrar_desafio(id_usuario, id_desafiado)
+
+        # Pergunta inicial de escolha para o desafiante
+        markup = telebot.types.InlineKeyboardMarkup()
+        markup.row(
+            telebot.types.InlineKeyboardButton("Gostosura 🍬", callback_data=f"gostoutrav_gostosura_{id_usuario}_{id_desafiado}"),
+            telebot.types.InlineKeyboardButton("Travessura 👻", callback_data=f"gostoutrav_travessura_{id_usuario}_{id_desafiado}")
+        )
+        bot.send_message(message.chat.id, f"{nome_usuario} desafiou {nome_desafiado} para Gostosura ou Travessura! Escolha:", reply_markup=markup)
+    
+    except Exception as e:
+        print(f"Erro ao iniciar gostoutrav: {e}")
+
+@bot.callback_query_handler(func=lambda call: call.data.startswith('gostoutrav_'))
+def resolver_gostoutrav(call):
+    try:
+        data = call.data.split('_')
+        escolha = data[1]  # "gostosura" ou "travessura"
+        id_usuario = int(data[2])
+        id_desafiado = int(data[3])
+
+        if 'escolha_usuario' not in globals():
+            globals().setdefault('escolha_usuario', {})
+
+        # Registrar a escolha do usuário
+        globals().setdefault('escolha_usuario', {})
+        if id_usuario not in globals()['escolha_usuario']:
+            globals()['escolha_usuario'][id_usuario] = escolha
+            # Perguntar ao desafiado sua escolha
+            markup = telebot.types.InlineKeyboardMarkup()
+            markup.row(
+                telebot.types.InlineKeyboardButton("Gostosura 🍬", callback_data=f"gostoutrav_gostosura_{id_desafiado}_{id_usuario}"),
+                telebot.types.InlineKeyboardButton("Travessura 👻", callback_data=f"gostoutrav_travessura_{id_desafiado}_{id_usuario}")
+            )
+            bot.send_message(call.message.chat.id, f"{call.message.reply_to_message.from_user.first_name}, você foi desafiado! Escolha:", reply_markup=markup)
+        
+        else:
+            # Resolver o desafio após a escolha do segundo jogador
+            escolha_usuario = globals()['escolha_usuario'][id_usuario]
+            if escolha == escolha_usuario:
+                if escolha == "gostosura":
+                    resultado = f"Ambos escolheram Gostosura! 🎉 Vocês dois ganham uma gostosura! 🍬"
+                    # Função para dar a gostosura
+                else:
+                    resultado = f"Ambos escolheram Travessura! Vocês dois recebem uma travessura! 👻"
+                    # Função para aplicar travessura
+            else:
+                if escolha_usuario == "gostosura":
+                    resultado = f"{call.message.reply_to_message.from_user.first_name} escolheu Travessura! {call.message.reply_to_message.from_user.first_name} aplica uma travessura a você! 👻"
+                else:
+                    resultado = f"{call.from_user.first_name} escolheu Travessura! {call.from_user.first_name} ganha uma travessura e aplica a você! 👻"
+
+            bot.send_message(call.message.chat.id, resultado)
+            globals()['escolha_usuario'].pop(id_usuario, None)  # Limpar escolhas para próximos desafios
+
+    except Exception as e:
+        print(f"Erro ao resolver gostoutrav: {e}")
+
 def bloquear_acao(user_id, acao, minutos, id_bloqueado=None):
     """
     Bloqueia uma ação para um usuário específico por um período determinado em minutos.

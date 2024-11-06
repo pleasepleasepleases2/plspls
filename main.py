@@ -201,7 +201,7 @@ escolha_usuario = {}
 def registrar_desafio(id_usuario, id_desafiado):
     conn, cursor = conectar_banco_dados()
     try:
-        hoje = datetime.datetime.now().date()
+        hoje = datetime.now().date()
         cursor.execute("""
             INSERT INTO desafios (id_usuario, id_desafiado, data_desafio)
             VALUES (%s, %s, %s)
@@ -215,7 +215,7 @@ def registrar_desafio(id_usuario, id_desafiado):
 def desafio_ja_ocorreu(id_usuario, id_desafiado):
     conn, cursor = conectar_banco_dados()
     try:
-        hoje = datetime.datetime.now().date()
+        hoje = datetime.datetime.now()
         cursor.execute("""
             SELECT data_desafio FROM desafios
             WHERE id_usuario = %s AND id_desafiado = %s AND data_desafio = %s

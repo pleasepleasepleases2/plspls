@@ -197,162 +197,159 @@ def adicionar_carta_faltante_halloween(user_id, chat_id):
 # Variável global para armazenar as escolhas
 escolha_usuario = {}
 
-# Função para registrar o desafio no banco de dados
 @bot.inline_handler(lambda query: query.query.startswith("troca"))
 def inline_troca(query):
     try:
-        # Parse da query
-        partes = query.query.split()
-        if len(partes) < 4:
-            results = [
-                telebot.types.InlineQueryResultArticle(
-                    id="erro",
-                    title="Formato inválido",
-                    description="Use: troca <idMinhaCarta> <idCartaDesejada> <@usuário>",
-                    input_message_content=telebot.types.InputTextMessageContent(
-                        "Formato inválido. Use: troca <idMinhaCarta> <idCartaDesejada> <@usuário>"
+        parts = query.query.split()
+        
+        # Validar formato do comando
+        if len(parts) < 4:
+            bot.answer_inline_query(query.id, [
+                types.InlineQueryResultArticle(
+                    id="invalid_format",
+                    title="Formato Inválido",
+                    description="Use: @bot troca <id_minha_carta> <id_sua_carta> <@username>",
+                    input_message_content=types.InputTextMessageContent(
+                        message_text="Formato inválido. Use: troca <id_minha_carta> <id_sua_carta> <@username>"
                     )
                 )
-            ]
-            bot.answer_inline_query(query.id, results, cache_time=1)
+            ], cache_time=0)
+            return
+        
+        # Extrair informações
+        _, id_minha_carta, id_sua_carta, username = parts[:4]
+        username = username.strip("@")  # Remover o '@' do nome de usuário
+
+        # Validação dos IDs de carta
+        if not id_minha_carta.isdigit() or not id_sua_carta.isdigit():
+            bot.answer_inline_query(query.id, [
+                types.InlineQueryResultArticle(
+                    id="invalid_card_id",
+                    title="IDs Inválidos",
+                    description="Os IDs das cartas devem ser números.",
+                    input_message_content=types.InputTextMessageContent(
+                        message_text="IDs inválidos. Certifique-se de que os IDs são números."
+                    )
+                )
+            ], cache_time=0)
             return
 
-        id_minha_carta = partes[1].upper()
-        id_carta_desejada = partes[2].upper()
-        username = partes[3].lstrip('@')
-        id_usuario_solicitante = query.from_user.id
-        nome_solicitante = query.from_user.first_name
+        id_minha_carta = int(id_minha_carta)
+        id_sua_carta = int(id_sua_carta)
 
-        # Verificar se o receptor existe
+        # Obter o ID do usuário alvo pelo username
         try:
-            receptor = bot.get_chat(username)
-            id_usuario_receptor = receptor.id
-            nome_receptor = receptor.first_name
-        except:
-            results = [
-                telebot.types.InlineQueryResultArticle(
-                    id="erro_receptor",
-                    title="Usuário não encontrado",
-                    description="O usuário mencionado não foi encontrado.",
-                    input_message_content=telebot.types.InputTextMessageContent(
-                        "Usuário não encontrado."
+            target_user_info = bot.get_chat(username)
+        except Exception as e:
+            bot.answer_inline_query(query.id, [
+                types.InlineQueryResultArticle(
+                    id="user_not_found",
+                    title="Usuário Não Encontrado",
+                    description=f"Não foi possível encontrar o usuário @{username}.",
+                    input_message_content=types.InputTextMessageContent(
+                        message_text=f"Usuário @{username} não encontrado ou não interagiu com o bot."
                     )
                 )
-            ]
-            bot.answer_inline_query(query.id, results, cache_time=1)
+            ], cache_time=0)
             return
 
-        # Gerar a mensagem de solicitação
-        titulo = f"Troca solicitada por {nome_solicitante}"
-        descricao = f"Troca {id_minha_carta} por {id_carta_desejada} com {nome_receptor}"
-        mensagem = (
-            f"💬 {nome_solicitante} quer trocar:\n\n"
-            f"🔄 Sua carta: <b>{id_minha_carta}</b>\n"
-            f"Por: <b>{id_carta_desejada}</b>\n\n"
-            f"👤 Usuário: @{username}\n"
-            f"Digite /aceitartroca {id_minha_carta} {id_carta_desejada} @{query.from_user.username} para aceitar."
-        )
+        target_user_id = target_user_info.id
 
-        # Criação do botão de confirmação
-        markup = InlineKeyboardMarkup()
-        markup.add(
-            InlineKeyboardButton("Aceitar Troca", callback_data=f"aceitar_troca_{id_usuario_solicitante}_{id_minha_carta}_{id_carta_desejada}")
-        )
-
-        result = telebot.types.InlineQueryResultArticle(
-            id="troca",
-            title=titulo,
-            description=descricao,
-            input_message_content=telebot.types.InputTextMessageContent(
-                mensagem, parse_mode="HTML"
-            ),
-            reply_markup=markup
-        )
-
-        bot.answer_inline_query(query.id, [result], cache_time=1)
-
-    except Exception as e:
-        print(f"Erro ao processar troca inline: {e}")
-        results = [
-            telebot.types.InlineQueryResultArticle(
-                id="erro_geral",
-                title="Erro ao processar a troca",
-                description="Ocorreu um erro ao tentar processar a troca.",
-                input_message_content=telebot.types.InputTextMessageContent(
-                    "Erro ao processar a troca. Tente novamente mais tarde."
-                )
+        # Montar a solicitação de troca
+        bot.answer_inline_query(query.id, [
+            types.InlineQueryResultArticle(
+                id="troca_request",
+                title="Propor Troca",
+                description=f"Troca {id_minha_carta} ↔ {id_sua_carta} com @{username}",
+                input_message_content=types.InputTextMessageContent(
+                    message_text=f"Solicitação de troca: {id_minha_carta} ↔ {id_sua_carta} com @{username}. Aguardando aceitação."
+                ),
+                reply_markup=criar_markup_aceitar_troca(query.from_user.id, target_user_id, id_minha_carta, id_sua_carta)
             )
-        ]
-        bot.answer_inline_query(query.id, results, cache_time=1)
-
-
-@bot.callback_query_handler(func=lambda call: call.data.startswith("aceitar_troca_"))
-def aceitar_troca(call):
-    try:
-        data = call.data.split("_")
-        id_solicitante = int(data[2])
-        id_minha_carta = data[3]
-        id_carta_desejada = data[4]
-
-        id_receptor = call.from_user.id
-        nome_receptor = call.from_user.first_name
-
-        # Verificar se ambos possuem as cartas corretas
-        conn, cursor = conectar_banco_dados()
-
-        cursor.execute("""
-            SELECT quantidade FROM inventario
-            WHERE id_usuario = %s AND id_personagem = %s
-        """, (id_solicitante, id_minha_carta))
-        quantidade_solicitante = cursor.fetchone()
-
-        cursor.execute("""
-            SELECT quantidade FROM inventario
-            WHERE id_usuario = %s AND id_personagem = %s
-        """, (id_receptor, id_carta_desejada))
-        quantidade_receptor = cursor.fetchone()
-
-        if not quantidade_solicitante or quantidade_solicitante[0] < 1:
-            bot.send_message(call.message.chat.id, "O solicitante não possui a carta informada.")
-            return
-
-        if not quantidade_receptor or quantidade_receptor[0] < 1:
-            bot.send_message(call.message.chat.id, "Você não possui a carta informada.")
-            return
-
-        # Realizar a troca
-        cursor.execute("""
-            UPDATE inventario SET quantidade = quantidade - 1
-            WHERE id_usuario = %s AND id_personagem = %s
-        """, (id_solicitante, id_minha_carta))
-
-        cursor.execute("""
-            UPDATE inventario SET quantidade = quantidade + 1
-            WHERE id_usuario = %s AND id_personagem = %s
-        """, (id_receptor, id_minha_carta))
-
-        cursor.execute("""
-            UPDATE inventario SET quantidade = quantidade - 1
-            WHERE id_usuario = %s AND id_personagem = %s
-        """, (id_receptor, id_carta_desejada))
-
-        cursor.execute("""
-            UPDATE inventario SET quantidade = quantidade + 1
-            WHERE id_usuario = %s AND id_personagem = %s
-        """, (id_solicitante, id_carta_desejada))
-
-        conn.commit()
-        bot.send_message(call.message.chat.id, "🎉 Troca realizada com sucesso!")
-        bot.send_message(id_solicitante, f"🎉 Sua troca com {nome_receptor} foi concluída!")
-        bot.send_message(id_receptor, f"🎉 Sua troca com @{call.from_user.username} foi concluída!")
+        ], cache_time=0)
 
     except Exception as e:
-        print(f"Erro ao aceitar troca: {e}")
-        bot.send_message(call.message.chat.id, "Erro ao processar a troca. Tente novamente mais tarde.")
+        print(f"Erro no inline de troca: {e}")
 
+def criar_markup_aceitar_troca(user_id, target_user_id, id_minha_carta, id_sua_carta):
+    markup = types.InlineKeyboardMarkup(row_width=2)
+    markup.add(
+        types.InlineKeyboardButton(
+            "✅ Aceitar",
+            callback_data=f"trocainline_aceitar_{user_id}_{target_user_id}_{id_minha_carta}_{id_sua_carta}"
+        ),
+        types.InlineKeyboardButton(
+            "❌ Recusar",
+            callback_data=f"trocainline_recusar_{user_id}_{target_user_id}_{id_minha_carta}_{id_sua_carta}"
+        )
+    )
+    return markup
+
+@bot.callback_query_handler(func=lambda call: call.data.startswith("trocainline_"))
+def processar_troca(call):
+    try:
+        parts = call.data.split("_")
+        action = parts[1]
+        user_id = int(parts[2])
+        target_user_id = int(parts[3])
+        id_minha_carta = int(parts[4])
+        id_sua_carta = int(parts[5])
+
+        if action == "aceitar":
+            # Validar a troca (verificar se os dois usuários possuem as cartas mencionadas)
+            if not validar_cartas_para_troca(user_id, target_user_id, id_minha_carta, id_sua_carta):
+                bot.answer_callback_query(call.id, "A troca não pôde ser completada. Verifique as cartas.", show_alert=True)
+                return
+
+            # Realizar a troca no banco de dados
+            realizar_troca_no_banco(user_id, target_user_id, id_minha_carta, id_sua_carta)
+
+            # Notificar os usuários
+            bot.send_message(user_id, f"Troca realizada com sucesso! Você deu a carta {id_minha_carta} e recebeu a carta {id_sua_carta}.")
+            bot.send_message(target_user_id, f"Troca realizada com sucesso! Você deu a carta {id_sua_carta} e recebeu a carta {id_minha_carta}.")
+            bot.answer_callback_query(call.id, "Troca aceita com sucesso!")
+        elif action == "recusar":
+            bot.answer_callback_query(call.id, "Troca recusada.")
+            bot.send_message(user_id, f"Seu pedido de troca com {target_user_id} foi recusado.")
+
+    except Exception as e:
+        print(f"Erro ao processar troca: {e}")
+        bot.answer_callback_query(call.id, "Ocorreu um erro ao processar a troca.", show_alert=True)
+
+def validar_cartas_para_troca(user_id, target_user_id, id_minha_carta, id_sua_carta):
+    conn, cursor = conectar_banco_dados()
+    try:
+        # Validar se o usuário tem a carta dele
+        cursor.execute("SELECT quantidade FROM inventario WHERE id_usuario = %s AND id_personagem = %s", (user_id, id_minha_carta))
+        minha_carta = cursor.fetchone()
+
+        # Validar se o outro usuário tem a carta dele
+        cursor.execute("SELECT quantidade FROM inventario WHERE id_usuario = %s AND id_personagem = %s", (target_user_id, id_sua_carta))
+        carta_deles = cursor.fetchone()
+
+        return minha_carta and minha_carta[0] > 0 and carta_deles and carta_deles[0] > 0
+    except Exception as e:
+        print(f"Erro ao validar cartas para troca: {e}")
+        return False
     finally:
         fechar_conexao(cursor, conn)
 
+def realizar_troca_no_banco(user_id, target_user_id, id_minha_carta, id_sua_carta):
+    conn, cursor = conectar_banco_dados()
+    try:
+        # Remover as cartas do inventário original e adicionar ao inventário do outro
+        cursor.execute("UPDATE inventario SET quantidade = quantidade - 1 WHERE id_usuario = %s AND id_personagem = %s", (user_id, id_minha_carta))
+        cursor.execute("INSERT INTO inventario (id_usuario, id_personagem, quantidade) VALUES (%s, %s, 1) ON DUPLICATE KEY UPDATE quantidade = quantidade + 1", (target_user_id, id_minha_carta))
+
+        cursor.execute("UPDATE inventario SET quantidade = quantidade - 1 WHERE id_usuario = %s AND id_personagem = %s", (target_user_id, id_sua_carta))
+        cursor.execute("INSERT INTO inventario (id_usuario, id_personagem, quantidade) VALUES (%s, %s, 1) ON DUPLICATE KEY UPDATE quantidade = quantidade + 1", (user_id, id_sua_carta))
+
+        conn.commit()
+    except Exception as e:
+        print(f"Erro ao realizar troca no banco: {e}")
+        conn.rollback()
+    finally:
+        fechar_conexao(cursor, conn)
 
 def bloquear_acao(user_id, acao, minutos, id_bloqueado=None):
     """
@@ -382,6 +379,8 @@ def bloquear_acao(user_id, acao, minutos, id_bloqueado=None):
     
     finally:
         fechar_conexao(cursor, conn)
+
+
 def callback_subcategory(call):
     try:
         subcategory_data = call.data.split("_")

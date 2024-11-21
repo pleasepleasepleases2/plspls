@@ -200,10 +200,13 @@ escolha_usuario = {}
 @bot.inline_handler(lambda query: query.query.startswith("troca"))
 def inline_troca(query):
     try:
+        print(f"DEBUG: Recebendo comando inline - Query: {query.query}")  # Log inicial
+
         parts = query.query.split()
 
         # Validar formato do comando
         if len(parts) < 4:
+            print("DEBUG: Formato do comando inválido.")  # Log de erro de formato
             bot.answer_inline_query(query.id, [
                 types.InlineQueryResultArticle(
                     id="invalid_format",
@@ -220,8 +223,11 @@ def inline_troca(query):
         _, id_minha_carta, id_sua_carta, username = parts[:4]
         username = username.strip("@")  # Remover o '@' do nome de usuário
 
+        print(f"DEBUG: ID Minha Carta: {id_minha_carta}, ID Sua Carta: {id_sua_carta}, Username: {username}")
+
         # Validação dos IDs de carta
         if not id_minha_carta.isdigit() or not id_sua_carta.isdigit():
+            print("DEBUG: IDs das cartas não são válidos.")  # Log IDs inválidos
             bot.answer_inline_query(query.id, [
                 types.InlineQueryResultArticle(
                     id="invalid_card_id",
@@ -239,10 +245,12 @@ def inline_troca(query):
 
         # Tentar obter informações do usuário
         try:
+            print(f"DEBUG: Tentando obter informações de @{username}")  # Log para tentativa de consulta
             target_user_info = bot.get_chat(username)
             target_user_id = target_user_info.id
+            print(f"DEBUG: Informações do usuário obtidas - ID: {target_user_id}")  # Log para sucesso
         except Exception as e:
-            # Se o usuário não foi encontrado, retornar uma mensagem amigável
+            print(f"DEBUG: Erro ao buscar informações do usuário @{username} - Erro: {e}")  # Log para falha
             bot.answer_inline_query(query.id, [
                 types.InlineQueryResultArticle(
                     id="user_not_found",
@@ -256,6 +264,7 @@ def inline_troca(query):
             return
 
         # Montar a solicitação de troca
+        print(f"DEBUG: Montando solicitação de troca para {query.from_user.id} e {target_user_id}")  # Log antes de montar troca
         bot.answer_inline_query(query.id, [
             types.InlineQueryResultArticle(
                 id="troca_request",
@@ -269,7 +278,8 @@ def inline_troca(query):
         ], cache_time=0)
 
     except Exception as e:
-        print(f"Erro no inline de troca: {e}")
+        print(f"DEBUG: Erro geral no inline de troca - Erro: {e}")  # Log para erros gerais
+
 
 def criar_markup_aceitar_troca(user_id, target_user_id, id_minha_carta, id_sua_carta):
     markup = types.InlineKeyboardMarkup(row_width=2)

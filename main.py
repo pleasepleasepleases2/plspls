@@ -201,7 +201,7 @@ escolha_usuario = {}
 def inline_troca(query):
     try:
         parts = query.query.split()
-        
+
         # Validar formato do comando
         if len(parts) < 4:
             bot.answer_inline_query(query.id, [
@@ -215,7 +215,7 @@ def inline_troca(query):
                 )
             ], cache_time=0)
             return
-        
+
         # Extrair informações
         _, id_minha_carta, id_sua_carta, username = parts[:4]
         username = username.strip("@")  # Remover o '@' do nome de usuário
@@ -237,23 +237,23 @@ def inline_troca(query):
         id_minha_carta = int(id_minha_carta)
         id_sua_carta = int(id_sua_carta)
 
-        # Obter o ID do usuário alvo pelo username
+        # Tentar obter informações do usuário
         try:
             target_user_info = bot.get_chat(username)
+            target_user_id = target_user_info.id
         except Exception as e:
+            # Se o usuário não foi encontrado, retornar uma mensagem amigável
             bot.answer_inline_query(query.id, [
                 types.InlineQueryResultArticle(
                     id="user_not_found",
                     title="Usuário Não Encontrado",
-                    description=f"Não foi possível encontrar o usuário @{username}.",
+                    description=f"Certifique-se de que @{username} já iniciou uma conversa com este bot.",
                     input_message_content=types.InputTextMessageContent(
-                        message_text=f"Usuário @{username} não encontrado ou não interagiu com o bot."
+                        message_text=f"Usuário @{username} não encontrado ou ainda não interagiu com este bot. Peça para o usuário enviar qualquer mensagem aqui antes de tentar novamente."
                     )
                 )
             ], cache_time=0)
             return
-
-        target_user_id = target_user_info.id
 
         # Montar a solicitação de troca
         bot.answer_inline_query(query.id, [

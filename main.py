@@ -198,109 +198,160 @@ def adicionar_carta_faltante_halloween(user_id, chat_id):
 escolha_usuario = {}
 
 # Função para registrar o desafio no banco de dados
-def registrar_desafio(id_usuario, id_desafiado):
-    conn, cursor = conectar_banco_dados()
+@bot.inline_handler(lambda query: query.query.startswith("troca"))
+def inline_troca(query):
     try:
-        hoje = datetime.now().date()
-        cursor.execute("""
-            INSERT INTO desafios (id_usuario, id_desafiado, data_desafio)
-            VALUES (%s, %s, %s)
-            ON DUPLICATE KEY UPDATE data_desafio = %s
-        """, (id_usuario, id_desafiado, hoje, hoje))
-        conn.commit()
-    finally:
-        fechar_conexao(cursor, conn)
-
-# Verificar se o desafio já ocorreu hoje
-def desafio_ja_ocorreu(id_usuario, id_desafiado):
-    conn, cursor = conectar_banco_dados()
-    try:
-        hoje = datetime.now()
-        cursor.execute("""
-            SELECT data_desafio FROM desafios
-            WHERE id_usuario = %s AND id_desafiado = %s AND data_desafio = %s
-        """, (id_usuario, id_desafiado, hoje))
-        return cursor.fetchone() is not None
-    finally:
-        fechar_conexao(cursor, conn)
-
-@bot.message_handler(commands=['gostoutrav'])
-def iniciar_gostoutrav(message):
-    try:
-        if not message.reply_to_message:
-            bot.reply_to(message, "Por favor, use o comando /gostoutrav em resposta à mensagem do usuário que deseja desafiar.")
+        # Parse da query
+        partes = query.query.split()
+        if len(partes) < 4:
+            results = [
+                telebot.types.InlineQueryResultArticle(
+                    id="erro",
+                    title="Formato inválido",
+                    description="Use: troca <idMinhaCarta> <idCartaDesejada> <@usuário>",
+                    input_message_content=telebot.types.InputTextMessageContent(
+                        "Formato inválido. Use: troca <idMinhaCarta> <idCartaDesejada> <@usuário>"
+                    )
+                )
+            ]
+            bot.answer_inline_query(query.id, results, cache_time=1)
             return
 
-        id_usuario = message.from_user.id
-        nome_usuario = message.from_user.first_name
-        id_desafiado = message.reply_to_message.from_user.id
-        nome_desafiado = message.reply_to_message.from_user.first_name
+        id_minha_carta = partes[1].upper()
+        id_carta_desejada = partes[2].upper()
+        username = partes[3].lstrip('@')
+        id_usuario_solicitante = query.from_user.id
+        nome_solicitante = query.from_user.first_name
 
-        if id_usuario == id_desafiado:
-            bot.reply_to(message, "Você não pode desafiar a si mesmo!")
+        # Verificar se o receptor existe
+        try:
+            receptor = bot.get_chat(username)
+            id_usuario_receptor = receptor.id
+            nome_receptor = receptor.first_name
+        except:
+            results = [
+                telebot.types.InlineQueryResultArticle(
+                    id="erro_receptor",
+                    title="Usuário não encontrado",
+                    description="O usuário mencionado não foi encontrado.",
+                    input_message_content=telebot.types.InputTextMessageContent(
+                        "Usuário não encontrado."
+                    )
+                )
+            ]
+            bot.answer_inline_query(query.id, results, cache_time=1)
             return
 
-        # Verifica se o desafio já foi feito hoje
-        if desafio_ja_ocorreu(id_usuario, id_desafiado):
-            bot.reply_to(message, "Você já desafiou esse usuário hoje! Tente novamente amanhã.")
-            return
-
-        # Registrar o desafio
-        registrar_desafio(id_usuario, id_desafiado)
-
-        # Pergunta inicial de escolha para o desafiante
-        markup = telebot.types.InlineKeyboardMarkup()
-        markup.row(
-            telebot.types.InlineKeyboardButton("Gostosura 🍬", callback_data=f"gostoutrav_gostosura_{id_usuario}_{id_desafiado}"),
-            telebot.types.InlineKeyboardButton("Travessura 👻", callback_data=f"gostoutrav_travessura_{id_usuario}_{id_desafiado}")
+        # Gerar a mensagem de solicitação
+        titulo = f"Troca solicitada por {nome_solicitante}"
+        descricao = f"Troca {id_minha_carta} por {id_carta_desejada} com {nome_receptor}"
+        mensagem = (
+            f"💬 {nome_solicitante} quer trocar:\n\n"
+            f"🔄 Sua carta: <b>{id_minha_carta}</b>\n"
+            f"Por: <b>{id_carta_desejada}</b>\n\n"
+            f"👤 Usuário: @{username}\n"
+            f"Digite /aceitartroca {id_minha_carta} {id_carta_desejada} @{query.from_user.username} para aceitar."
         )
-        bot.send_message(message.chat.id, f"{nome_usuario} desafiou {nome_desafiado} para Gostosura ou Travessura! Escolha:", reply_markup=markup)
-    
+
+        # Criação do botão de confirmação
+        markup = InlineKeyboardMarkup()
+        markup.add(
+            InlineKeyboardButton("Aceitar Troca", callback_data=f"aceitar_troca_{id_usuario_solicitante}_{id_minha_carta}_{id_carta_desejada}")
+        )
+
+        result = telebot.types.InlineQueryResultArticle(
+            id="troca",
+            title=titulo,
+            description=descricao,
+            input_message_content=telebot.types.InputTextMessageContent(
+                mensagem, parse_mode="HTML"
+            ),
+            reply_markup=markup
+        )
+
+        bot.answer_inline_query(query.id, [result], cache_time=1)
+
     except Exception as e:
-        print(f"Erro ao iniciar gostoutrav: {e}")
-
-@bot.callback_query_handler(func=lambda call: call.data.startswith('gostoutrav_'))
-def resolver_gostoutrav(call):
-    try:
-        data = call.data.split('_')
-        escolha = data[1]  # "gostosura" ou "travessura"
-        id_usuario = int(data[2])
-        id_desafiado = int(data[3])
-
-        global escolha_usuario
-
-        # Registrar a escolha do usuário
-        if id_usuario not in escolha_usuario:
-            escolha_usuario[id_usuario] = escolha
-            # Perguntar ao desafiado sua escolha
-            markup = telebot.types.InlineKeyboardMarkup()
-            markup.row(
-                telebot.types.InlineKeyboardButton("Gostosura 🍬", callback_data=f"gostoutrav_gostosura_{id_desafiado}_{id_usuario}"),
-                telebot.types.InlineKeyboardButton("Travessura 👻", callback_data=f"gostoutrav_travessura_{id_desafiado}_{id_usuario}")
+        print(f"Erro ao processar troca inline: {e}")
+        results = [
+            telebot.types.InlineQueryResultArticle(
+                id="erro_geral",
+                title="Erro ao processar a troca",
+                description="Ocorreu um erro ao tentar processar a troca.",
+                input_message_content=telebot.types.InputTextMessageContent(
+                    "Erro ao processar a troca. Tente novamente mais tarde."
+                )
             )
-            bot.send_message(call.message.chat.id, f"{call.message.reply_to_message.from_user.first_name}, você foi desafiado! Escolha:", reply_markup=markup)
-        
-        else:
-            # Resolver o desafio após a escolha do segundo jogador
-            escolha_usuario1 = escolha_usuario[id_usuario]
-            if escolha == escolha_usuario1:
-                if escolha == "gostosura":
-                    resultado = f"Ambos escolheram Gostosura! 🎉 Vocês dois ganham uma gostosura! 🍬"
-                    # Função para dar a gostosura
-                else:
-                    resultado = f"Ambos escolheram Travessura! Vocês dois recebem uma travessura! 👻"
-                    # Função para aplicar travessura
-            else:
-                if escolha_usuario1 == "gostosura":
-                    resultado = f"{call.message.reply_to_message.from_user.first_name} escolheu Travessura! {call.message.reply_to_message.from_user.first_name} aplica uma travessura a você! 👻"
-                else:
-                    resultado = f"{call.from_user.first_name} escolheu Travessura! {call.from_user.first_name} ganha uma travessura e aplica a você! 👻"
+        ]
+        bot.answer_inline_query(query.id, results, cache_time=1)
 
-            bot.send_message(call.message.chat.id, resultado)
-            del escolha_usuario[id_usuario]  # Limpar escolhas para próximos desafios
+
+@bot.callback_query_handler(func=lambda call: call.data.startswith("aceitar_troca_"))
+def aceitar_troca(call):
+    try:
+        data = call.data.split("_")
+        id_solicitante = int(data[2])
+        id_minha_carta = data[3]
+        id_carta_desejada = data[4]
+
+        id_receptor = call.from_user.id
+        nome_receptor = call.from_user.first_name
+
+        # Verificar se ambos possuem as cartas corretas
+        conn, cursor = conectar_banco_dados()
+
+        cursor.execute("""
+            SELECT quantidade FROM inventario
+            WHERE id_usuario = %s AND id_personagem = %s
+        """, (id_solicitante, id_minha_carta))
+        quantidade_solicitante = cursor.fetchone()
+
+        cursor.execute("""
+            SELECT quantidade FROM inventario
+            WHERE id_usuario = %s AND id_personagem = %s
+        """, (id_receptor, id_carta_desejada))
+        quantidade_receptor = cursor.fetchone()
+
+        if not quantidade_solicitante or quantidade_solicitante[0] < 1:
+            bot.send_message(call.message.chat.id, "O solicitante não possui a carta informada.")
+            return
+
+        if not quantidade_receptor or quantidade_receptor[0] < 1:
+            bot.send_message(call.message.chat.id, "Você não possui a carta informada.")
+            return
+
+        # Realizar a troca
+        cursor.execute("""
+            UPDATE inventario SET quantidade = quantidade - 1
+            WHERE id_usuario = %s AND id_personagem = %s
+        """, (id_solicitante, id_minha_carta))
+
+        cursor.execute("""
+            UPDATE inventario SET quantidade = quantidade + 1
+            WHERE id_usuario = %s AND id_personagem = %s
+        """, (id_receptor, id_minha_carta))
+
+        cursor.execute("""
+            UPDATE inventario SET quantidade = quantidade - 1
+            WHERE id_usuario = %s AND id_personagem = %s
+        """, (id_receptor, id_carta_desejada))
+
+        cursor.execute("""
+            UPDATE inventario SET quantidade = quantidade + 1
+            WHERE id_usuario = %s AND id_personagem = %s
+        """, (id_solicitante, id_carta_desejada))
+
+        conn.commit()
+        bot.send_message(call.message.chat.id, "🎉 Troca realizada com sucesso!")
+        bot.send_message(id_solicitante, f"🎉 Sua troca com {nome_receptor} foi concluída!")
+        bot.send_message(id_receptor, f"🎉 Sua troca com @{call.from_user.username} foi concluída!")
 
     except Exception as e:
-        print(f"Erro ao resolver gostoutrav: {e}")
+        print(f"Erro ao aceitar troca: {e}")
+        bot.send_message(call.message.chat.id, "Erro ao processar a troca. Tente novamente mais tarde.")
+
+    finally:
+        fechar_conexao(cursor, conn)
 
 
 def bloquear_acao(user_id, acao, minutos, id_bloqueado=None):

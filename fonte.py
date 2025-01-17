@@ -127,7 +127,10 @@ def comando_sorte(message):
         
         texto = f"<i>A sorte está ao seu favor!</i> \nVocê comprou uma raspadinha e ganhou <b>{sorteio}</b> cenouras!"
         bot.send_message(message.chat.id, text=texto, parse_mode="HTML")
-    
+        
+    except Exception as e:
+        traceback.print_exc() 
+        print(f"Erro ao verificar perfil: {e}")
     except Exception as e:
         bot.send_message(message.chat.id, f"Ocorreu um erro ao processar o comando /raspadinha: {e}")
     
